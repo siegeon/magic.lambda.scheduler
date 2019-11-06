@@ -15,7 +15,7 @@ namespace magic.lambda.scheduler
     /// <summary>
     /// [scheduler.get-task] slot that will return an existing task with the specified name.
     /// </summary>
-    [Slot(Name = "scheduler.get-task")]
+    [Slot(Name = "scheduler.tasks.get")]
     public class GetTask : ISlot
     {
         /// <summary>

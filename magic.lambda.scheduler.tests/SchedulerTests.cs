@@ -25,11 +25,11 @@ namespace magic.lambda.scheduler.tests
         {
             var date = DateTime.Now.AddMinutes(5);
             var lambda = Common.Evaluate(string.Format(@"
-scheduler.create-task:foo-bar
+scheduler.tasks.create:foo-bar
    when:date:""{0}""
    .lambda
       .foo
-scheduler.get-task:foo-bar",
+scheduler.tasks.get:foo-bar",
                 date.ToString("yyyy-MM-ddTHH\\:mm\\:ss")));
             Assert.Equal(2, lambda.Children.Skip(1).First().Children.Count());
             Assert.Equal(
