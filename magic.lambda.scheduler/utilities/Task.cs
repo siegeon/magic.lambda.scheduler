@@ -124,12 +124,36 @@ namespace magic.lambda.scheduler.utilities
                     return false;
                 var span = (date - DateTime.Now).TotalMilliseconds;
                 timer.Interval = span;
+                _timer = timer;
+                _timer.Start();
             }
-            _timer = timer;
+            var repeat = Node.Children.FirstOrDefault(x => x.Name == "repeat");
+            if (repeat != null)
+            {
+                var interval = repeat.Children.FirstOrDefault();
+                if (interval == null)
+                    return false;
+                var val = interval.GetEx<long>();
+                switch (interval.Name)
+                {
+                    case "second":
+                        timer.Interval = val * 1000;
+                        break;
+                    case "minute":
+                        timer.Interval = val * 60000;
+                        break;
+                    case "hour":
+                        timer.Interval = val * 3600000;
+                        break;
+                    default:
+                        return false;
+                }
+                timer.AutoReset = true;
+                _timer = timer;
+            }
 
             // Starting timer and returning it to caller.
-            timer.Start();
-            return true;
+            return _timer != null;
         }
 
         /*

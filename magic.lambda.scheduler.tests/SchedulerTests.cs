@@ -44,22 +44,32 @@ scheduler.tasks.get:foo-bar",
             Assert.Null(lambda.Children.Skip(1).First().Children.First().Children.Skip(1).First().Children.First().Value);
         }
 
-        static ManualResetEvent _handle = new ManualResetEvent(false);
-        static bool _signaled = false;
+        static ManualResetEvent _handle1 = new ManualResetEvent(false);
+        static ManualResetEvent _handle2 = new ManualResetEvent(false);
+        static bool _signaled1 = false;
+        static bool _signaled2 = false;
 
         [Slot(Name = "foo.bar.timer")]
         public class FooBarHowdy : ISlot
         {
             public void Signal(ISignaler signaler, Node input)
             {
-                _signaled = true;
-                _handle.Set();
+                _signaled1 = true;
+                _handle1?.Set();
+                if (_handle1 == null)
+                {
+                    _signaled2 = true;
+                    _handle2.Set();
+                }
+                _handle1 = null;
             }
         }
 
         [Fact]
         public void ScheduleAndCallback_01()
         {
+            _handle1 = new ManualResetEvent(false);
+            _signaled1 = false;
             var date = DateTime.Now.AddSeconds(2);
             var lambda = Common.Evaluate(string.Format(@"
 scheduler.tasks.create:foo-bar
@@ -68,8 +78,29 @@ scheduler.tasks.create:foo-bar
       foo.bar.timer
 scheduler.tasks.get:foo-bar",
                 date.ToString("yyyy-MM-ddTHH\\:mm\\:ss", CultureInfo.InvariantCulture)));
-            _handle.WaitOne(5000);
-            Assert.True(_signaled);
+            _handle1.WaitOne(5000);
+            Assert.True(_signaled1);
+        }
+
+        [Fact]
+        public void ScheduleAndCallback_02()
+        {
+            _handle1 = new ManualResetEvent(false);
+            _handle2 = new ManualResetEvent(false);
+            _signaled1 = false;
+            _signaled2 = false;
+            var date = DateTime.Now.AddSeconds(2);
+            var lambda = Common.Evaluate(@"
+scheduler.tasks.create:foo-bar
+   repeat
+      second:int:2
+   .lambda
+      foo.bar.timer
+scheduler.tasks.get:foo-bar");
+            _handle1.WaitOne(5000);
+            _handle2.WaitOne(5000);
+            Assert.True(_signaled1);
+            Assert.True(_signaled2);
         }
 
         [Fact]
