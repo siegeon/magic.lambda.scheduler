@@ -13,7 +13,7 @@ using magic.lambda.scheduler.utilities;
 namespace magic.lambda.scheduler
 {
     /// <summary>
-    /// [scheduler.get-task] slot that will return an existing task with the specified name.
+    /// [scheduler.tasks.get] slot that will return an existing task with the specified name.
     /// </summary>
     [Slot(Name = "scheduler.tasks.get")]
     public class GetTask : ISlot
@@ -30,6 +30,7 @@ namespace magic.lambda.scheduler
             var task = Common.GetTask(taskName);
             if (task == null)
                 throw new ArgumentException($"Task with the name of {taskName} doesn't exist.");
+
             input.AddRange(task.Children.ToList());
         }
     }

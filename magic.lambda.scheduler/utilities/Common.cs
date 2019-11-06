@@ -22,8 +22,14 @@ namespace magic.lambda.scheduler.utilities
         static Synchronizer<Node> _tasks = new Synchronizer<Node>(new Node());
         static object _locker = new object();
 
+        /// <summary>
+        /// Returns the folder where your tasks are stored.
+        /// </summary>
         public static string TasksFolder { get; private set; }
 
+        /// <summary>
+        /// Returns your task declaration files, where tasks are declared.
+        /// </summary>
         public static string TasksFile { get; private set; }
 
         /// <summary>
@@ -132,6 +138,9 @@ namespace magic.lambda.scheduler.utilities
             });
         }
 
+        /*
+         * Internal helper method to retrieve task with specified name.
+         */
         internal static Node GetTask(string name)
         {
             return _tasks.Read(tasks =>
@@ -148,12 +157,15 @@ namespace magic.lambda.scheduler.utilities
             });
         }
 
+        /*
+         * Sanity checks name of task, since it needs to be serialized to disc.
+         */
         static void SanityCheckTaskName(string taskName)
         {
             foreach (var idxChar in taskName)
             {
                 if ("abcdefghijklmnopqrstuvwxyz_-1234567890".IndexOf(idxChar) == -1)
-                    throw new ArgumentException($"You can only use alphanumeric characters, in addition to '_' and '-' in task names. Taks {taskName} is not a legal taskname");
+                    throw new ArgumentException($"You can only use alphanumeric characters [a-z] and [0-1], in addition to '_' and '-' in task names. Taks {taskName} is not a legal taskname");
             }
         }
 

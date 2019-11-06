@@ -10,7 +10,7 @@ using magic.lambda.scheduler.utilities;
 namespace magic.lambda.scheduler
 {
     /// <summary>
-    /// [scheduler.create-task] slot that will create a new scheduled task.
+    /// [scheduler.tasks.create] slot that will create a new scheduled task.
     /// 
     /// You can supply [when], which creates a task that is executed once - Or you can create a [repeat]
     /// task, which is executed multiple times according to some interval. You cannot supply both [when]
