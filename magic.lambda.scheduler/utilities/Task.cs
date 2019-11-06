@@ -106,7 +106,7 @@ namespace magic.lambda.scheduler.utilities
                 try
                 {
                     var signaler = _provider.GetService(typeof(ISignaler)) as ISignaler;
-                    var lambda = Node.Clone();
+                    var lambda = Node.Children.FirstOrDefault(x => x.Name == ".lambda").Clone();
                     signaler.SignalAsync("wait.eval", lambda);
                 }
                 catch (Exception)

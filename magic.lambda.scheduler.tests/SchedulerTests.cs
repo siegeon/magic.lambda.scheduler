@@ -8,6 +8,9 @@ using System.Linq;
 using Xunit;
 using magic.node.extensions;
 using System.Globalization;
+using magic.signals.contracts;
+using magic.node;
+using System.Threading;
 
 namespace magic.lambda.scheduler.tests
 {
@@ -39,6 +42,34 @@ scheduler.tasks.get:foo-bar",
             Assert.Equal(".foo", lambda.Children.Skip(1).First().Children.First().Children.Skip(1).First().Children.First().Name);
             Assert.Empty(lambda.Children.Skip(1).First().Children.First().Children.Skip(1).First().Children.First().Children);
             Assert.Null(lambda.Children.Skip(1).First().Children.First().Children.Skip(1).First().Children.First().Value);
+        }
+
+        static ManualResetEvent _handle = new ManualResetEvent(false);
+        static bool _signaled = false;
+
+        [Slot(Name = "foo.bar.timer")]
+        public class FooBarHowdy : ISlot
+        {
+            public void Signal(ISignaler signaler, Node input)
+            {
+                _signaled = true;
+                _handle.Set();
+            }
+        }
+
+        [Fact]
+        public void ScheduleAndCallback_01()
+        {
+            var date = DateTime.Now.AddSeconds(2);
+            var lambda = Common.Evaluate(string.Format(@"
+scheduler.tasks.create:foo-bar
+   when:date:""{0}""
+   .lambda
+      foo.bar.timer
+scheduler.tasks.get:foo-bar",
+                date.ToString("yyyy-MM-ddTHH\\:mm\\:ss", CultureInfo.InvariantCulture)));
+            _handle.WaitOne(5000);
+            Assert.True(_signaled);
         }
 
         [Fact]
