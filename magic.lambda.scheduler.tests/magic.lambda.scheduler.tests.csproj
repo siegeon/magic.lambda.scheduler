@@ -16,7 +16,6 @@
     </PackageReference>
     <PackageReference Include="magic.lambda" Version="3.0.0" />
     <PackageReference Include="magic.signals" Version="3.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Configuration" Version="2.2.0" />
   </ItemGroup>
 
   <ItemGroup>

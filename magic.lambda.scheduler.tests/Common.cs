@@ -4,9 +4,9 @@
  */
 
 using System;
+using System.IO;
 using System.Linq;
 using System.Collections.Generic;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using magic.node;
 using magic.signals.services;
@@ -30,9 +30,8 @@ namespace magic.lambda.scheduler.tests
 
         static IServiceProvider Initialize()
         {
-            var configuration = new ConfigurationBuilder().Build();
+            scheduler.Initialize.Init(Directory.GetCurrentDirectory());
             var services = new ServiceCollection();
-            services.AddTransient<IConfiguration>((svc) => configuration);
             services.AddTransient<ISignaler, Signaler>();
             var types = new SignalsProvider(InstantiateAllTypes<ISlot>(services));
             services.AddTransient<ISignalsProvider>((svc) => types);

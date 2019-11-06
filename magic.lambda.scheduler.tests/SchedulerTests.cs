@@ -12,10 +12,11 @@ namespace magic.lambda.scheduler.tests
     public class SchedulerTests
     {
         [Fact]
-        public void SchedulTest_01()
+        public void InitTests_01()
         {
-            var lambda = Common.Evaluate(@"
-scheduler.create-task");
+            var lambda = Common.Evaluate(@"");
+            Assert.EndsWith("/tasks.hl", Initialize.TasksFile);
+            Assert.EndsWith("/tasks/", Initialize.TasksFolder);
         }
     }
 }

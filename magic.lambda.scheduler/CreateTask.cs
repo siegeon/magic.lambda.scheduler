@@ -7,7 +7,7 @@ using System;
 using magic.node;
 using magic.signals.contracts;
 
-namespace magic.lambda.slots
+namespace magic.lambda.scheduler
 {
     /// <summary>
     /// [slots.exists] slot that will check if a dynamic slot exists or not.
