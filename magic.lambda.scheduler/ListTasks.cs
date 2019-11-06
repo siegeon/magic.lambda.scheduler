@@ -3,10 +3,8 @@
  * See the enclosed LICENSE file for details.
  */
 
-using System;
 using System.Linq;
 using magic.node;
-using magic.node.extensions;
 using magic.signals.contracts;
 using magic.lambda.scheduler.utilities;
 

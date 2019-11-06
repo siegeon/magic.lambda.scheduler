@@ -19,8 +19,8 @@ namespace magic.lambda.scheduler.utilities
     public static class Common
     {
         // List of tasks.
-        static Synchronizer<Node> _tasks = new Synchronizer<Node>(new Node());
-        static object _locker = new object();
+        static readonly Synchronizer<Node> _tasks = new Synchronizer<Node>(new Node());
+        static readonly object _locker = new object();
 
         /// <summary>
         /// Returns the folder where your tasks are stored.
@@ -177,12 +177,10 @@ namespace magic.lambda.scheduler.utilities
          */
         internal static IEnumerable<Node> GetTasks()
         {
-            var list = new List<Node>();
-            _tasks.Read(tasks =>
+            return _tasks.Read(tasks =>
             {
-                list.AddRange(tasks.Children.Select(x => x.Clone()));
+                return tasks.Children.Select(x => x.Clone()).ToList();
             });
-            return list;
         }
 
         /*
