@@ -3,12 +3,12 @@
  * See the enclosed LICENSE file for details.
  */
 
-using magic.node;
 using System;
 using System.IO;
 using System.Linq;
+using System.Collections.Generic;
+using magic.node;
 using magic.node.extensions;
-using magic.signals.contracts;
 using magic.node.extensions.hyperlambda;
 
 namespace magic.lambda.scheduler.utilities
@@ -155,6 +155,34 @@ namespace magic.lambda.scheduler.utilities
                 }
                 return result;
             });
+        }
+
+        /*
+         * Deletes a task from the scheduler.
+         */
+        internal static void DeleteTask(string taskName)
+        {
+            _tasks.Write(tasks =>
+            {
+                var task = tasks.Children.FirstOrDefault(x => x.Name == taskName);
+                if (task == null)
+                    throw new ArgumentException($"Task with the name of {taskName} was not found");
+                task.UnTie();
+                File.Delete(TasksFolder + task.Name + ".hl");
+            });
+        }
+
+        /*
+         * Returns all tasks in the system.
+         */
+        internal static IEnumerable<Node> GetTasks()
+        {
+            var list = new List<Node>();
+            _tasks.Read(tasks =>
+            {
+                list.AddRange(tasks.Children.Select(x => x.Clone()));
+            });
+            return list;
         }
 
         /*
