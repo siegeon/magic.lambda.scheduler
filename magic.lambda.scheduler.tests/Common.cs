@@ -30,7 +30,8 @@ namespace magic.lambda.scheduler.tests
 
         static IServiceProvider Initialize()
         {
-            scheduler.Initialize.Init(Directory.GetCurrentDirectory());
+            if (string.IsNullOrEmpty(utilities.Common.TasksFolder))
+                utilities.Common.Initialize(Directory.GetCurrentDirectory());
             var services = new ServiceCollection();
             services.AddTransient<ISignaler, Signaler>();
             var types = new SignalsProvider(InstantiateAllTypes<ISlot>(services));
