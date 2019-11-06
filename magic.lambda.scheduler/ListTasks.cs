@@ -27,7 +27,7 @@ namespace magic.lambda.scheduler
             input.Clear();
 
             // Retrieves all tasks from common helper class.
-            var tasks = Common.GetTasks().ToList();
+            var tasks = Common.GetTasks().Select(x => new Node("", x.Name));
 
             /*
              * Returning tasks declaration to caller.

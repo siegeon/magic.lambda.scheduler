@@ -30,13 +30,12 @@ namespace magic.lambda.scheduler.tests
 
         static IServiceProvider Initialize()
         {
-            if (string.IsNullOrEmpty(utilities.Common.TasksFolder))
-                utilities.Common.Initialize(Directory.GetCurrentDirectory());
             var services = new ServiceCollection();
             services.AddTransient<ISignaler, Signaler>();
             var types = new SignalsProvider(InstantiateAllTypes<ISlot>(services));
             services.AddTransient<ISignalsProvider>((svc) => types);
             var provider = services.BuildServiceProvider();
+            utilities.Common.Initialize(provider, Directory.GetCurrentDirectory().Replace("\\", "/").TrimEnd('/') + "/tasks.hl");
             return provider;
         }
 

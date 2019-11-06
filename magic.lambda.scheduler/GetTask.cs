@@ -41,7 +41,7 @@ namespace magic.lambda.scheduler
              * Returning task declaration to caller.
              * Notice, no need to clone. Helper class has already cloned.
              */
-            input.AddRange(task.Children.ToList());
+            input.Add(task);
         }
     }
 }

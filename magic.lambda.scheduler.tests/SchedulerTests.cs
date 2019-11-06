@@ -7,6 +7,7 @@ using System;
 using System.Linq;
 using Xunit;
 using magic.node.extensions;
+using System.Globalization;
 
 namespace magic.lambda.scheduler.tests
 {
@@ -17,7 +18,6 @@ namespace magic.lambda.scheduler.tests
         {
             var lambda = Common.Evaluate(@"");
             Assert.EndsWith("/tasks.hl", utilities.Common.TasksFile);
-            Assert.EndsWith("/tasks/", utilities.Common.TasksFolder);
         }
 
         [Fact]
@@ -30,14 +30,15 @@ scheduler.tasks.create:foo-bar
    .lambda
       .foo
 scheduler.tasks.get:foo-bar",
-                date.ToString("yyyy-MM-ddTHH\\:mm\\:ss")));
-            Assert.Equal(2, lambda.Children.Skip(1).First().Children.Count());
+                date.ToString("yyyy-MM-ddTHH\\:mm\\:ss", CultureInfo.InvariantCulture)));
+            Assert.True(lambda.Children.Skip(1).First().Children.Count() > 0);
             Assert.Equal(
-                date.ToString("yyyy-MM-ddTHH\\:mm\\:ss"), 
-                lambda.Children.Skip(1).First().Children.First().GetEx<DateTime>().ToString("yyyy-MM-ddTHH\\:mm\\:ss"));
-            Assert.Equal(".lambda", lambda.Children.Skip(1).First().Children.Skip(1).First().Name);
-            Assert.Single(lambda.Children.Skip(1).First().Children.Skip(1).First().Children);
-            Assert.Equal(".foo", lambda.Children.Skip(1).First().Children.Skip(1).First().Children.First().Name);
+                date.ToString("yyyy-MM-ddTHH\\:mm\\:ss", CultureInfo.InvariantCulture), 
+                lambda.Children.Skip(1).First().Children.First().Children.First().GetEx<DateTime>().ToString("yyyy-MM-ddTHH\\:mm\\:ss", CultureInfo.InvariantCulture));
+            Assert.Equal(".lambda", lambda.Children.Skip(1).First().Children.First().Children.Skip(1).First().Name);
+            Assert.Equal(".foo", lambda.Children.Skip(1).First().Children.First().Children.Skip(1).First().Children.First().Name);
+            Assert.Empty(lambda.Children.Skip(1).First().Children.First().Children.Skip(1).First().Children.First().Children);
+            Assert.Null(lambda.Children.Skip(1).First().Children.First().Children.Skip(1).First().Children.First().Value);
         }
 
         [Fact]
@@ -56,9 +57,9 @@ scheduler.tasks.create:foo-bar
    .lambda
       .foo
 scheduler.tasks.list",
-                date.ToString("yyyy-MM-ddTHH\\:mm\\:ss")));
+                date.ToString("yyyy-MM-ddTHH\\:mm\\:ss", CultureInfo.InvariantCulture)));
             Assert.True(lambda.Children.Skip(1).First().Children.Count() > 0);
-            Assert.Contains(lambda.Children.Skip(1).First().Children, x => x.Name == "foo-bar");
+            Assert.Contains(lambda.Children.Skip(1).First().Children, x => x.GetEx<string>() == "foo-bar");
         }
 
         [Fact]
@@ -71,7 +72,7 @@ scheduler.tasks.create:foo-bar
    .lambda
       .foo
 scheduler.tasks.delete:foo-bar",
-                date.ToString("yyyy-MM-ddTHH\\:mm\\:ss")));
+                date.ToString("yyyy-MM-ddTHH\\:mm\\:ss", CultureInfo.InvariantCulture)));
             // Notice, this will throw if it fails.
         }
 
