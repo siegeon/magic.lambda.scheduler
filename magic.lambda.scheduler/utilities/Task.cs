@@ -15,26 +15,32 @@ namespace magic.lambda.scheduler.utilities
     /*
      * Class encapsulating a single task in the scheduler.
      */
-    public class Task
+    internal class Task
     {
         IServiceProvider _provider;
         Timer _timer;
+
+        // Private CTOR to prevent creation from outside of static CTOR.
+        private Task()
+        { }
 
         /*
          * The actual name of the task, which is the same as its filename, 
          * minus path and extension.
          */
-        public string Name { get; set; }
+        public string Name { get; private set; }
 
         /*
          * Node wrapping actual task.
          */
         public Node Node { get; private set; }
 
+        #region [ -- Private and internal helper methods -- ]
+
         /*
          * Static constructor, that creates and initializes task.
          */
-        public static Task Create(IServiceProvider provider, Node node)
+        internal static Task Create(IServiceProvider provider, Node node)
         {
             // Retrieving name, and sanity checking.
             var name = node.GetEx<string>();
@@ -59,26 +65,21 @@ namespace magic.lambda.scheduler.utilities
              * Notice, if not, it might be that execution date was in the past.
              */
             if (!task.CreateTimer())
-                return null;
+                throw new ArgumentException($"Task's date was in the past, and hence no task could be created.");
 
             // Success, returning task to caller.
             return task;
         }
 
         /*
-         * Stops the specified task's timer.
+         * Static constructor, that creates and initializes task from its serialized version.
+         * 
+         * Notice, this expects a different node structure, since the node structure for serialized
+         * tasks are slightly different the structure for tasks dynamically added using the task add slot.
+         * 
+         * Also, this on does not need to sanity check the names of tasks, etc.
          */
-        public void Stop()
-        {
-            _timer.Stop();
-        }
-
-        #region [ -- Private and internal helper methods -- ]
-
-        /*
-         * Static constructor, that creates and initializes task.
-         */
-        internal static Task CreateEx(IServiceProvider provider, Node node)
+        internal static Task CreateFromSerialized(IServiceProvider provider, Node node)
         {
             // Retrieving name, and sanity checking.
             var task = new Task
@@ -97,17 +98,18 @@ namespace magic.lambda.scheduler.utilities
         bool CreateTimer()
         {
             // Creating timer, and associating it with lambda object's evaluation.
-            var timer = new Timer
-            {
-                Enabled = true,
-            };
-            timer.Elapsed += (sender, e) =>
+            var timer = new Timer();
+            timer.Elapsed += async (sender, e) =>
             {
                 try
                 {
                     var signaler = _provider.GetService(typeof(ISignaler)) as ISignaler;
                     var lambda = Node.Children.FirstOrDefault(x => x.Name == ".lambda").Clone();
-                    signaler.SignalAsync("wait.eval", lambda);
+                    await signaler.SignalAsync("wait.eval", lambda);
+
+                    // Checking if this is a one time task.
+                    if (Node.Children.Any(x => x.Name == "when"))
+                        Common.DeleteTask(Name); // Single invocation task.
                 }
                 catch (Exception)
                 {
@@ -124,8 +126,8 @@ namespace magic.lambda.scheduler.utilities
                     return false;
                 var span = (date - DateTime.Now).TotalMilliseconds;
                 timer.Interval = span;
+                timer.AutoReset = false;
                 _timer = timer;
-                _timer.Start();
             }
             var repeat = Node.Children.FirstOrDefault(x => x.Name == "repeat");
             if (repeat != null)
@@ -153,9 +155,21 @@ namespace magic.lambda.scheduler.utilities
             }
 
             // Starting timer and returning it to caller.
+            if (_timer != null)
+            {
+                _timer.Enabled = true;
+            }
             return _timer != null;
         }
 
+
+        /*
+         * Stops the specified task's timer.
+         */
+        internal void Stop()
+        {
+            _timer.Stop();
+        }
         /*
          * Sanity checks name of task, since it needs to be serialized to disc.
          */
@@ -163,7 +177,7 @@ namespace magic.lambda.scheduler.utilities
         {
             foreach (var idxChar in taskName)
             {
-                if ("abcdefghijklmnopqrstuvwxyz_-1234567890".IndexOf(idxChar) == -1)
+                if ("abcdefghijklmnopqrstuvwxyz_-1234567890.".IndexOf(idxChar) == -1)
                     throw new ArgumentException($"You can only use alphanumeric characters [a-z] and [0-1], in addition to '_' and '-' in task names. Taks {taskName} is not a legal taskname");
             }
         }

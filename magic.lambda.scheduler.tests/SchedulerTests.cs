@@ -44,10 +44,10 @@ scheduler.tasks.get:foo-bar",
             Assert.Null(lambda.Children.Skip(1).First().Children.First().Children.Skip(1).First().Children.First().Value);
         }
 
-        static ManualResetEvent _handle1 = new ManualResetEvent(false);
-        static ManualResetEvent _handle2 = new ManualResetEvent(false);
-        static bool _signaled1 = false;
-        static bool _signaled2 = false;
+        static ManualResetEvent _handle1;
+        static ManualResetEvent _handle2;
+        static bool _signaled1;
+        static bool _signaled2;
 
         [Slot(Name = "foo.bar.timer")]
         public class FooBarHowdy : ISlot
@@ -70,7 +70,7 @@ scheduler.tasks.get:foo-bar",
         {
             _handle1 = new ManualResetEvent(false);
             _signaled1 = false;
-            var date = DateTime.Now.AddSeconds(2);
+            var date = DateTime.Now.AddSeconds(1);
             var lambda = Common.Evaluate(string.Format(@"
 scheduler.tasks.create:foo-bar
    when:date:""{0}""
@@ -78,8 +78,11 @@ scheduler.tasks.create:foo-bar
       foo.bar.timer
 scheduler.tasks.get:foo-bar",
                 date.ToString("yyyy-MM-ddTHH\\:mm\\:ss", CultureInfo.InvariantCulture)));
-            _handle1.WaitOne(5000);
+            _handle1.WaitOne(2000);
             Assert.True(_signaled1);
+
+            // Notice, since this is a single invocation task, it should not exist anymore.
+            Assert.Throws<ArgumentException>(() => Common.Evaluate("scheduler.tasks.get:foo-bar"));
         }
 
         [Fact]
@@ -89,18 +92,29 @@ scheduler.tasks.get:foo-bar",
             _handle2 = new ManualResetEvent(false);
             _signaled1 = false;
             _signaled2 = false;
-            var date = DateTime.Now.AddSeconds(2);
             var lambda = Common.Evaluate(@"
 scheduler.tasks.create:foo-bar
    repeat
-      second:int:2
+      second:int:1
    .lambda
       foo.bar.timer
 scheduler.tasks.get:foo-bar");
-            _handle1.WaitOne(5000);
-            _handle2.WaitOne(5000);
+            _handle1.WaitOne(2000);
+            _handle2.WaitOne(2000);
             Assert.True(_signaled1);
             Assert.True(_signaled2);
+        }
+
+        [Fact]
+        public void Schedule_Throws()
+        {
+            var date = DateTime.Now.AddSeconds(-2);
+            Assert.Throws<ArgumentException>(() => Common.Evaluate(string.Format(@"
+scheduler.tasks.create:foo-bar
+   when:date:""{0}""
+   .lambda
+      .foo",
+                date.ToString("yyyy-MM-ddTHH\\:mm\\:ss", CultureInfo.InvariantCulture))));
         }
 
         [Fact]

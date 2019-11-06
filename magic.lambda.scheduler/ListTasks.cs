@@ -25,13 +25,12 @@ namespace magic.lambda.scheduler
         {
             // Clearing input values.
             input.Clear();
+            input.Value = null; // To be sure ...
 
             // Retrieves all tasks from common helper class.
             var tasks = Common.GetTasks().Select(x => new Node("", x.Name));
 
-            /*
-             * Returning tasks declaration to caller.
-             */
+            // Returning tasks declaration to caller.
             input.AddRange(tasks);
         }
     }
