@@ -3,10 +3,9 @@
  * See the enclosed LICENSE file for details.
  */
 
+using System;
 using magic.node;
-using magic.node.extensions;
 using magic.signals.contracts;
-using magic.lambda.scheduler.utilities;
 
 namespace magic.lambda.scheduler
 {
@@ -23,13 +22,7 @@ namespace magic.lambda.scheduler
         /// <param name="input">Arguments to slot.</param>
         public void Signal(ISignaler signaler, Node input)
         {
-            // Retrieving task name and clearing input values.
-            var taskName = input.GetEx<string>();
-            input.Clear();
-            input.Value = null;
-
-            // Deleting task using ocmmon helper.
-            Common.DeleteTask(taskName);
+            throw new NotImplementedException();
         }
     }
 }

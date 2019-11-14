@@ -3,10 +3,9 @@
  * See the enclosed LICENSE file for details.
  */
 
-using System.Linq;
+using System;
 using magic.node;
 using magic.signals.contracts;
-using magic.lambda.scheduler.utilities;
 
 namespace magic.lambda.scheduler
 {
@@ -23,15 +22,7 @@ namespace magic.lambda.scheduler
         /// <param name="input">Arguments to slot.</param>
         public void Signal(ISignaler signaler, Node input)
         {
-            // Clearing input values.
-            input.Clear();
-            input.Value = null; // To be sure ...
-
-            // Retrieves all tasks from common helper class.
-            var tasks = Common.GetTasks().Select(x => new Node("", x.Name));
-
-            // Returning tasks declaration to caller.
-            input.AddRange(tasks);
+            throw new NotImplementedException();
         }
     }
 }

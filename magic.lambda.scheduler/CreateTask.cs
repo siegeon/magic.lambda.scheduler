@@ -3,9 +3,9 @@
  * See the enclosed LICENSE file for details.
  */
 
+using System;
 using magic.node;
 using magic.signals.contracts;
-using magic.lambda.scheduler.utilities;
 
 namespace magic.lambda.scheduler
 {
@@ -26,12 +26,7 @@ namespace magic.lambda.scheduler
         /// <param name="input">Arguments to slot.</param>
         public void Signal(ISignaler signaler, Node input)
         {
-            // Invokes common helper method.
-            Common.AddTask(input);
-
-            // Clearing arguments.
-            input.Value = null;
-            input.Clear();
+            throw new NotImplementedException();
         }
     }
 }

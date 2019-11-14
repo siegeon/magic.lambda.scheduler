@@ -36,7 +36,6 @@ namespace magic.lambda.scheduler.tests
             var types = new SignalsProvider(InstantiateAllTypes<ISlot>(services));
             services.AddTransient<ISignalsProvider>((svc) => types);
             var provider = services.BuildServiceProvider();
-            utilities.Common.Initialize(provider, Directory.GetCurrentDirectory().Replace("\\", "/").TrimEnd('/') + "/tasks.hl");
             return provider;
         }
 
@@ -44,6 +43,7 @@ namespace magic.lambda.scheduler.tests
         {
             var type = typeof(T);
             var result = AppDomain.CurrentDomain.GetAssemblies()
+                .Where(x => !x.IsDynamic && !x.FullName.StartsWith("Microsoft"))
                 .SelectMany(s => s.GetTypes())
                 .Where(p => type.IsAssignableFrom(p) && !p.IsInterface && !p.IsAbstract);
 

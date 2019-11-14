@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
@@ -7,14 +7,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\magic.node\magic.node.extensions\dev_magic.node.extensions.csproj" />
-    <ProjectReference Include="..\..\magic.signals\magic.signals.contracts\dev_magic.signals.contracts.csproj" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="3.0.0" />
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="Microsoft.Extensions.DependencyInjection.Abstractions">
-      <HintPath>..\..\..\..\Program Files\dotnet\sdk\NuGetFallbackFolder\microsoft.extensions.dependencyinjection.abstractions\2.2.0\lib\netstandard2.0\Microsoft.Extensions.DependencyInjection.Abstractions.dll</HintPath>
-    </Reference>
+    <ProjectReference Include="..\..\magic.node\magic.node.extensions\dev_magic.node.extensions.csproj" />
+    <ProjectReference Include="..\..\magic.signals\magic.signals.contracts\dev_magic.signals.contracts.csproj" />
   </ItemGroup>
 
 </Project>

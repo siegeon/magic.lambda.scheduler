@@ -5,9 +5,7 @@
 
 using System;
 using magic.node;
-using magic.node.extensions;
 using magic.signals.contracts;
-using magic.lambda.scheduler.utilities;
 
 namespace magic.lambda.scheduler
 {
@@ -24,23 +22,7 @@ namespace magic.lambda.scheduler
         /// <param name="input">Arguments to slot.</param>
         public void Signal(ISignaler signaler, Node input)
         {
-            // Retrieving task name and clearing input values.
-            var taskName = input.GetEx<string>();
-            input.Clear();
-            input.Value = null;
-
-            // Retrieves task from common helper class.
-            var task = Common.GetTask(taskName);
-
-            // Sanity checking that task exists.
-            if (task == null)
-                throw new ArgumentException($"Task with the name of {taskName} doesn't exist.");
-
-            /*
-             * Returning task declaration to caller.
-             * Notice, no need to clone. Helper class has already cloned.
-             */
-            input.Add(task);
+            throw new NotImplementedException();
         }
     }
 }
