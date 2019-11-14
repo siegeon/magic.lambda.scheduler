@@ -12,19 +12,34 @@ namespace magic.lambda.scheduler
 {
     public class BackgroundService : IHostedService, IDisposable
     {
-        public void Dispose()
-        {
-            throw new NotImplementedException();
-        }
+        Timer _timer;
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
+            _timer?.Dispose();
+            _timer = new Timer(ExecuteNextTask, null, TimeSpan.Zero, Timeout.InfiniteTimeSpan);
+            return Task.CompletedTask;
         }
 
         public Task StopAsync(CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
+            _timer?.Dispose();
+            _timer = null;
+            return Task.CompletedTask;
         }
+
+        public void Dispose()
+        {
+            _timer?.Dispose();
+        }
+
+        #region [ -- Private helper methods -- ]
+
+        void ExecuteNextTask(object state)
+        {
+
+        }
+
+        #endregion
     }
 }
