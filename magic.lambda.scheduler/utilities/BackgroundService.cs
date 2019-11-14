@@ -13,11 +13,16 @@ namespace magic.lambda.scheduler
     public class BackgroundService : IHostedService, IDisposable
     {
         Timer _timer;
+        string _tasksFile;
+
+        public BackgroundService(string tasksFile)
+        {
+            _tasksFile = tasksFile ?? throw new ArgumentNullException(nameof(tasksFile));
+        }
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
-            _timer?.Dispose();
-            _timer = new Timer(ExecuteNextTask, null, TimeSpan.Zero, Timeout.InfiniteTimeSpan);
+            CreateTimer();
             return Task.CompletedTask;
         }
 
@@ -35,9 +40,19 @@ namespace magic.lambda.scheduler
 
         #region [ -- Private helper methods -- ]
 
+        void CreateTimer()
+        {
+            // TODO: Implement by intelligently ordering scheduled tasks according to which task is up next.
+            _timer?.Dispose();
+            _timer = new Timer(ExecuteNextTask, null, TimeSpan.FromSeconds(5), Timeout.InfiniteTimeSpan);
+        }
+
         void ExecuteNextTask(object state)
         {
+            // TODO: Implement ...
 
+            // Disposing old timer, and creating a new kicking in when next task is due.
+            CreateTimer();
         }
 
         #endregion
