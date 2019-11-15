@@ -35,7 +35,14 @@ namespace magic.lambda.scheduler.tests
             services.AddTransient<ISignaler, Signaler>();
             var types = new SignalsProvider(InstantiateAllTypes<ISlot>(services));
             services.AddTransient<ISignalsProvider>((svc) => types);
+            var tasksFile = AppDomain.CurrentDomain.BaseDirectory + "tasks.hl";
+            if (File.Exists(tasksFile))
+                File.Delete(tasksFile);
+            services.AddSingleton((svc) => new BackgroundService(svc, tasksFile));
             var provider = services.BuildServiceProvider();
+
+            // Ensuring BackgroundService is created.
+            provider.GetService<BackgroundService>();
             return provider;
         }
 

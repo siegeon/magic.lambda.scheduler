@@ -10,9 +10,14 @@ namespace magic.lambda.scheduler.tests
     public class SchedulerTests
     {
         [Fact]
-        public void Init_01()
+        public void CreateWhen_01()
         {
-            var lambda = Common.Evaluate(@"");
+            var lambda = Common.Evaluate(@"
+scheduler.tasks.create
+   when:""2022-12-24T23:55""
+   .lambda
+      .foo
+");
         }
     }
 }
