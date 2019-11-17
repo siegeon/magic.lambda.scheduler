@@ -128,8 +128,8 @@ scheduler.tasks.create:task-02
    .lambda
       .foo
 scheduler.tasks.list",
-                DateTime.Now.AddSeconds(1).ToString("O"),
-                DateTime.Now.AddSeconds(2).ToString("O")));
+                DateTime.Now.AddMinutes(1).ToString("O"),
+                DateTime.Now.AddMinutes(2).ToString("O")));
             Assert.Equal(2, lambda.Children.Skip(2).First().Children.Count());
             Assert.Equal("task-01", lambda.Children.Skip(2).First().Children.First().GetEx<string>());
             Assert.Equal("task-02", lambda.Children.Skip(2).First().Children.Skip(1).First().GetEx<string>());
@@ -148,8 +148,8 @@ scheduler.tasks.create:task-01
    .lambda
       .foo
 scheduler.tasks.list",
-                DateTime.Now.AddSeconds(1).ToString("O"),
-                DateTime.Now.AddSeconds(2).ToString("O")));
+                DateTime.Now.AddMinutes(1).ToString("O"),
+                DateTime.Now.AddMinutes(2).ToString("O")));
             Assert.Equal(2, lambda.Children.Skip(2).First().Children.Count());
             Assert.Equal("task-01", lambda.Children.Skip(2).First().Children.First().GetEx<string>());
             Assert.Equal("task-02", lambda.Children.Skip(2).First().Children.Skip(1).First().GetEx<string>());
@@ -200,6 +200,20 @@ scheduler.tasks.delete:task-01",
                 DateTime.Now.AddSeconds(1).ToString("O")));
             SchedulerSlot03._handle.WaitOne(2000);
             Assert.False(SchedulerSlot03._invoked);
+        }
+
+        [Fact]
+        public void CreateGet_01()
+        {
+            var lambda = Common.Evaluate(string.Format(@"
+scheduler.tasks.create:task-01
+   when:date:""{0}""
+   .lambda
+      .foo
+scheduler.tasks.get:task-01",
+                DateTime.Now.AddHours(1).ToString("O")));
+            Assert.Single(lambda.Children.Skip(1).First().Children);
+            Assert.Equal("task-01", lambda.Children.Skip(1).First().Children.First().Name);
         }
     }
 }

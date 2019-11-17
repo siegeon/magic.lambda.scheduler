@@ -49,6 +49,14 @@ namespace magic.lambda.scheduler.utilities
         }
 
         /*
+         * Returns the task with the given name, if any.
+         */
+        public Task GetTask(string name)
+        {
+            return _tasks.FirstOrDefault(x => x.Name == name);
+        }
+
+        /*
          * Deletes an existing task from the task manager.
          */
         public void DeleteTask(Task task)

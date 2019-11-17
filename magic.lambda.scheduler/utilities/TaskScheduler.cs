@@ -97,6 +97,19 @@ namespace magic.lambda.scheduler.utilities
             EnsureTimer();
         }
 
+        public Node GetTask(string name)
+        {
+            return _tasks.Read(tasks =>
+            {
+                var task = tasks.GetTask(name);
+                if (task == null)
+                    return null;
+                var result = new Node(task.Name);
+                result.AddRange(task._original.Clone().Children.ToList());
+                return result;
+            });
+        }
+
         /// <summary>
         /// Deletes an existing task from your task manager.
         /// </summary>
@@ -118,6 +131,9 @@ namespace magic.lambda.scheduler.utilities
 
         #region [ -- Interface implementations -- ]
 
+        /*
+         * IDisposable implementation.
+         */
         public void Dispose()
         {
             lock (_locker)
@@ -135,6 +151,10 @@ namespace magic.lambda.scheduler.utilities
 
         #region [ -- Private helper methods -- ]
 
+        /*
+         * Creates the timer such that it is invoked when the due date for the
+         * next upcoming task is due.
+         */
         void EnsureTimer()
         {
             /*
@@ -211,7 +231,10 @@ namespace magic.lambda.scheduler.utilities
             });
         }
 
-        async void ExecuteNextTask(object state)
+        /*
+         * Executes the next upcoming tasks, if any.
+         */
+        void ExecuteNextTask(object state)
         {
             /*
              * Verifying that scheduler has not been explicitly stopped.
@@ -290,7 +313,7 @@ namespace magic.lambda.scheduler.utilities
                  */
                 var lambda = next.Lambda.Clone();
                 var signaler = _services.GetService(typeof(ISignaler)) as ISignaler;
-                await signaler.SignalAsync("wait.eval", lambda);
+                signaler.SignalAsync("wait.eval", lambda).Wait();
             }
             catch(Exception err)
             {
