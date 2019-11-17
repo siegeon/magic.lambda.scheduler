@@ -98,6 +98,15 @@ namespace magic.lambda.scheduler.utilities
         }
 
         /// <summary>
+        /// Deletes an existing task from your task manager.
+        /// </summary>
+        /// <param name="name">Name of task to delete.</param>
+        public void DeleteTask(string name)
+        {
+            _tasks.Write(tasks => tasks.DeleteTask(name));
+        }
+
+        /// <summary>
         /// Lists all tasks in task manager, in order of evaluation, such that
         /// the first task in queue will be the first task returned.
         /// </summary>

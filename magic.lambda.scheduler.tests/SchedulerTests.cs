@@ -174,5 +174,32 @@ scheduler.tasks.create:task-01
             Assert.Equal("task-01", lambda.Children.First().Children.First().GetEx<string>());
             Assert.Equal("task-02", lambda.Children.First().Children.Skip(1).First().GetEx<string>());
         }
+
+        [Slot(Name = "foo.task.scheduler-03")]
+        public class SchedulerSlot03 : ISlot
+        {
+            internal static bool _invoked;
+            internal static ManualResetEvent _handle = new ManualResetEvent(false);
+
+            public void Signal(ISignaler signaler, Node input)
+            {
+                _invoked = true;
+                _handle.Set();
+            }
+        }
+
+        [Fact]
+        public void CreateDeleteBeforeExecution_01()
+        {
+            Common.Evaluate(string.Format(@"
+scheduler.tasks.create:task-01
+   when:date:""{0}""
+   .lambda
+      foo.task.scheduler-03
+scheduler.tasks.delete:task-01",
+                DateTime.Now.AddSeconds(1).ToString("O")));
+            SchedulerSlot03._handle.WaitOne(2000);
+            Assert.False(SchedulerSlot03._invoked);
+        }
     }
 }
