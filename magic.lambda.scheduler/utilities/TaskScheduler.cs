@@ -86,6 +86,12 @@ namespace magic.lambda.scheduler.utilities
                 tasks.AddTask(node);
                 tasks.Save();
             });
+
+            /*
+             * Need to "retouch" our timer in case task is our first due
+             * task in our list of tasks.
+             */
+            EnsureTimer();
         }
 
         #region [ -- Interface implementations -- ]

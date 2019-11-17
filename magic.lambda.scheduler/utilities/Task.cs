@@ -22,7 +22,7 @@ namespace magic.lambda.scheduler.utilities
             Lambda = taskNode.Children
                 .FirstOrDefault(x => x.Name == ".lambda")?.Clone() ??
                 throw new ApplicationException($"No [.lambda] found in task named {Name}");
-            CalculateDue();
+            CalculateDue(true);
         }
 
         public string Name { get; private set; }
@@ -33,10 +33,10 @@ namespace magic.lambda.scheduler.utilities
 
         public bool Repeats { get; private set; }
 
-        public void CalculateDue()
+        public void CalculateDue(bool first = false)
         {
             // Checking if task repeats, and if not, returning false to caller.
-            if (!Repeats)
+            if (!first && !Repeats)
                 return;
 
             // Figuring out patter, if it's a single task evaluated once, or a repeating pattern.

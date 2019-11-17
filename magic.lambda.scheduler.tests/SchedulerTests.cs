@@ -24,12 +24,12 @@ scheduler.tasks.create
 ");
         }
 
-        static bool _invoked = true;
-        static ManualResetEvent _handle = new ManualResetEvent(false);
-
         [Slot(Name = "foo.task.scheduler-01")]
         public class SchedulerSlot01 : ISlot
         {
+            internal static bool _invoked;
+            internal static ManualResetEvent _handle = new ManualResetEvent(false);
+
             public void Signal(ISignaler signaler, Node input)
             {
                 _invoked = true;
@@ -45,9 +45,9 @@ scheduler.tasks.create
    when:date:""{0}""
    .lambda
       foo.task.scheduler-01
-", DateTime.Now.AddSeconds(10).ToString("O")));
-            _handle.WaitOne(15000);
-            Assert.True(_invoked);
+", DateTime.Now.AddSeconds(2).ToString("O")));
+            SchedulerSlot01._handle.WaitOne(4000);
+            Assert.True(SchedulerSlot01._invoked);
         }
     }
 }
