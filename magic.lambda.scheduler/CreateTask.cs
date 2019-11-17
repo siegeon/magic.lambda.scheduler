@@ -16,15 +16,15 @@ namespace magic.lambda.scheduler
     [Slot(Name = "scheduler.tasks.create")]
     public class CreateTask : ISlot
     {
-        readonly TaskScheduler _backgroundService;
+        readonly TaskScheduler _scheduler;
 
         /// <summary>
         /// Creates a new instance of your slot.
         /// </summary>
-        /// <param name="backgroundService">Which background service to use.</param>
-        public CreateTask(TaskScheduler backgroundService)
+        /// <param name="scheduler">Which background service to use.</param>
+        public CreateTask(TaskScheduler scheduler)
         {
-            _backgroundService = backgroundService ?? throw new ArgumentNullException(nameof(backgroundService));
+            _scheduler = scheduler ?? throw new ArgumentNullException(nameof(scheduler));
         }
 
         /// <summary>
@@ -34,7 +34,7 @@ namespace magic.lambda.scheduler
         /// <param name="input">Arguments to slot.</param>
         public void Signal(ISignaler signaler, Node input)
         {
-            //_backgroundService.Tasks.AddTask(input);
+            _scheduler.AddTask(input);
         }
     }
 }

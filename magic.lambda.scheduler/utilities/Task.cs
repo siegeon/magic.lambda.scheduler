@@ -12,7 +12,7 @@ namespace magic.lambda.scheduler.utilities
 {
     internal class Task : IComparable
     {
-        readonly Node _original;
+        internal readonly Node _original;
 
         public Task(Node taskNode)
         {
@@ -90,7 +90,7 @@ namespace magic.lambda.scheduler.utilities
 
                         var seconds = dueNode.Children.FirstOrDefault(x => x.Name == "value")?
                             .GetEx<long>() ??
-                            throw new ApplicationException($"Syntax error in task named '{Name}', no [value] node found beneath [{dueNode.Name}]"));
+                            throw new ApplicationException($"Syntax error in task named '{Name}', no [value] node found beneath [{dueNode.Name}]");
                         if (seconds < 5)
                             throw new ArgumentException($"You cannot create a task that repeats more often than every 5 seconds. Task name was '{Name}'");
                         Due = DateTime.Now.AddSeconds(seconds);

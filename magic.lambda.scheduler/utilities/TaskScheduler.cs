@@ -5,6 +5,8 @@
 
 using System;
 using System.Threading;
+using magic.node;
+using magic.node.extensions;
 using magic.signals.contracts;
 
 namespace magic.lambda.scheduler.utilities
@@ -17,8 +19,9 @@ namespace magic.lambda.scheduler.utilities
     /// </summary>
     public sealed class TaskScheduler : IDisposable
     {
+        readonly object _locker = new object();
         readonly IServiceProvider _services;
-        readonly Tasks _tasks;
+        readonly Synchronizer<TaskManager> _tasks;
         Timer _timer;
         bool _running;
 
@@ -34,7 +37,7 @@ namespace magic.lambda.scheduler.utilities
         public TaskScheduler(IServiceProvider services, string tasksFile)
         {
             _services = services ?? throw new ArgumentNullException(nameof(services));
-            _tasks = new Tasks(tasksFile ?? throw new ArgumentNullException(nameof(tasksFile)));
+            _tasks = new Synchronizer<TaskManager>(new TaskManager(tasksFile ?? throw new ArgumentNullException(nameof(tasksFile))));
         }
 
         /// <summary>
@@ -43,8 +46,14 @@ namespace magic.lambda.scheduler.utilities
         /// </summary>
         public void Start()
         {
-            _running = true;
-            CreateTimer();
+            lock (_locker)
+            {
+                if (_running)
+                    return; // Already started.
+
+                _running = true;
+                EnsureTimer();
+            }
         }
 
         /// <summary>
@@ -52,84 +61,126 @@ namespace magic.lambda.scheduler.utilities
         /// </summary>
         public void Stop()
         {
-            _running = false;
-            _timer?.Dispose();
-            _timer = null;
+            lock (_locker)
+            {
+                if (!_running)
+                    return; // Already stopped.
+
+                _running = false;
+                _timer?.Dispose();
+                _timer = null;
+            }
+        }
+
+        /// <summary>
+        /// Creates a new task, and or edits an existing.
+        /// </summary>
+        /// <param name="node">Node declaring your task.</param>
+        public void AddTask(Node node)
+        {
+            var taskName = node.GetEx<string>();
+            _tasks.Write(tasks =>
+            {
+                if (tasks.HasTask(taskName))
+                    tasks.Remove(taskName);
+                tasks.AddTask(node);
+                tasks.Save();
+            });
         }
 
         #region [ -- Interface implementations -- ]
 
         public void Dispose()
         {
-            _running = false;
-            _timer?.Dispose();
-            _timer = null; // In case instance is disposed twice.
+            lock (_locker)
+            {
+                if (_timer == null)
+                    return; // Nothing to dispose here.
+
+                _running = false;
+                _timer.Dispose();
+                _timer = null; // In case instance is disposed twice.
+            }
         }
 
         #endregion
 
         #region [ -- Private helper methods -- ]
 
-        void CreateTimer()
+        void EnsureTimer()
         {
             /*
-             * Checking if scheduler has been explicitly stopped.
-             */
-            if (!_running)
-                return; // Scheduler has been explicitly stopped.
-
-            // Disposing old timer.
-            _timer?.Dispose();
-            _timer = null; // To avoid disposing timer twice.
-
-            // Retrieving next task.
-            var next = _tasks.NextTask();
-            if (next == null)
-                return; // No more tasks, hence not creating timer.
-
-            /*
-             * Checking if task is overdue, at which point we evaluate it
-             * immediately.
-             */
-            var now = DateTime.Now;
-
-            /*
-             * Figuring out when to evaluate next task.
+             * Checking if timer actually is running, and if not, returning
+             * early.
              *
-             * Notice, if task is over due, we evaluate it 250 milliseconds from
-             * now, to make sure we evaluate tasks that for some reasons have
-             * been queued up not being able to evaluate for some reasons.
+             * Also disposing old timer if existing, to make sure we get a new
+             * timer kicking in as our next upcoming task is due.
              */
-            var nextDue = next.Due < now ?
-                new TimeSpan(0, 0, 0, 0, 250) :
-                next.Due - now;
+            lock (_locker)
+            {
+                /*
+                 * Checking if scheduler has been explicitly stopped.
+                 */
+                if (!_running)
+                    return; // Scheduler has been explicitly stopped.
 
-            /*
-             * Checking if due date for next task is too high for our timer.
-             * 
-             * Notice, the timeout can be maximum 49 days for a
-             * System.Threading.Timer, hence we must check to see if the due
-             * date is too high for our timer to be successfully created, and
-             * if it is, we simply "recursively" invoke self 45 days from now,
-             * to re-create timer 45 days from now.
-             */
-            if (nextDue.TotalDays > 45)
-            {
-                // Next task due date is too high for our timer.
-                _timer = new Timer(
-                    (state) => CreateTimer(),
-                    null,
-                    new TimeSpan(45, 0, 0, 0),
-                    new TimeSpan(0, 0, 0, 0, -1));
+                // Disposing old timer if there exists one.
+                _timer?.Dispose();
+                _timer = null; // To avoid disposing timer twice.
             }
-            else
+
+            // Calculating next task's due date.
+            _tasks.Read((tasks) =>
             {
-                _timer = new Timer(
-                    ExecuteNextTask,
-                    null,
-                    nextDue,
-                    new TimeSpan(0, 0, 0, 0, -1));
-            }
+                // Retrieving next task.
+                var next = tasks.NextTask();
+                if (next == null)
+                    return; // No more tasks, hence not creating timer.
+
+                /*
+                 * Checking if task is overdue, at which point we evaluate it
+                 * immediately.
+                 */
+                var now = DateTime.Now;
+
+                /*
+                 * Figuring out when to evaluate next task.
+                 *
+                 * Notice, if task is over due, we evaluate it 250 milliseconds from
+                 * now, to make sure we evaluate tasks that for some reasons have
+                 * been queued up not being able to evaluate for some reasons.
+                 */
+                var nextDue = next.Due < now ?
+                    new TimeSpan(0, 0, 0, 0, 250) :
+                    next.Due - now;
+
+                /*
+                 * Checking if due date for next task is too high for our timer.
+                 * 
+                 * Notice, the timeout can be maximum 49 days for a
+                 * System.Threading.Timer, hence we must check to see if the due
+                 * date is too high for our timer to be successfully created, and
+                 * if it is, we simply "recursively" invoke self 45 days from now,
+                 * to re-create timer 45 days from now.
+                 */
+                if (nextDue.TotalDays > 45)
+                {
+                    // Next task due date is too high for our timer.
+                    _timer = new Timer(
+                        (state) => EnsureTimer(),
+                        null,
+                        new TimeSpan(45, 0, 0, 0),
+                        new TimeSpan(0, 0, 0, 0, -1));
+                }
+                else
+                {
+                    _timer = new Timer(
+                        ExecuteNextTask,
+                        null,
+                        nextDue,
+                        new TimeSpan(0, 0, 0, 0, -1));
+                }
+            });
         }
 
         async void ExecuteNextTask(object state)
@@ -137,16 +188,35 @@ namespace magic.lambda.scheduler.utilities
             /*
              * Verifying that scheduler has not been explicitly stopped.
              */
-            if (!_running)
-                return;
+            lock (_locker)
+            {
+                if (!_running)
+                    return;
+            }
 
             /*
              * Verifying that we have an upcoming task, and if
              * not returning early.
              */
-            var next = _tasks.NextTask();
+            var next = _tasks.Read(tasks => tasks.NextTask());
             if (next == null)
-                return;
+                return; // No more tasks in scheduler.
+
+            /*
+             * Verifying this task actually is due, and that the task we had a
+             * timeout for was not removed before it was set to be evaluated.
+             */
+            if (next.Due.AddMilliseconds(-1) > DateTime.Now)
+            {
+                /*
+                 * Top task in list of tasks is not due now, hence we recreate
+                 * our timer, and return early.
+                 *
+                 * Notice, there are no reasons to reorder or manipulate our
+                 * task list, or remove tasks, etc.
+                 */
+                EnsureTimer();
+            }
 
             /*
              * We can never allow for exceptions to propagate out of this
@@ -156,22 +226,36 @@ namespace magic.lambda.scheduler.utilities
             {
                 /*
                  * Making sure we reorder list of tasks before we evaluate task,
-                 * in case of exceptions.
+                 * in case of exceptions, in addition to allowing us to restart
+                 * timer, to have multiple tasks executing consecutively on
+                 * different threads if necessary due to overlapping dues dates.
                  */
                 if (next.Repeats)
                 {
                     /*
                      * Task repeats, making sure we calculate next due date, for
-                     * then to reorder task list.
+                     * then to reorder task list, making sure we synchronize
+                     * access to tasks as we do.
                      */
-                    next.CalculateDue();
-                    _tasks.Sort();
+                    _tasks.Write(tasks =>
+                    {
+                        next.CalculateDue();
+                        tasks.Sort();
+                    });
                 }
                 else
                 {
                     // Task does not repeat.
-                    _tasks.DeleteTask(next);
+                    _tasks.Write(tasks => tasks.DeleteTask(next));
                 }
+
+                /*
+                 * Recreating our timer before we evaluate task, in case
+                 * multiple tasks have overlapping due dates, which will allow
+                 * us to use multiple threads to evaluate multiple tasks
+                 * simultaneously.
+                 */
+                EnsureTimer();
 
                 /*
                  * Retrieving task's lambda object, and evaluating it.
@@ -186,9 +270,6 @@ namespace magic.lambda.scheduler.utilities
                 var logger = _services.GetService(typeof(ILogger)) as ILogger;
                 logger.LogError(next.Name, err);
             }
-
-            // Re-creating our timer.
-            CreateTimer();
         }
 
         #endregion
