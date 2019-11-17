@@ -11,12 +11,26 @@ using Microsoft.Extensions.DependencyInjection;
 using magic.node;
 using magic.signals.services;
 using magic.signals.contracts;
+using magic.lambda.scheduler.utilities;
 using magic.node.extensions.hyperlambda;
 
 namespace magic.lambda.scheduler.tests
 {
     public static class Common
     {
+        public class Logger : ILogger
+        {
+            public void LogError(string taskName, Exception err)
+            {
+                /*
+                 * Our implementation here in its unit tests simply rethrows
+                 * any exceptions, to make them propagate, and raise an error
+                 * for our unit tests.
+                 */
+                throw err;
+            }
+        }
+
         static public Node Evaluate(string hl)
         {
             var services = Initialize();
@@ -35,14 +49,16 @@ namespace magic.lambda.scheduler.tests
             services.AddTransient<ISignaler, Signaler>();
             var types = new SignalsProvider(InstantiateAllTypes<ISlot>(services));
             services.AddTransient<ISignalsProvider>((svc) => types);
+            services.AddTransient<ILogger, Logger>();
             var tasksFile = AppDomain.CurrentDomain.BaseDirectory + "tasks.hl";
             if (File.Exists(tasksFile))
                 File.Delete(tasksFile);
-            services.AddSingleton((svc) => new BackgroundService(svc, tasksFile));
+            services.AddSingleton((svc) => new TaskScheduler(svc, tasksFile));
             var provider = services.BuildServiceProvider();
 
-            // Ensuring BackgroundService is created.
-            provider.GetService<BackgroundService>();
+            // Ensuring BackgroundService is created and started.
+            var backgroundServices = provider.GetService<TaskScheduler>();
+            backgroundServices.Start();
             return provider;
         }
 
@@ -50,7 +66,7 @@ namespace magic.lambda.scheduler.tests
         {
             var type = typeof(T);
             var result = AppDomain.CurrentDomain.GetAssemblies()
-                .Where(x => !x.IsDynamic && !x.FullName.StartsWith("Microsoft"))
+                .Where(x => !x.IsDynamic && !x.FullName.StartsWith("Microsoft", StringComparison.InvariantCulture))
                 .SelectMany(s => s.GetTypes())
                 .Where(p => type.IsAssignableFrom(p) && !p.IsInterface && !p.IsAbstract);
 

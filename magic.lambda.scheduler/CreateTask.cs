@@ -6,6 +6,7 @@
 using System;
 using magic.node;
 using magic.signals.contracts;
+using magic.lambda.scheduler.utilities;
 
 namespace magic.lambda.scheduler
 {
@@ -15,6 +16,17 @@ namespace magic.lambda.scheduler
     [Slot(Name = "scheduler.tasks.create")]
     public class CreateTask : ISlot
     {
+        readonly TaskScheduler _backgroundService;
+
+        /// <summary>
+        /// Creates a new instance of your slot.
+        /// </summary>
+        /// <param name="backgroundService">Which background service to use.</param>
+        public CreateTask(TaskScheduler backgroundService)
+        {
+            _backgroundService = backgroundService ?? throw new ArgumentNullException(nameof(backgroundService));
+        }
+
         /// <summary>
         /// Slot implementation.
         /// </summary>
@@ -22,7 +34,7 @@ namespace magic.lambda.scheduler
         /// <param name="input">Arguments to slot.</param>
         public void Signal(ISignaler signaler, Node input)
         {
-            BackgroundService.Tasks.AddTask(input);
+            //_backgroundService.Tasks.AddTask(input);
         }
     }
 }

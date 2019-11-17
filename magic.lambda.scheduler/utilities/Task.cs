@@ -10,7 +10,7 @@ using magic.node.extensions;
 
 namespace magic.lambda.scheduler.utilities
 {
-    public class Task : IComparable
+    internal class Task : IComparable
     {
         readonly Node _original;
 
@@ -33,27 +33,12 @@ namespace magic.lambda.scheduler.utilities
 
         public bool Repeats { get; private set; }
 
-        public bool CalculateNextDueDate()
+        public void CalculateDue()
         {
             // Checking if task repeats, and if not, returning false to caller.
             if (!Repeats)
-                return false;
+                return;
 
-            CalculateDue();
-            return true;
-        }
-
-        public int CompareTo(object obj)
-        {
-            if (obj is Task rhs)
-                return Due.CompareTo(rhs);
-            throw new ArgumentException($"You tried to compare a Task to an object of type {obj?.GetType().Name ?? "???"}");
-        }
-
-        #region [ -- Private helper methods -- ]
-
-        void CalculateDue()
-        {
             // Figuring out patter, if it's a single task evaluated once, or a repeating pattern.
             var due = _original.Children.Where(x => x.Name == "when" || x.Name == "repeat");
             if (due.Count() != 1)
@@ -80,6 +65,7 @@ namespace magic.lambda.scheduler.utilities
                     case "Thursday":
                     case "Friday":
                     case "Saturday":
+
                         {
                             var timeEntities = dueNode.Children
                                 .FirstOrDefault(x => x.Name == "time")?
@@ -97,26 +83,37 @@ namespace magic.lambda.scheduler.utilities
                                 weekday = (DayOfWeek)(((int)weekday + 1) % 7);
                             }
                             Due = when;
-                        } break;
-                    case "seconds":
-                        Due = DateTime.Now.AddSeconds(dueNode.Children
-                            .FirstOrDefault(x => x.Name == "value")?
-                            .GetEx<long>() ?? 
-                            throw new ApplicationException($"Syntax error in task named '{Name}', no [value] node found beneath [{dueNode.Name}]"));
+                        }
                         break;
+
+                    case "seconds":
+
+                        var seconds = dueNode.Children.FirstOrDefault(x => x.Name == "value")?
+                            .GetEx<long>() ??
+                            throw new ApplicationException($"Syntax error in task named '{Name}', no [value] node found beneath [{dueNode.Name}]"));
+                        if (seconds < 5)
+                            throw new ArgumentException($"You cannot create a task that repeats more often than every 5 seconds. Task name was '{Name}'");
+                        Due = DateTime.Now.AddSeconds(seconds);
+                        break;
+
                     case "minutes":
+
                         Due = DateTime.Now.AddMinutes(dueNode.Children
                             .FirstOrDefault(x => x.Name == "value")?
                             .GetEx<long>() ??
                             throw new ApplicationException($"Syntax error in task named '{Name}', no [value] node found beneath [{dueNode.Name}]"));
                         break;
+
                     case "hours":
+
                         Due = DateTime.Now.AddHours(dueNode.Children
                             .FirstOrDefault(x => x.Name == "value")?
                             .GetEx<long>() ??
                             throw new ApplicationException($"Syntax error in task named '{Name}', no [value] node found beneath [{dueNode.Name}]"));
                         break;
+
                     case "last-day-of-month":
+
                         {
                             var timeEntities = dueNode.Children
                                 .FirstOrDefault(x => x.Name == "time")?
@@ -132,8 +129,11 @@ namespace magic.lambda.scheduler.utilities
                                 int.Parse(timeEntities[1]),
                                 0,
                                 DateTimeKind.Utc);
-                        } break;
+                        }
+                        break;
+
                     default:
+
                         {
                             var dayOfMonth = int.Parse(repeat);
                             if (dayOfMonth > 28 || dayOfMonth < 1)
@@ -151,11 +151,17 @@ namespace magic.lambda.scheduler.utilities
                                 Due = nextDate.AddMonths(1);
                             else
                                 Due = nextDate;
-                        } break;
+                        }
+                        break;
                 }
             }
         }
 
-        #endregion
+        public int CompareTo(object obj)
+        {
+            if (obj is Task rhs)
+                return Due.CompareTo(rhs);
+            throw new ArgumentException($"You tried to compare a Task to an object of type {obj?.GetType().Name ?? "???"}");
+        }
     }
 }

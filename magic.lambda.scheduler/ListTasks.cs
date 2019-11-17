@@ -6,6 +6,7 @@
 using System;
 using magic.node;
 using magic.signals.contracts;
+using magic.lambda.scheduler.utilities;
 
 namespace magic.lambda.scheduler
 {
@@ -15,6 +16,17 @@ namespace magic.lambda.scheduler
     [Slot(Name = "scheduler.tasks.list")]
     public class ListTasks : ISlot
     {
+        readonly TaskScheduler _backgroundService;
+
+        /// <summary>
+        /// Creates a new instance of your slot.
+        /// </summary>
+        /// <param name="backgroundService">Which background service to use.</param>
+        public ListTasks(TaskScheduler backgroundService)
+        {
+            _backgroundService = backgroundService ?? throw new ArgumentNullException(nameof(backgroundService));
+        }
+
         /// <summary>
         /// Slot implementation.
         /// </summary>

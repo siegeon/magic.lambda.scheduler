@@ -7,96 +7,71 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Collections.Generic;
-using sys = System.Threading.Tasks;
 using magic.node;
-using magic.signals.contracts;
 using magic.node.extensions.hyperlambda;
 
 namespace magic.lambda.scheduler.utilities
 {
-    public class Tasks
+    /*
+     * Internal class to keep track of upcoming tasks, and sort them according
+     * to their due dates.
+     *
+     * Also responsible for loading and saving tasks to disc, etc.
+     */
+    internal class Tasks
     {
+        // Making sure we have synchronized access to our task list.
         readonly Synchronizer<List<Task>> _tasks = new Synchronizer<List<Task>>(new List<Task>());
-        readonly Synchronizer<string> _tasksFile;
-        readonly IServiceProvider _services;
 
-        public Tasks(IServiceProvider services, string tasksFile)
+        // Making sure we have synchronized access to our tasks file.
+        readonly string _tasksFile;
+
+        public Tasks(string tasksFile)
         {
-            _services = services ?? throw new ArgumentNullException(nameof(services));
-            _tasksFile = new Synchronizer<string>(tasksFile ?? throw new ArgumentNullException(nameof(tasksFile)));
+            _tasksFile = tasksFile ?? throw new ArgumentNullException(nameof(tasksFile));
             ReadTasksFile();
         }
 
         public void AddTask(Node node)
         {
             var task = new Task(node);
-            _tasks.Write(tasks => tasks.Add(task));
-        }
-
-        public TimeSpan NextTaskDue()
-        {
-            return _tasks.Read(tasks =>
+            _tasks.Write((tasks) =>
             {
-                // If no tasks exists, we return max value to caller.
-                if (tasks.Count() == 0)
-                    return TimeSpan.MaxValue;
-
-                // Finding first task and its due DateTime.
-                var task = tasks.First();
-                var taskTime = task.Due;
-
-                // checking if task is in the past, at which point we return min value for TimeSpan.
-                var now = DateTime.Now;
-                if (now > taskTime)
-                    return TimeSpan.MinValue;
-
-                // Returning the timespan for when next task should be evaluated.
-                return taskTime - now;
+                tasks.Add(task);
+                tasks.Sort();
             });
         }
 
-        public bool ExecuteNextTask()
+        public void DeleteTask(Task task)
         {
-            var current = _tasks.Read(tasks => tasks.FirstOrDefault());
-            if (current == null)
-                return false; // No more current tasks.
+            _tasks.Write(tasks => tasks.Remove(task));
+        }
 
-            var signaler = _services.GetService(typeof(ISignaler)) as ISignaler;
-            try
-            {
-                var lambda = current.Lambda.Clone();
-                sys.Task.Factory.StartNew(async () => await signaler.SignalAsync("wait.eval", lambda));
-            }
-            catch (Exception err)
-            {
-                // We can NEVER let exceptions penetrate beyond here!
-                // TODO: Logging.
-            }
-            finally
-            {
-                if (current.CalculateNextDueDate())
-                    _tasks.Write(tasks => tasks.Sort());
-                else
-                    _tasks.Write(tasks => tasks.Remove(current));
-            }
-            return true;
+        public Task NextTask()
+        {
+            return _tasks.Read(tasks => tasks.FirstOrDefault());
+        }
+
+        public void Sort()
+        {
+            _tasks.Write(tasks => tasks.Sort());
         }
 
         #region [ -- Private helper methods -- ]
 
+        /*
+         * Loads tasks file from disc.
+         */
         void ReadTasksFile()
         {
-            var lambda = _tasksFile.Read(path =>
+            var lambda = new Node();
+            if (File.Exists(_tasksFile))
             {
-                if (File.Exists(path))
+                using (var stream = File.OpenRead(_tasksFile))
                 {
-                    using (var stream = File.OpenRead(path))
-                    {
-                        return new Parser(stream).Lambda();
-                    }
+                    lambda = new Parser(stream).Lambda();
                 }
-                return new Node();
-            });
+            }
             _tasks.Write(tasks =>
             {
                 foreach (var idx in lambda.Children)
@@ -104,6 +79,21 @@ namespace magic.lambda.scheduler.utilities
                     tasks.Add(new Task(idx));
                 }
                 tasks.Sort();
+            });
+        }
+
+        /*
+         * Saves tasks file to disc.
+         */
+        void SaveTasksFile()
+        {
+            _tasks.Write(tasks =>
+            {
+                var hyper = Generator.GetHyper(tasks.Select(x => x._original));
+                using (var stream = File.CreateText(_tasksFile))
+                {
+                    stream.Write(hyper);
+                }
             });
         }
 
