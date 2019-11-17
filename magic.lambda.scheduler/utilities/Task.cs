@@ -16,18 +16,17 @@ namespace magic.lambda.scheduler.utilities
 
         public Task(Node taskNode)
         {
-            // Necessary to calculate *next* evaluation time.
+            if (!taskNode.Children.Any(x => x.Name == ".lambda"))
+                throw new ArgumentException($"No [.lambda] supplied to task named {taskNode.GetEx<string>()}");
+
             _original = taskNode.Clone();
             Name = taskNode.Name;
-            Lambda = taskNode.Children
-                .FirstOrDefault(x => x.Name == ".lambda")?.Clone() ??
-                throw new ApplicationException($"No [.lambda] found in task named {Name}");
             CalculateDue(true);
         }
 
         public string Name { get; private set; }
 
-        public Node Lambda { get; private set; }
+        public Node Lambda => _original.Children.First(x => x.Name == ".lambda");
 
         public DateTime Due { get; private set; }
 
@@ -42,7 +41,7 @@ namespace magic.lambda.scheduler.utilities
             // Figuring out patter, if it's a single task evaluated once, or a repeating pattern.
             var due = _original.Children.Where(x => x.Name == "when" || x.Name == "repeat");
             if (due.Count() != 1)
-                throw new ApplicationException($"All tasks must have either a [when] or an [repeat] argument, and exactly one, not both");
+                throw new ArgumentException($"All tasks must have either a [when] or an [repeat] argument, and exactly one, not both");
 
             var dueNode = due.First();
             if (dueNode.Name == "when")
@@ -83,34 +82,40 @@ namespace magic.lambda.scheduler.utilities
                                 weekday = (DayOfWeek)(((int)weekday + 1) % 7);
                             }
                             Due = when;
-                        }
-                        break;
+                        } break;
 
                     case "seconds":
 
-                        var seconds = dueNode.Children.FirstOrDefault(x => x.Name == "value")?
-                            .GetEx<long>() ??
-                            throw new ApplicationException($"Syntax error in task named '{Name}', no [value] node found beneath [{dueNode.Name}]");
-                        if (seconds < 5)
-                            throw new ArgumentException($"You cannot create a task that repeats more often than every 5 seconds. Task name was '{Name}'");
-                        Due = DateTime.Now.AddSeconds(seconds);
-                        break;
+                        {
+                            var seconds = dueNode.Children.FirstOrDefault(x => x.Name == "value")?
+                                .GetEx<long>() ??
+                                throw new ApplicationException($"Syntax error in task named '{Name}', no [value] node found beneath [{dueNode.Name}]");
+                            if (seconds < 5)
+                                throw new ArgumentException($"You cannot create a task that repeats more often than every 5 seconds. Task name was '{Name}'");
+                            Due = DateTime.Now.AddSeconds(seconds);
+                        } break;
 
                     case "minutes":
 
-                        Due = DateTime.Now.AddMinutes(dueNode.Children
-                            .FirstOrDefault(x => x.Name == "value")?
-                            .GetEx<long>() ??
-                            throw new ApplicationException($"Syntax error in task named '{Name}', no [value] node found beneath [{dueNode.Name}]"));
-                        break;
+                        {
+                            var minutes = dueNode.Children.FirstOrDefault(x => x.Name == "value")?
+                                .GetEx<long>() ??
+                                throw new ApplicationException($"Syntax error in task named '{Name}', no [value] node found beneath [{dueNode.Name}]");
+                            if (minutes < 1)
+                                throw new ArgumentException($"Minutes for task named '{Name}' must be a positive integer");
+                            Due = DateTime.Now.AddMinutes(minutes);
+                        } break;
 
                     case "hours":
 
-                        Due = DateTime.Now.AddHours(dueNode.Children
-                            .FirstOrDefault(x => x.Name == "value")?
-                            .GetEx<long>() ??
-                            throw new ApplicationException($"Syntax error in task named '{Name}', no [value] node found beneath [{dueNode.Name}]"));
-                        break;
+                        {
+                            var hours = dueNode.Children.FirstOrDefault(x => x.Name == "value")?
+                                .GetEx<long>() ??
+                                throw new ApplicationException($"Syntax error in task named '{Name}', no [value] node found beneath [{dueNode.Name}]");
+                            if (hours < 1)
+                                throw new ArgumentException($"Hours for task named '{Name}' must be a positive integer");
+                            Due = DateTime.Now.AddHours(hours);
+                        } break;
 
                     case "last-day-of-month":
 
@@ -129,8 +134,7 @@ namespace magic.lambda.scheduler.utilities
                                 int.Parse(timeEntities[1]),
                                 0,
                                 DateTimeKind.Utc);
-                        }
-                        break;
+                        } break;
 
                     default:
 
@@ -151,8 +155,7 @@ namespace magic.lambda.scheduler.utilities
                                 Due = nextDate.AddMonths(1);
                             else
                                 Due = nextDate;
-                        }
-                        break;
+                        } break;
                 }
             }
         }

@@ -49,5 +49,58 @@ scheduler.tasks.create
             SchedulerSlot01._handle.WaitOne(4000);
             Assert.True(SchedulerSlot01._invoked);
         }
+
+        [Fact]
+        public void CreateWhen_03_NoLambda_Throws()
+        {
+            Assert.Throws<ArgumentException>(() => Common.Evaluate(@"
+scheduler.tasks.create
+   when:""2022-12-24T23:55"""));
+        }
+
+        [Fact]
+        public void CreateWhen_04_NoDue_Throws()
+        {
+            Assert.Throws<ArgumentException>(() => Common.Evaluate(@"
+scheduler.tasks.create
+   .lambda
+      .foo"));
+        }
+
+        [Fact]
+        public void CreateWhen_05_BothWhenRepeat_Throws()
+        {
+            Assert.Throws<ArgumentException>(() => Common.Evaluate(@"
+scheduler.tasks.create
+   when:""2022-12-24T23:55""
+   repeat:Monday
+      time:""22:00"""));
+        }
+
+        [Slot(Name = "foo.task.scheduler-02")]
+        public class SchedulerSlot02 : ISlot
+        {
+            internal static int _invoked = 0;
+            internal static ManualResetEvent _handle = new ManualResetEvent(false);
+
+            public void Signal(ISignaler signaler, Node input)
+            {
+                if (++_invoked == 2)
+                    _handle.Set();
+            }
+        }
+
+        [Fact]
+        public void CreateRepeat_05()
+        {
+            Common.Evaluate(@"
+scheduler.tasks.create
+   repeat:seconds
+      value:5
+   .lambda
+      foo.task.scheduler-02");
+            SchedulerSlot02._handle.WaitOne(12000);
+            Assert.Equal(2, SchedulerSlot02._invoked);
+        }
     }
 }
