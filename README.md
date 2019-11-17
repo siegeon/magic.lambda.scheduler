@@ -9,6 +9,8 @@ Provides the ability to create scheduled tasks for [Magic](https://github.com/po
 * [scheduler.tasks.get] - Returns an existing scheduled task according to its name
 * [scheduler.tasks.list] - Lists all scheduled tasks
 * [scheduler.tasks.delete] - Deletes a named scheduled task
+* [scheduler.start] - Starts the scheduler
+* [scheduler.stop] - Stops the scheduler, implying all tasks will temporary be paused
 
 When creating a task, you can create a task that only executes once. This is done as follows for instance.
 
