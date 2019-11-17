@@ -20,7 +20,7 @@ namespace magic.lambda.scheduler.utilities
                 throw new ArgumentException($"No [.lambda] supplied to task named {taskNode.GetEx<string>()}");
 
             _original = taskNode.Clone();
-            Name = taskNode.Name;
+            Name = taskNode.GetEx<string>() ?? throw new ArgumentException("No name given to task");
             CalculateDue(true);
         }
 
@@ -163,7 +163,7 @@ namespace magic.lambda.scheduler.utilities
         public int CompareTo(object obj)
         {
             if (obj is Task rhs)
-                return Due.CompareTo(rhs);
+                return Due.CompareTo(rhs.Due);
             throw new ArgumentException($"You tried to compare a Task to an object of type {obj?.GetType().Name ?? "???"}");
         }
     }

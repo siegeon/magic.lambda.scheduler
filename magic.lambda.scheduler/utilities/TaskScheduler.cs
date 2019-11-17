@@ -4,7 +4,9 @@
  */
 
 using System;
+using System.Linq;
 using System.Threading;
+using System.Collections.Generic;
 using magic.node;
 using magic.node.extensions;
 using magic.signals.contracts;
@@ -81,10 +83,11 @@ namespace magic.lambda.scheduler.utilities
             var taskName = node.GetEx<string>();
             _tasks.Write(tasks =>
             {
-                if (tasks.HasTask(taskName))
-                    tasks.Remove(taskName);
+                /*
+                 *  Removing any other tasks with the same name before
+                 *  proceeding with add.
+                 */
                 tasks.AddTask(node);
-                tasks.Save();
             });
 
             /*
@@ -92,6 +95,16 @@ namespace magic.lambda.scheduler.utilities
              * task in our list of tasks.
              */
             EnsureTimer();
+        }
+
+        /// <summary>
+        /// Lists all tasks in task manager, in order of evaluation, such that
+        /// the first task in queue will be the first task returned.
+        /// </summary>
+        /// <returns>All tasks listed in chronological order of evaluation.</returns>
+        public IEnumerable<string> ListTasks()
+        {
+            return _tasks.Read(tasks => tasks.List().Select(x => x.Name).ToList());
         }
 
         #region [ -- Interface implementations -- ]

@@ -4,6 +4,7 @@
  */
 
 using System;
+using System.Linq;
 using magic.node;
 using magic.signals.contracts;
 using magic.lambda.scheduler.utilities;
@@ -34,7 +35,7 @@ namespace magic.lambda.scheduler
         /// <param name="input">Arguments to slot.</param>
         public void Signal(ISignaler signaler, Node input)
         {
-            throw new NotImplementedException();
+            input.AddRange(_scheduler.ListTasks().Select(x => new Node("", x)));
         }
     }
 }

@@ -37,19 +37,12 @@ namespace magic.lambda.scheduler.utilities
         }
 
         /*
-         * Returns true if the specified task exists in task manager.
-         */
-        public bool HasTask(string taskName)
-        {
-            return _tasks.Any(x => x.Name == taskName);
-        }
-
-        /*
          * Adds a new task to the task manager.
          */
         public void AddTask(Node node)
         {
             var task = new Task(node);
+            _tasks.RemoveAll(x => x.Name == task.Name);
             _tasks.Add(task);
             _tasks.Sort();
             SaveTasksFile();
@@ -65,19 +58,19 @@ namespace magic.lambda.scheduler.utilities
         }
 
         /*
-         * Only removes task, without saving task file.
-         */
-        public void Remove(string taskName)
-        {
-            _tasks.RemoveAll(task => task.Name == taskName);
-        }
-
-        /*
          * Returns the next upcoming task from the task manager.
          */
         public Task NextTask()
         {
             return _tasks.FirstOrDefault();
+        }
+
+        /*
+         * Returns ann tasks to caller.
+         */
+        public IEnumerable<Task> List()
+        {
+            return _tasks;
         }
 
         /*
