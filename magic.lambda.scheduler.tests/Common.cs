@@ -31,9 +31,9 @@ namespace magic.lambda.scheduler.tests
             }
         }
 
-        static public Node Evaluate(string hl)
+        static public Node Evaluate(string hl, bool deleteTasksFile = true)
         {
-            var services = Initialize();
+            var services = Initialize(deleteTasksFile);
             var lambda = new Parser(hl).Lambda();
             var signaler = services.GetService(typeof(ISignaler)) as ISignaler;
             signaler.Signal("eval", lambda);
@@ -42,16 +42,15 @@ namespace magic.lambda.scheduler.tests
 
         #region [ -- Private helper methods -- ]
 
-        static IServiceProvider Initialize()
+        static IServiceProvider Initialize(bool deleteTasksFile)
         {
-            File.Delete(Directory.GetCurrentDirectory().Replace("\\", "/").TrimEnd('/') + "/tasks.hl");
             var services = new ServiceCollection();
             services.AddTransient<ISignaler, Signaler>();
             var types = new SignalsProvider(InstantiateAllTypes<ISlot>(services));
             services.AddTransient<ISignalsProvider>((svc) => types);
             services.AddTransient<ILogger, Logger>();
             var tasksFile = AppDomain.CurrentDomain.BaseDirectory + "tasks.hl";
-            if (File.Exists(tasksFile))
+            if (deleteTasksFile && File.Exists(tasksFile))
                 File.Delete(tasksFile);
             services.AddSingleton((svc) => new TaskScheduler(svc, tasksFile));
             var provider = services.BuildServiceProvider();
