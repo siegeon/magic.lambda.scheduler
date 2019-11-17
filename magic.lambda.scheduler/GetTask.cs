@@ -38,7 +38,7 @@ namespace magic.lambda.scheduler
             var name = input.GetEx<string>();
             input.Value = null;
             input.Clear();
-            input.Add(_scheduler.GetTask(name));
+            input.Add(_scheduler.GetTask(name) ?? throw new ArgumentException($"Task with name of '{name}' was not found"));
         }
     }
 }

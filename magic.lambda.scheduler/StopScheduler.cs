@@ -13,7 +13,7 @@ namespace magic.lambda.scheduler
     /// <summary>
     /// [scheduler.stop] slot that will stop the task scheduler.
     /// </summary>
-    [Slot(Name = "scheduler.start")]
+    [Slot(Name = "scheduler.stop")]
     public class StopScheduler : ISlot
     {
         readonly TaskScheduler _scheduler;

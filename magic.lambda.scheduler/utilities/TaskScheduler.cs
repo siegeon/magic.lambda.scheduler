@@ -92,11 +92,18 @@ namespace magic.lambda.scheduler.utilities
 
             /*
              * Need to "retouch" our timer in case task is our first due
-             * task in our list of tasks.
+             * task in our list of tasks, but only if scheduler is actually
+             * running, and has not been stopped for some reasons.
              */
-            EnsureTimer();
+            if (_running)
+                EnsureTimer();
         }
 
+        /// <summary>
+        /// Returns a previously created task to caller.
+        /// </summary>
+        /// <param name="name">Name of task you wish to retrieve.</param>
+        /// <returns></returns>
         public Node GetTask(string name)
         {
             return _tasks.Read(tasks =>
