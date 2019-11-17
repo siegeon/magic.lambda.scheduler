@@ -59,15 +59,6 @@ namespace magic.lambda.scheduler.utilities
         /*
          * Deletes an existing task from the task manager.
          */
-        public void DeleteTask(Task task)
-        {
-            _tasks.Remove(task);
-            SaveTasksFile();
-        }
-
-        /*
-         * Deletes an existing task from the task manager.
-         */
         public void DeleteTask(string taskName)
         {
             _tasks.RemoveAll(x => x.Name == taskName);
