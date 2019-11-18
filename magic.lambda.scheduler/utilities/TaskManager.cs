@@ -49,14 +49,6 @@ namespace magic.lambda.scheduler.utilities
         }
 
         /*
-         * Returns the task with the given name, if any.
-         */
-        public Task GetTask(string name)
-        {
-            return _tasks.FirstOrDefault(x => x.Name == name);
-        }
-
-        /*
          * Deletes an existing task from the task manager.
          */
         public void DeleteTask(string taskName)
@@ -66,15 +58,23 @@ namespace magic.lambda.scheduler.utilities
         }
 
         /*
+         * Returns the task with the given name, if any.
+         */
+        public Task GetTask(string name)
+        {
+            return _tasks.FirstOrDefault(x => x.Name == name);
+        }
+
+        /*
          * Returns the next upcoming task from the task manager.
          */
-        public Task NextTask()
+        public Task NextDueTask()
         {
             return _tasks.FirstOrDefault();
         }
 
         /*
-         * Returns ann tasks to caller.
+         * Returns all tasks to caller.
          */
         public IEnumerable<Task> List()
         {
@@ -125,7 +125,7 @@ namespace magic.lambda.scheduler.utilities
          */
         void SaveTasksFile()
         {
-            var hyper = Generator.GetHyper(_tasks.Select(x => x._original));
+            var hyper = Generator.GetHyper(_tasks.Select(x => x.RootNode));
             using (var stream = File.CreateText(_tasksFile))
             {
                 stream.Write(hyper);

@@ -3,14 +3,14 @@
 
 [![Build status](https://travis-ci.org/polterguy/magic.lambda.scheduler.svg?master)](https://travis-ci.org/polterguy/magic.lambda.scheduler)
 
-Provides the ability to create scheduled tasks for [Magic](https://github.com/polterguy.magic). More specifically provides the following signals.
+Provides the ability to create scheduled tasks for [Magic](https://github.com/polterguy.magic). More specifically provides the following slots.
 
-* [scheduler.tasks.create] - Creates a new scheduled task
-* [scheduler.tasks.get] - Returns an existing scheduled task according to its name
-* [scheduler.tasks.list] - Lists all scheduled tasks
-* [scheduler.tasks.delete] - Deletes a named scheduled task
-* [scheduler.start] - Starts the scheduler
-* [scheduler.stop] - Stops the scheduler, implying all tasks will temporary be paused
+* __[scheduler.tasks.create]__ - Creates a new scheduled task.
+* __[scheduler.tasks.get]__ - Returns an existing scheduled task according to its name.
+* __[scheduler.tasks.list]__ - Lists all scheduled tasks.
+* __[scheduler.tasks.delete]__ - Deletes a named scheduled task.
+* __[scheduler.stop]__ - Stops the scheduler, implying all tasks will temporary be paused.
+* __[scheduler.start]__ - Starts the scheduler. Notice, depending upon your configuration, this signal might need to be raised in order to actually start processing tasks.
 
 When creating a task, you can create a task that only executes once. This is done as follows for instance.
 
@@ -38,7 +38,7 @@ scheduler.tasks.create:task-name
       .foo-something
 ```
 
-You can choose any weekday you wish to have your task repeat. Below is an exhaustive list.
+You can choose any weekday you wish to have your task repeat on a specific weekday. Below is an exhaustive list.
 
 * Sunday
 * Monday
@@ -59,19 +59,20 @@ scheduler.tasks.create:task-name
       .foo-something
 ```
 
-The above will evaluate your task every 50 second. The above second can be exchanged with _"minutes"_ or _"hours"_. Notice, you can
-have _very large integer values_ here, to have tasks that are repeating _very seldom_, such as e.g. the following illustrates.
+The above will evaluate your task every 50 second. The above _"seconds"_ can be exchanged with _"minutes"_, _"hours"_ or _"days"_.
+Notice, this allows you to have _very large integer values_, to have tasks that are repeating _very seldom_, such as e.g. the
+following illustrates.
 
 ```
 scheduler.tasks.create:task-name
-   repeat:hours
-      value:5000000
+   repeat:days
+      value:3650
    .lambda
       /* Your tasks lambda object goes here /*
       .foo-something
 ```
 
-The above task will only be evaluated every 5.000.000 hour, which of course becomes every 570 year, which is hopefully not a meaningful
+The above task will only be evaluated every 3650 days, which of course becomes every 10 years, which is hopefully not a meaningful
 repetition pattern for you for the record. To create a task that is evaluated on the last day of the month, at 5PM, you can use the following
 repetition pattern.
 
@@ -83,6 +84,8 @@ scheduler.tasks.create:task-name
       /* Your tasks lambda object goes here /*
       .foo-something
 ```
+
+When supplying hours and minutes such as the above example illustrates, you must use military hours, implying from 00:00 to 23:59.
 
 If you provide an integer value between 1 and 28 as your **[repeat]** value, the scheduler will interpret this as the day of the month,
 and evaluate your task on this particular day of the month, at the specified **[time]**. Below is an example.

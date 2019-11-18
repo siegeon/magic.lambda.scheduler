@@ -113,7 +113,7 @@ namespace magic.lambda.scheduler.utilities
                     return null;
 
                 // Creating and returning our result.
-                return new Node(task.Name, null, task._original.Clone().Children.ToList());
+                return new Node(task.Name, null, task.RootNode.Clone().Children.ToList());
             }
         }
 
@@ -150,9 +150,9 @@ namespace magic.lambda.scheduler.utilities
 
         #region [ -- Interface implementations -- ]
 
-        /*
-         * IDisposable implementation.
-         */
+        /// <summary>
+        /// IDisposable implementation.
+        /// </summary>
         public void Dispose()
         {
             lock (_locker)
@@ -193,7 +193,7 @@ namespace magic.lambda.scheduler.utilities
             _timer = null; // To avoid disposing timer twice.
 
             // Retrieving next task if there are any.
-            var next = _tasks.NextTask();
+            var next = _tasks.NextDueTask();
             if (next == null)
                 return; // No more tasks, hence not creating timer.
 
@@ -265,7 +265,7 @@ namespace magic.lambda.scheduler.utilities
             Task current;
             lock (_locker)
             {
-                current = _tasks.NextTask();
+                current = _tasks.NextDueTask();
             }
             if (current == null)
                 return; // No more tasks in scheduler.
@@ -284,25 +284,6 @@ namespace magic.lambda.scheduler.utilities
                     EnsureTimer();
                 }
                 return; // Returning early, nothing more to do here.
-            }
-
-            /*
-             * Making sure we're able to log exceptions.
-             */
-            try
-            {
-                /*
-                 * Retrieving task's lambda object, and evaluating it.
-                 */
-                var lambda = current.Lambda.Clone();
-                var signaler = _services.GetService(typeof(ISignaler)) as ISignaler;
-                signaler.SignalAsync("wait.eval", lambda).Wait();
-            }
-            catch(Exception err)
-            {
-                // Making sure we log exception using preferred ILogger instance.
-                var logger = _services.GetService(typeof(ILogger)) as ILogger;
-                logger.LogError(current.Name, err);
             }
 
             /*
@@ -333,6 +314,25 @@ namespace magic.lambda.scheduler.utilities
                     _tasks.DeleteTask(current.Name);
                     EnsureTimer();
                 }
+            }
+
+            /*
+             * Making sure we're able to log exceptions.
+             */
+            try
+            {
+                /*
+                 * Retrieving task's lambda object, and evaluating it.
+                 */
+                var lambda = current.Lambda.Clone();
+                var signaler = _services.GetService(typeof(ISignaler)) as ISignaler;
+                signaler.SignalAsync("wait.eval", lambda).Wait();
+            }
+            catch(Exception err)
+            {
+                // Making sure we log exception using preferred ILogger instance.
+                var logger = _services.GetService(typeof(ILogger)) as ILogger;
+                logger.LogError(current.Name, err);
             }
         }
 
