@@ -5,11 +5,8 @@
 
 using System;
 using System.Linq;
-using System.Threading;
 using Xunit;
-using magic.node;
 using magic.node.extensions;
-using magic.signals.contracts;
 
 namespace magic.lambda.scheduler.tests
 {
@@ -23,19 +20,6 @@ scheduler.tasks.create:task-01
    when:""2022-12-24T23:55""
    .lambda
       .foo");
-        }
-
-        [Slot(Name = "foo.task.scheduler-01")]
-        public class SchedulerSlot01 : ISlot
-        {
-            internal static bool _invoked;
-            internal static ManualResetEvent _handle = new ManualResetEvent(false);
-
-            public void Signal(ISignaler signaler, Node input)
-            {
-                _invoked = true;
-                _handle.Set();
-            }
         }
 
         [Fact]
@@ -87,19 +71,6 @@ scheduler.tasks.create
    when:""2022-12-24T23:55""
    .lambda
       .foo"));
-        }
-
-        [Slot(Name = "foo.task.scheduler-02")]
-        public class SchedulerSlot02 : ISlot
-        {
-            internal static int _invoked = 0;
-            internal static ManualResetEvent _handle = new ManualResetEvent(false);
-
-            public void Signal(ISignaler signaler, Node input)
-            {
-                if (++_invoked == 2)
-                    _handle.Set();
-            }
         }
 
         [Fact]
@@ -173,19 +144,6 @@ scheduler.tasks.create:task-01
             Assert.Equal(2, lambda.Children.First().Children.Count());
             Assert.Equal("task-01", lambda.Children.First().Children.First().GetEx<string>());
             Assert.Equal("task-02", lambda.Children.First().Children.Skip(1).First().GetEx<string>());
-        }
-
-        [Slot(Name = "foo.task.scheduler-03")]
-        public class SchedulerSlot03 : ISlot
-        {
-            internal static bool _invoked;
-            internal static ManualResetEvent _handle = new ManualResetEvent(false);
-
-            public void Signal(ISignaler signaler, Node input)
-            {
-                _invoked = true;
-                _handle.Set();
-            }
         }
 
         [Fact]
