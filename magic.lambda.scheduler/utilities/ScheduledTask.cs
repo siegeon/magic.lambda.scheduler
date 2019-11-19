@@ -28,13 +28,19 @@ namespace magic.lambda.scheduler.utilities
 
             RootNode = taskNode.Clone();
             Name = taskNode.GetEx<string>() ?? throw new ArgumentException("No name given to task");
-            CalculateDue(true);
+            Description = taskNode.Children.FirstOrDefault(x => x.Name == "description")?.GetEx<string>() ?? "";
+            CalculateDue();
         }
 
         /*
          * Name of task.
          */
         public string Name { get; private set; }
+
+        /*
+         * Description of task.
+         */
+        public string Description { get; set; }
 
         /*
          * Actual lambda object, which should be evaluedt as task is evaluated.
@@ -58,12 +64,11 @@ namespace magic.lambda.scheduler.utilities
          */
         public bool Repeats { get; private set; }
 
-        public void CalculateDue(bool first = false)
+        /*
+         * Calculates task's next due date.
+         */
+        public void CalculateDue()
         {
-            // Checking if task repeats, and if not, returning false to caller.
-            if (!first && !Repeats)
-                return;
-
             // Figuring out patter, if it's a single task evaluated once, or a repeating pattern.
             var due = RootNode.Children.Where(x => x.Name == "when" || x.Name == "repeat");
             if (due.Count() != 1)
@@ -122,6 +127,11 @@ namespace magic.lambda.scheduler.utilities
 
         #region [ -- Interface implementations -- ]
 
+        /*
+         * Necessary to make it possible to sort tasks according to their due dates,
+         * such that tasks intended to be evaluated first, comes before other tasks in the
+         * TaskList instance containing all tasks.
+         */
         public int CompareTo(object obj)
         {
             if (obj is ScheduledTask rhs)
@@ -164,7 +174,7 @@ namespace magic.lambda.scheduler.utilities
              * the specified pattern.
              * 
              * Notice, this implies that no tasks created for example for the current day,
-             * on an earlier hour, will be evaluated before a week from now.
+             * on an earlier hour than Now, will be evaluated before a week from now.
              */
             var when = DateTime.Now.Date.AddHours(hour).AddMinutes(minutes);
             while (when < DateTime.Now && weekday != DateTime.Now.DayOfWeek)
@@ -250,7 +260,7 @@ namespace magic.lambda.scheduler.utilities
                     DateTimeKind.Utc);
             }
 
-            // Setting due date.
+            // Returning due date.
             return candidate;
         }
 
