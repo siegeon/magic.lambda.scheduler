@@ -253,7 +253,7 @@ namespace magic.lambda.scheduler.utilities
          */
         void ExecuteNextTask(object state)
         {
-            // Checking if we have reached maximum thread count.
+            // Checking if we have reached maximum simultaneous tasks evaluation count.
             if (Interlocked.Increment(ref _runningTasks) > MaxSimultaneousTasks)
                 _waiter.WaitOne(); // Waiting for one of the currently evaluated tasks to finish before proceeding.
 
