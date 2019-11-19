@@ -18,10 +18,10 @@ namespace magic.lambda.scheduler.utilities
      *
      * Also responsible for loading and saving tasks to disc, etc.
      */
-    internal class TaskManager
+    internal class TaskList
     {
         // Making sure we have synchronized access to our task list.
-        readonly List<Task> _tasks = new List<Task>();
+        readonly List<ScheduledTask> _tasks = new List<ScheduledTask>();
 
         // Making sure we have synchronized access to our tasks file.
         readonly string _tasksFile;
@@ -30,7 +30,7 @@ namespace magic.lambda.scheduler.utilities
          * Creates a new task manager, by loading serialized tasks from the
          * given tasksFile path.
          */
-        public TaskManager(string tasksFile)
+        public TaskList(string tasksFile)
         {
             _tasksFile = tasksFile ?? throw new ArgumentNullException(nameof(tasksFile));
             ReadTasksFile();
@@ -41,7 +41,7 @@ namespace magic.lambda.scheduler.utilities
          */
         public void AddTask(Node node)
         {
-            var task = new Task(node);
+            var task = new ScheduledTask(node);
             _tasks.RemoveAll(x => x.Name == task.Name);
             _tasks.Add(task);
             _tasks.Sort();
@@ -60,7 +60,7 @@ namespace magic.lambda.scheduler.utilities
         /*
          * Returns the task with the given name, if any.
          */
-        public Task GetTask(string name)
+        public ScheduledTask GetTask(string name)
         {
             return _tasks.FirstOrDefault(x => x.Name == name);
         }
@@ -68,7 +68,7 @@ namespace magic.lambda.scheduler.utilities
         /*
          * Returns the next upcoming task from the task manager.
          */
-        public Task NextDueTask()
+        public ScheduledTask NextDueTask()
         {
             return _tasks.FirstOrDefault();
         }
@@ -76,7 +76,7 @@ namespace magic.lambda.scheduler.utilities
         /*
          * Returns all tasks to caller.
          */
-        public IEnumerable<Task> List()
+        public IEnumerable<ScheduledTask> List()
         {
             return _tasks;
         }
@@ -115,7 +115,7 @@ namespace magic.lambda.scheduler.utilities
             }
             foreach (var idx in lambda.Children)
             {
-                _tasks.Add(new Task(idx));
+                _tasks.Add(new ScheduledTask(idx));
             }
             _tasks.Sort();
         }

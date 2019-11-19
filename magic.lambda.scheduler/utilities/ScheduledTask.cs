@@ -14,14 +14,14 @@ namespace magic.lambda.scheduler.utilities
      * Class wrapping a single task, with its repetition pattern, or due date,
      * and its associated lambda object to be evaluated when task is to be evaluated.
      */
-    internal class Task : IComparable
+    internal class ScheduledTask : IComparable
     {
         /*
          * Creates a new task for the scheduler.
          * Notice, expects a structurally acceptable Node object, accurately describing
          * the task.
          */
-        public Task(Node taskNode)
+        public ScheduledTask(Node taskNode)
         {
             if (!taskNode.Children.Any(x => x.Name == ".lambda"))
                 throw new ArgumentException($"No [.lambda] supplied to task named {taskNode.GetEx<string>()}");
@@ -90,31 +90,31 @@ namespace magic.lambda.scheduler.utilities
                     case "Thursday":
                     case "Friday":
                     case "Saturday":
-                        CreateWeekdayDueDate(dueNode, repeat);
+                        Due = CreateWeekdayDueDate(Name, dueNode, (DayOfWeek)Enum.Parse(typeof(DayOfWeek), repeat));
                         break;
 
                     case "seconds":
-                        CreateEveryXDueDate(dueNode, (value) => DateTime.Now.AddSeconds(value));
+                        Due = CreateEveryXDueDate(Name, dueNode, (value) => DateTime.Now.AddSeconds(value));
                         break;
 
                     case "minutes":
-                        CreateEveryXDueDate(dueNode, (value) => DateTime.Now.AddMinutes(value));
+                        Due = CreateEveryXDueDate(Name, dueNode, (value) => DateTime.Now.AddMinutes(value));
                         break;
 
                     case "hours":
-                        CreateEveryXDueDate(dueNode, (value) => DateTime.Now.AddHours(value));
+                        Due = CreateEveryXDueDate(Name, dueNode, (value) => DateTime.Now.AddHours(value));
                         break;
 
                     case "days":
-                        CreateEveryXDueDate(dueNode, (value) => DateTime.Now.AddDays(value));
+                        Due = CreateEveryXDueDate(Name, dueNode, (value) => DateTime.Now.AddDays(value));
                         break;
 
                     case "last-day-of-month":
-                        CreateLastDayOfMonthDueDate(dueNode);
+                        Due = CreateLastDayOfMonthDueDate(Name, dueNode);
                         break;
 
                     default:
-                        CreateDayOfMonthDueDate(dueNode, repeat);
+                        Due = CreateDayOfMonthDueDate(Name, dueNode, int.Parse(repeat));
                         break;
                 }
             }
@@ -124,7 +124,7 @@ namespace magic.lambda.scheduler.utilities
 
         public int CompareTo(object obj)
         {
-            if (obj is Task rhs)
+            if (obj is ScheduledTask rhs)
                 return Due.CompareTo(rhs.Due);
             throw new ArgumentException($"You tried to compare a Task to an object of type {obj?.GetType().Name ?? "???"}");
         }
@@ -136,7 +136,7 @@ namespace magic.lambda.scheduler.utilities
         /*
          * Finds the next due date for task based upon a "every weekday of type 'x' repetition" pattern.
          */
-        void CreateWeekdayDueDate(Node dueNode, string day)
+        static DateTime CreateWeekdayDueDate(string name, Node dueNode, DayOfWeek weekday)
         {
             /*
              * Finding "time of day" value to use.
@@ -150,7 +150,7 @@ namespace magic.lambda.scheduler.utilities
 
             // Sanity checking the time.
             if (timeEntities.Length != 2)
-                throw new ApplicationException($"Syntax error in [time] in task named {Name}");
+                throw new ApplicationException($"Syntax error in [time] in task named {name}");
 
             /*
              * Converting time to hours and minutes in integer form,
@@ -158,7 +158,6 @@ namespace magic.lambda.scheduler.utilities
              */
             var hour = int.Parse(timeEntities[0]);
             var minutes = int.Parse(timeEntities[1]);
-            var weekday = (DayOfWeek)Enum.Parse(typeof(DayOfWeek), day);
 
             /*
              * Iterating forwards in time, until we reach a time and weekday matching
@@ -173,14 +172,14 @@ namespace magic.lambda.scheduler.utilities
                 when = when.AddDays(1);
                 weekday = (DayOfWeek)(((int)weekday + 1) % 7);
             }
-            Due = when;
+            return when;
         }
 
         /*
          * Finds the next due date for the task based upon an "every n 'time entity'"
          * repetition pattern, where 'time entity' might be hours, minutes, seconds or days.
          */
-        void CreateEveryXDueDate(Node dueNode, Func<long, DateTime> func)
+        static DateTime CreateEveryXDueDate(string name, Node dueNode, Func<long, DateTime> func)
         {
             /*
              * Finds out how often this task repeats, which is an integer number,
@@ -188,21 +187,21 @@ namespace magic.lambda.scheduler.utilities
              */
             var seconds = dueNode.Children.FirstOrDefault(x => x.Name == "value")?
                 .GetEx<long>() ??
-                throw new ApplicationException($"Syntax error in task named '{Name}', no [value] node found beneath [{dueNode.Name}].");
+                throw new ApplicationException($"Syntax error in task named '{name}', no [value] node found beneath [{dueNode.Name}].");
 
             // Sanity checking value fetched above.
             if (seconds < 1)
-                throw new ArgumentException($"The [value] parts of your '{Name}' task repetition pattern must be a positive integer.");
+                throw new ArgumentException($"The [value] parts of your '{name}' task repetition pattern must be a positive integer.");
 
             // Calculating next due date based upon findings from above.
-            Due = func(seconds);
+            return func(seconds);
         }
 
         /*
          * Finds the next due date which implies evaluating the task on the
          * last day of the month, at some specified time of the day.
          */
-        void CreateLastDayOfMonthDueDate(Node dueNode)
+        static DateTime CreateLastDayOfMonthDueDate(string name, Node dueNode)
         {
             /*
              * Figuring out at what time of the day task should be evaluated.
@@ -210,13 +209,13 @@ namespace magic.lambda.scheduler.utilities
             var timeEntities = dueNode.Children
                 .FirstOrDefault(x => x.Name == "time")?
                 .GetEx<string>()?
-                .Split(':') ?? throw new ApplicationException($"No [time] found in task named {Name}");
+                .Split(':') ?? throw new ApplicationException($"No [time] found in task named {name}");
 
             /*
              * Basic sanity checking.
              */
             if (timeEntities.Length != 2)
-                throw new ApplicationException($"Syntax error in [time] in task named {Name}");
+                throw new ApplicationException($"Syntax error in [time] in task named {name}");
 
             /*
              * Constructing the next due date for the task, which will be the current
@@ -252,13 +251,13 @@ namespace magic.lambda.scheduler.utilities
             }
 
             // Setting due date.
-            Due = candidate;
+            return candidate;
         }
 
         /*
          * Finds the next due date based upon an "every x day of month" repetition pattern.
          */
-        void CreateDayOfMonthDueDate(Node dueNode, string repeat)
+        static DateTime CreateDayOfMonthDueDate(string name, Node dueNode, int dayOfMonth)
         {
             /*
              * Retrieving day of month, and sanity checking its value.
@@ -266,9 +265,8 @@ namespace magic.lambda.scheduler.utilities
              * Notice, we don't allow for values higher than 28, to avoid "Februrary" issues.
              * Use "last-day-of-month" repetition pattern if this is a problem.
              */
-            var dayOfMonth = int.Parse(repeat);
             if (dayOfMonth > 28 || dayOfMonth < 1)
-                throw new ApplicationException($"Unknown 'day of month' value in task named '{Name}'. Day of month value was '{dayOfMonth}' and it must be between 1 and 28");
+                throw new ApplicationException($"Unknown 'day of month' value in task named '{name}'. Day of month value was '{dayOfMonth}' and it must be between 1 and 28");
 
             /*
              * Figuring out the time of the day to evaluate the task, defaulting to "00:00",
@@ -277,9 +275,9 @@ namespace magic.lambda.scheduler.utilities
             var timeEntities = dueNode.Children
                 .FirstOrDefault(x => x.Name == "time")?
                 .GetEx<string>()?
-                .Split(':') ?? throw new ApplicationException($"No [time] found in task named {Name}");
+                .Split(':') ?? throw new ApplicationException($"No [time] found in task named {name}");
             if (timeEntities.Length != 2)
-                throw new ApplicationException($"Syntax error in [time] in task named {Name}");
+                throw new ApplicationException($"Syntax error in [time] in task named {name}");
 
             /*
              * Converting above values to integer values, and doing some
@@ -288,7 +286,7 @@ namespace magic.lambda.scheduler.utilities
             var hour = int.Parse(timeEntities[0]);
             var minutes = int.Parse(timeEntities[1]);
             if (hour < 0 || hour > 23 || minutes < 0 || minutes > 59)
-                throw new ArgumentException($"The [time] pattern of your scheduled '{Name}' task must by between 00:00 and 23:59");
+                throw new ArgumentException($"The [time] pattern of your scheduled '{name}' task must by between 00:00 and 23:59");
 
             /*
              * Figuring out when to evaluate the task next time.
@@ -297,9 +295,9 @@ namespace magic.lambda.scheduler.utilities
              */
             var nextDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, dayOfMonth, hour, minutes, 0);
             if (nextDate < DateTime.Now)
-                Due = nextDate.AddMonths(1);
+                return nextDate.AddMonths(1);
             else
-                Due = nextDate;
+                return nextDate;
         }
 
         #endregion
