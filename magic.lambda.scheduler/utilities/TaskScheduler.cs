@@ -38,14 +38,14 @@ namespace magic.lambda.scheduler.utilities
         /// declaring what tasks your application has scheduled for future
         /// evaluation.</param>
         /// <param name="autoStart">If true, will start service immediately.</param>
-        /// <param name="maxThreads">Maximum number of simultaneous tasks.</param>
-        public TaskScheduler(IServiceProvider services, string tasksFile, bool autoStart = false, int maxThreads = 4)
+        /// <param name="maxSimultaneousTasks">Maximum number of simultaneous tasks.</param>
+        public TaskScheduler(IServiceProvider services, string tasksFile, bool autoStart = false, int maxSimultaneousTasks = 4)
         {
             _services = services ?? throw new ArgumentNullException(nameof(services));
             _tasks = new TaskList(tasksFile ?? throw new ArgumentNullException(nameof(tasksFile)));
-            if (maxThreads < 1 || maxThreads > 64)
+            if (maxSimultaneousTasks < 1 || maxSimultaneousTasks > 64)
                 throw new ArgumentException("Max threads must be a positive integer between 1 and 64");
-            MaxThreads = maxThreads;
+            MaxSimultaneousTasks = maxSimultaneousTasks;
             if (autoStart)
                 Start();
         }
@@ -60,7 +60,7 @@ namespace magic.lambda.scheduler.utilities
         /// 
         /// Helps you avoid flooding your server with background tasks running in parallel.
         /// </summary>
-        public int MaxThreads { get; private set; }
+        public int MaxSimultaneousTasks { get; private set; }
 
         /// <summary>
         /// Starts your scheduler. You must invoke this method in order to
@@ -254,7 +254,7 @@ namespace magic.lambda.scheduler.utilities
         void ExecuteNextTask(object state)
         {
             // Checking if we have reached maximum thread count.
-            if (Interlocked.Increment(ref _runningTasks) > MaxThreads)
+            if (Interlocked.Increment(ref _runningTasks) > MaxSimultaneousTasks)
                 _waiter.WaitOne(); // Waiting for one of the currently evaluated tasks to finish before proceeding.
 
             /*
@@ -282,7 +282,7 @@ namespace magic.lambda.scheduler.utilities
             }
 
             // Checking if we can allow another task to start executing.
-            if (Interlocked.Decrement(ref _runningTasks) == MaxThreads)
+            if (Interlocked.Decrement(ref _runningTasks) == MaxSimultaneousTasks)
                 _waiter.Set();
         }
 
