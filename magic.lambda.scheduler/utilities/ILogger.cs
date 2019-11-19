@@ -4,7 +4,6 @@
  */
 
 using System;
-using System.Threading;
 
 namespace magic.lambda.scheduler.utilities
 {
