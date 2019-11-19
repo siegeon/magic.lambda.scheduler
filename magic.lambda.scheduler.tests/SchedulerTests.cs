@@ -173,5 +173,23 @@ scheduler.tasks.get:task-01",
             Assert.Single(lambda.Children.Skip(1).First().Children);
             Assert.Equal("task-01", lambda.Children.Skip(1).First().Children.First().Name);
         }
+
+        [Fact]
+        public void CreateGet_02()
+        {
+            var now = DateTime.Now.Date;
+            var lambda = Common.Evaluate(string.Format(@"
+scheduler.tasks.create:task-01
+   repeat:{0}
+      time:""00:00""
+   .lambda
+      .foo
+scheduler.tasks.get:task-01",
+                now.AddDays(2).DayOfWeek));
+            Assert.Single(lambda.Children.Skip(1).First().Children);
+            Assert.Equal(
+                now.AddDays(2), 
+                lambda.Children.Skip(1).First().Children.First().Children.FirstOrDefault(x => x.Name == "due").GetEx<DateTime>());
+        }
     }
 }

@@ -194,16 +194,16 @@ namespace magic.lambda.scheduler.utilities
              * Finds out how often this task repeats, which is an integer number,
              * being the number of seconds between each evaluation.
              */
-            var seconds = dueNode.Children.FirstOrDefault(x => x.Name == "value")?
+            var value = dueNode.Children.FirstOrDefault(x => x.Name == "value")?
                 .GetEx<long>() ??
                 throw new ApplicationException($"Syntax error in task named '{name}', no [value] node found beneath [{dueNode.Name}].");
 
             // Sanity checking value fetched above.
-            if (seconds < 1)
+            if (value < 1)
                 throw new ArgumentException($"The [value] parts of your '{name}' task repetition pattern must be a positive integer.");
 
             // Calculating next due date based upon findings from above.
-            return func(seconds);
+            return func(value);
         }
 
         /*
@@ -227,6 +227,15 @@ namespace magic.lambda.scheduler.utilities
                 throw new ApplicationException($"Syntax error in [time] in task named {name}");
 
             /*
+             * Converting above values to integer values, and doing some
+             * basic sanity checking.
+             */
+            var hour = int.Parse(timeEntities[0]);
+            var minutes = int.Parse(timeEntities[1]);
+            if (hour < 0 || hour > 23 || minutes < 0 || minutes > 59)
+                throw new ArgumentException($"The [time] pattern of your scheduled '{name}' task must by between 00:00 and 23:59");
+
+            /*
              * Constructing the next due date for the task, which will be the current
              * month, and on its last day, assuming the time has not passed - At which
              * point we'll have to wait to evaluate the task.
@@ -235,8 +244,8 @@ namespace magic.lambda.scheduler.utilities
                 DateTime.Now.Year,
                 DateTime.Now.Month,
                 DateTime.DaysInMonth(DateTime.Now.Year, DateTime.Now.Month),
-                int.Parse(timeEntities[0]),
-                int.Parse(timeEntities[1]),
+                hour,
+                minutes,
                 0,
                 DateTimeKind.Utc);
 
@@ -302,7 +311,14 @@ namespace magic.lambda.scheduler.utilities
              * Notice, we never allow for creating tasks in the past, hence if due date has passed,
              * we simply add one month to its due date.
              */
-            var nextDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, dayOfMonth, hour, minutes, 0);
+            var nextDate = new DateTime(
+                DateTime.Now.Year, 
+                DateTime.Now.Month, 
+                dayOfMonth, 
+                hour, 
+                minutes, 
+                0,
+                DateTimeKind.Utc);
             if (nextDate < DateTime.Now)
                 return nextDate.AddMonths(1);
             else
