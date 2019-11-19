@@ -35,10 +35,13 @@ namespace magic.lambda.scheduler.utilities
         /// <param name="tasksFile">The path to your tasks file,
         /// declaring what tasks your application has scheduled for future
         /// evaluation.</param>
-        public TaskScheduler(IServiceProvider services, string tasksFile)
+        /// <param name="autoStart">If true, will start service immediately.</param>
+        public TaskScheduler(IServiceProvider services, string tasksFile, bool autoStart = false)
         {
             _services = services ?? throw new ArgumentNullException(nameof(services));
             _tasks = new TaskList(tasksFile ?? throw new ArgumentNullException(nameof(tasksFile)));
+            if (autoStart)
+                Start();
         }
 
         /// <summary>
