@@ -176,11 +176,10 @@ namespace magic.lambda.scheduler.utilities
              * Notice, this implies that no tasks created for example for the current day,
              * on an earlier hour than Now, will be evaluated before a week from now.
              */
-            var when = DateTime.Now.Date.AddHours(hour).AddMinutes(minutes);
-            while (when < DateTime.Now && weekday != DateTime.Now.DayOfWeek)
+            var when = DateTime.Now.ToUniversalTime().Date.AddHours(hour).AddMinutes(minutes);
+            while (when < DateTime.Now || weekday != when.DayOfWeek)
             {
                 when = when.AddDays(1);
-                weekday = (DayOfWeek)(((int)weekday + 1) % 7);
             }
             return when;
         }

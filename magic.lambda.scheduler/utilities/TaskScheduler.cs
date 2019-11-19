@@ -116,7 +116,11 @@ namespace magic.lambda.scheduler.utilities
                     return null;
 
                 // Creating and returning our result.
-                return new Node(task.Name, null, task.RootNode.Clone().Children.ToList());
+                var result = new Node(task.Name, null, task.RootNode.Clone().Children.ToList());
+
+                // Making sure we also return upcoming due date as [due] node.
+                result.Add(new Node("due", task.Due));
+                return result;
             }
         }
 
