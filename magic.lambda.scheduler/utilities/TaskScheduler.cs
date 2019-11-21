@@ -27,7 +27,7 @@ namespace magic.lambda.scheduler.utilities
         readonly IServiceProvider _services;
         readonly SemaphoreSlim _waiter;
         readonly TaskList _tasks;
-        Timer _timer;
+        readonly Timer _timer;
 
         /// <summary>
         /// Creates a new background service, responsible for scheduling and
@@ -49,6 +49,7 @@ namespace magic.lambda.scheduler.utilities
             _services = services ?? throw new ArgumentNullException(nameof(services));
             _tasks = new TaskList(tasksFile ?? throw new ArgumentNullException(nameof(tasksFile)));
             _waiter = new SemaphoreSlim(maxSimultaneousTasks);
+            _timer = new Timer(ExecuteNextTask);
 
             // Starting scheduler if we should.
             if (autoStart)
@@ -76,8 +77,6 @@ namespace magic.lambda.scheduler.utilities
         public void Stop()
         {
             Running = false;
-            _timer?.Dispose();
-            _timer = null;
         }
 
         /// <summary>
@@ -180,11 +179,6 @@ namespace magic.lambda.scheduler.utilities
             if (!Running)
                 return;
 
-            /*
-             * Disposing old timer if there exists one.
-             */
-            _timer?.Dispose();
-
             // Retrieving next task if there are any.
             var next = _tasks.NextDueTask();
             if (next == null)
@@ -208,17 +202,13 @@ namespace magic.lambda.scheduler.utilities
                 Math.Min((next.Due - now).TotalMilliseconds, new TimeSpan(45, 0, 0, 0).TotalMilliseconds);
 
             /*
-             * Creating our timer, such that it kicks in at next task`s due date,
+             * Creating our timer, such that it kicks in at next task's due date,
              * or (max) 45 days from now.
              * 
              * Notice, if next task is not due when timer kicks in, the timer will simply
              * be re-created, and nothing else will occur.
              */
-            _timer = new Timer(
-                ExecuteNextTask,
-                null,
-                (long)nextDue,
-                Timeout.Infinite);
+            _timer.Change((long)nextDue, Timeout.Infinite);
         }
 
         /*
@@ -276,6 +266,10 @@ namespace magic.lambda.scheduler.utilities
              */
             lock (_locker)
             {
+                // Verifying that we're still running.
+                if (!Running)
+                    return null;
+
                 /*
                  * Retrieving next task and checking if it's due, and calculating its next
                  * due date, before we reorder tasks again to sort them according to their due dates.
