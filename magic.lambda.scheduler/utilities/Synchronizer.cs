@@ -8,23 +8,16 @@ using System.Threading;
 
 namespace magic.lambda.scheduler.utilities
 {
-    // TODO: Merge with similar class in other projects.
-    internal class Synchronizer<T>
+    internal static class SynchronizeScheduler
     {
-        readonly ReaderWriterLockSlim _lock = new ReaderWriterLockSlim();
-        readonly T _shared;
+        readonly static ReaderWriterLockSlim _lock = new ReaderWriterLockSlim();
 
-        public Synchronizer(T shared)
-        {
-            _shared = shared;
-        }
-
-        public void Read(Action<T> functor)
+        public static void Read(Action functor)
         {
             _lock.EnterReadLock();
             try
             {
-                functor(_shared);
+                functor();
             }
             finally
             {
@@ -32,12 +25,12 @@ namespace magic.lambda.scheduler.utilities
             }
         }
 
-        public T2 Get<T2>(Func<T, T2> functor)
+        public static T Get<T>(Func<T> functor)
         {
             _lock.EnterReadLock();
             try
             {
-                return functor(_shared);
+                return functor();
             }
             finally
             {
@@ -45,12 +38,12 @@ namespace magic.lambda.scheduler.utilities
             }
         }
 
-        public void Write(Action<T> functor)
+        public static void Write(Action functor)
         {
             _lock.EnterWriteLock();
             try
             {
-                functor(_shared);
+                functor();
             }
             finally
             {

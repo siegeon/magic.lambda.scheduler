@@ -36,9 +36,10 @@ namespace magic.lambda.scheduler
         public void Signal(ISignaler signaler, Node input)
         {
             var name = input.GetEx<string>();
+            var task = SynchronizeScheduler.Get(() => _scheduler.GetTask(name));
             input.Value = null;
             input.Clear();
-            input.Add(_scheduler.GetTask(name) ?? throw new ArgumentException($"Task with name of '{name}' was not found"));
+            input.Add(task ?? throw new ArgumentException($"Task with name of '{name}' was not found"));
         }
     }
 }
