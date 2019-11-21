@@ -21,9 +21,7 @@ namespace magic.lambda.scheduler.utilities
     internal class TaskList
     {
         // Making sure we have synchronized access to our task list.
-        readonly List<ScheduledTask> _tasks = new List<ScheduledTask>();
-
-        // Making sure we have synchronized access to our tasks file.
+        readonly Synchronizer<List<ScheduledTask>> _tasks = new Synchronizer<List<ScheduledTask>>(new List<ScheduledTask>());
         readonly string _tasksFile;
 
         /*
@@ -41,14 +39,18 @@ namespace magic.lambda.scheduler.utilities
          */
         public void AddTask(Node node)
         {
-            if (_tasks.Count >= 1000)
-                throw new ApplicationException("The task scheduler only supports a maximum of 1.000 tasks to avoid flooding your server involuntarily.");
-
             var task = new ScheduledTask(node);
-            _tasks.RemoveAll(x => x.Name == task.Name);
-            _tasks.Add(task);
-            _tasks.Sort();
-            SaveTasksFile();
+            _tasks.Write(tasks =>
+            {
+                // Making sure we never add more than 1.000 tasks
+                if (tasks.Count >= 1000)
+                    throw new ApplicationException("The task scheduler only supports a maximum of 1.000 tasks to avoid flooding your server accidenatlly.");
+
+                tasks.RemoveAll(x => x.Name == task.Name);
+                tasks.Add(task);
+                tasks.Sort();
+                SaveTasksFile(tasks);
+            });
         }
 
         /*
@@ -56,8 +58,11 @@ namespace magic.lambda.scheduler.utilities
          */
         public void DeleteTask(string taskName)
         {
-            _tasks.RemoveAll(x => x.Name == taskName);
-            SaveTasksFile();
+            _tasks.Write(tasks =>
+            {
+                tasks.RemoveAll(x => x.Name == taskName);
+                SaveTasksFile(tasks);
+            });
         }
 
         /*
@@ -65,7 +70,7 @@ namespace magic.lambda.scheduler.utilities
          */
         public ScheduledTask GetTask(string name)
         {
-            return _tasks.FirstOrDefault(x => x.Name == name);
+            return _tasks.Get(tasks => tasks.FirstOrDefault(x => x.Name == name));
         }
 
         /*
@@ -73,7 +78,7 @@ namespace magic.lambda.scheduler.utilities
          */
         public ScheduledTask NextDueTask()
         {
-            return _tasks.FirstOrDefault();
+            return _tasks.Get(tasks => tasks.FirstOrDefault());
         }
 
         /*
@@ -81,7 +86,7 @@ namespace magic.lambda.scheduler.utilities
          */
         public IEnumerable<ScheduledTask> List()
         {
-            return _tasks;
+            return _tasks.Get(tasks => tasks.ToList());
         }
 
         /*
@@ -90,7 +95,7 @@ namespace magic.lambda.scheduler.utilities
          */
         public void Sort()
         {
-            _tasks.Sort();
+            _tasks.Write(tasks => tasks.Sort());
         }
 
         /*
@@ -98,7 +103,7 @@ namespace magic.lambda.scheduler.utilities
          */
         public void Save()
         {
-            SaveTasksFile();
+            SaveTasksFile(_tasks.Get(tasks => tasks.ToList()));
         }
 
         #region [ -- Private helper methods -- ]
@@ -108,27 +113,30 @@ namespace magic.lambda.scheduler.utilities
          */
         void ReadTasksFile()
         {
-            var lambda = new Node();
-            if (File.Exists(_tasksFile))
+            _tasks.Write(tasks =>
             {
-                using (var stream = File.OpenRead(_tasksFile))
+                var lambda = new Node();
+                if (File.Exists(_tasksFile))
                 {
-                    lambda = new Parser(stream).Lambda();
+                    using (var stream = File.OpenRead(_tasksFile))
+                    {
+                        lambda = new Parser(stream).Lambda();
+                    }
                 }
-            }
-            foreach (var idx in lambda.Children)
-            {
-                _tasks.Add(new ScheduledTask(idx));
-            }
-            _tasks.Sort();
+                foreach (var idx in lambda.Children)
+                {
+                    tasks.Add(new ScheduledTask(idx));
+                }
+                tasks.Sort();
+            });
         }
 
         /*
          * Saves tasks file to disc.
          */
-        void SaveTasksFile()
+        void SaveTasksFile(IEnumerable<ScheduledTask> tasks)
         {
-            var hyper = Generator.GetHyper(_tasks.Select(x => x.RootNode));
+            var hyper = Generator.GetHyper(tasks.Select(x => x.RootNode));
             using (var stream = File.CreateText(_tasksFile))
             {
                 stream.Write(hyper);

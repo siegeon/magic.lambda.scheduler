@@ -21,10 +21,9 @@ namespace magic.lambda.scheduler.utilities
     /// </summary>
     public sealed class TaskScheduler : IDisposable
     {
-        readonly object _locker = new object();
         readonly IServiceProvider _services;
+        readonly SemaphoreSlim _waiter;
         readonly TaskList _tasks;
-        SemaphoreSlim _waiter;
         Timer _timer;
 
         /// <summary>
@@ -40,11 +39,15 @@ namespace magic.lambda.scheduler.utilities
         /// <param name="maxSimultaneousTasks">Maximum number of simultaneous tasks.</param>
         public TaskScheduler(IServiceProvider services, string tasksFile, bool autoStart = false, int maxSimultaneousTasks = 4)
         {
-            _services = services ?? throw new ArgumentNullException(nameof(services));
-            _tasks = new TaskList(tasksFile ?? throw new ArgumentNullException(nameof(tasksFile)));
+            // Sanity checking invocation and decorating instance.
             if (maxSimultaneousTasks < 1 || maxSimultaneousTasks > 64)
                 throw new ArgumentException("Max threads must be a positive integer between 1 and 64");
+
+            _services = services ?? throw new ArgumentNullException(nameof(services));
+            _tasks = new TaskList(tasksFile ?? throw new ArgumentNullException(nameof(tasksFile)));
             _waiter = new SemaphoreSlim(maxSimultaneousTasks);
+
+            // Starting scheduler if we should.
             if (autoStart)
                 Start();
         }
@@ -60,11 +63,8 @@ namespace magic.lambda.scheduler.utilities
         /// </summary>
         public void Start()
         {
-            lock (_locker)
-            {
-                Running = true;
-                EnsureTimer();
-            }
+            Running = true;
+            EnsureTimer();
         }
 
         /// <summary>
@@ -72,12 +72,9 @@ namespace magic.lambda.scheduler.utilities
         /// </summary>
         public void Stop()
         {
-            lock (_locker)
-            {
-                Running = false;
-                _timer?.Dispose();
-                _timer = null;
-            }
+            Running = false;
+            _timer?.Dispose();
+            _timer = null;
         }
 
         /// <summary>
@@ -88,20 +85,17 @@ namespace magic.lambda.scheduler.utilities
         /// <param name="node">Node declaring your task.</param>
         public void AddTask(Node node)
         {
-            lock (_locker)
-            {
-                /*
-                 *  Removing any other tasks with the same name before
-                 *  proceeding with add.
-                 */
-                _tasks.AddTask(node);
+            /*
+                *  Removing any other tasks with the same name before
+                *  proceeding with add.
+                */
+            _tasks.AddTask(node);
 
-                /*
-                 * Need to "retouch" our timer in case task is our first due
-                 * task in our list of tasks.
-                 */
-                EnsureTimer();
-            }
+            /*
+                * Need to "retouch" our timer in case task is our first due
+                * task in our list of tasks.
+                */
+            EnsureTimer();
         }
 
         /// <summary>
@@ -111,22 +105,19 @@ namespace magic.lambda.scheduler.utilities
         /// <returns>A node representing your task.</returns>
         public Node GetTask(string name)
         {
-            lock (_locker)
-            {
-                // Getting task with specified name.
-                var task = _tasks.GetTask(name);
+            // Getting task with specified name.
+            var task = _tasks.GetTask(name);
 
-                // Checking if named task exists.
-                if (task == null)
-                    return null;
+            // Checking if named task exists.
+            if (task == null)
+                return null;
 
-                // Creating and returning our result.
-                var result = new Node(task.Name, null, task.RootNode.Clone().Children.ToList());
+            // Creating and returning our result.
+            var result = new Node(task.Name, null, task.RootNode.Clone().Children.ToList());
 
-                // Making sure we also return upcoming due date as [due] node.
-                result.Add(new Node("due", task.Due));
-                return result;
-            }
+            // Making sure we also return upcoming due date as [due] node.
+            result.Add(new Node("due", task.Due));
+            return result;
         }
 
         /// <summary>
@@ -135,16 +126,13 @@ namespace magic.lambda.scheduler.utilities
         /// <param name="name">Name of task to delete.</param>
         public void DeleteTask(string name)
         {
-            lock (_locker)
-            {
-                _tasks.DeleteTask(name);
+            _tasks.DeleteTask(name);
 
-                /*
-                 * Need to "retouch" our timer in case task is our first due
-                 * task in our list of tasks.
-                 */
-                EnsureTimer();
-            }
+            /*
+                * Need to "retouch" our timer in case task is our first due
+                * task in our list of tasks.
+                */
+            EnsureTimer();
         }
 
         /// <summary>
@@ -154,10 +142,7 @@ namespace magic.lambda.scheduler.utilities
         /// <returns>All tasks listed in chronological order of evaluation.</returns>
         public IEnumerable<string> ListTasks()
         {
-            lock (_locker)
-            {
-                return _tasks.List().Select(x => x.Name).ToList();
-            }
+            return _tasks.List().Select(x => x.Name).ToList();
         }
 
         #region [ -- Interface implementations -- ]
@@ -167,18 +152,11 @@ namespace magic.lambda.scheduler.utilities
         /// </summary>
         public void Dispose()
         {
-            lock (_locker)
-            {
-                if (_timer == null)
-                    return; // Nothing to dispose here.
+            Running = false;
+            _timer?.Dispose();
+            _timer = null;
 
-                Running = false;
-                _timer.Dispose();
-                _timer = null; // In case instance is disposed twice.
-
-                _waiter?.Dispose();
-                _waiter = null;
-            }
+            _waiter?.Dispose();
         }
 
         #endregion
@@ -291,36 +269,32 @@ namespace magic.lambda.scheduler.utilities
              * Retrieving next task and checking if it's due, and calculating its next
              * due date, before we reorder tasks again to sort them according to their due dates.
              */
-            lock (_locker)
+            var next = _tasks.NextDueTask();
+            if (next == null)
+                return null;
+
+            // Verifying this task actually is due.
+            if (next.Due.AddMilliseconds(-100) > DateTime.Now)
             {
-                // Retrieving next due task, and verify we have an upcoming task.
-                var next = _tasks.NextDueTask();
-                if (next == null)
-                    return null;
-
-                // Verifying this task actually is due.
-                if (next.Due.AddMilliseconds(-100) > DateTime.Now)
-                {
-                    // First task is still not due, hence re-creating timer and returning null.
-                    EnsureTimer();
-                    return null;
-                }
-
-                // Calculating task's next due date, and reordering tasks afterwards.
-                if (next.Repeats)
-                {
-                    // Task is repeating, hence calculating its next due date, and reordering our tasks.
-                    next.CalculateDue();
-                    _tasks.Sort();
-                }
-                else
-                {
-                    // Task is only supposed to be evaluated once, hence deleting it from list of tasks.
-                    _tasks.DeleteTask(next.Name);
-                }
+                // First task is still not due, hence re-creating timer and returning null.
                 EnsureTimer();
-                return next;
+                return null;
             }
+
+            // Calculating task's next due date, and reordering tasks afterwards.
+            if (next.Repeats)
+            {
+                // Task is repeating, hence calculating its next due date, and reordering our tasks.
+                next.CalculateDue();
+                _tasks.Sort();
+            }
+            else
+            {
+                // Task is only supposed to be evaluated once, hence deleting it from list of tasks.
+                _tasks.DeleteTask(next.Name);
+            }
+            EnsureTimer();
+            return next;
         }
 
         #endregion
