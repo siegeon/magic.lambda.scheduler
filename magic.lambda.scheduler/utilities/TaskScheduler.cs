@@ -23,7 +23,6 @@ namespace magic.lambda.scheduler.utilities
     /// </summary>
     public sealed class TaskScheduler : IDisposable
     {
-        readonly object _locker = new object();
         readonly IServiceProvider _services;
         readonly SemaphoreSlim _waiter;
         readonly TaskList _tasks;
@@ -259,12 +258,12 @@ namespace magic.lambda.scheduler.utilities
         {
             /*
              * Notice, worst case scenario, multiple threads might have overlapping due dates,
-             * at which point we could in theory get a race condition, having multiple threads
-             * trying to access this method simultaneously.
+             * at which point we could in theory get a race condition during execution of tasks,
+             * having multiple threads trying to modify _tasks simultaneously.
              * 
              * To avoid this problem, we make sure all access is synchronized to this method.
              */
-            lock (_locker)
+            return SynchronizeScheduler.WriteGet(() =>
             {
                 // Verifying that we're still running.
                 if (!Running)
@@ -300,7 +299,7 @@ namespace magic.lambda.scheduler.utilities
                 }
                 EnsureTimer();
                 return next;
-            }
+            });
         }
 
         #endregion

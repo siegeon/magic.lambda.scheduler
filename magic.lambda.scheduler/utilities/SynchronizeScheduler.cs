@@ -62,5 +62,21 @@ namespace magic.lambda.scheduler.utilities
                 _lock.ExitWriteLock();
             }
         }
+
+        /*
+         * Acquires a write lock, and invokes the specified Action.
+         */
+        public static T WriteGet<T>(Func<T> functor)
+        {
+            _lock.EnterWriteLock();
+            try
+            {
+                return functor();
+            }
+            finally
+            {
+                _lock.ExitWriteLock();
+            }
+        }
     }
 }
