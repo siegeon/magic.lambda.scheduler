@@ -21,11 +21,10 @@ namespace magic.lambda.scheduler.utilities
     /// </summary>
     public sealed class TaskScheduler : IDisposable
     {
-        readonly ManualResetEvent _waiter = new ManualResetEvent(false);
         readonly object _locker = new object();
         readonly IServiceProvider _services;
         readonly TaskList _tasks;
-        int _runningTasks = 0;
+        SemaphoreSlim _waiter;
         Timer _timer;
 
         /// <summary>
@@ -45,7 +44,7 @@ namespace magic.lambda.scheduler.utilities
             _tasks = new TaskList(tasksFile ?? throw new ArgumentNullException(nameof(tasksFile)));
             if (maxSimultaneousTasks < 1 || maxSimultaneousTasks > 64)
                 throw new ArgumentException("Max threads must be a positive integer between 1 and 64");
-            MaxSimultaneousTasks = maxSimultaneousTasks;
+            _waiter = new SemaphoreSlim(maxSimultaneousTasks);
             if (autoStart)
                 Start();
         }
@@ -54,13 +53,6 @@ namespace magic.lambda.scheduler.utilities
         /// Returns true if scheduler is running.
         /// </summary>
         public bool Running { get; private set; }
-
-        /// <summary>
-        /// Maximum number of tasks to run simultaneously.
-        /// 
-        /// Helps you avoid flooding your server with background tasks running in parallel.
-        /// </summary>
-        public int MaxSimultaneousTasks { get; private set; }
 
         /// <summary>
         /// Starts your scheduler. You must invoke this method in order to
@@ -183,6 +175,9 @@ namespace magic.lambda.scheduler.utilities
                 Running = false;
                 _timer.Dispose();
                 _timer = null; // In case instance is disposed twice.
+
+                _waiter?.Dispose();
+                _waiter = null;
             }
         }
 
@@ -253,9 +248,8 @@ namespace magic.lambda.scheduler.utilities
          */
         void ExecuteNextTask(object state)
         {
-            // Checking if we have reached maximum simultaneous tasks evaluation count.
-            if (Interlocked.Increment(ref _runningTasks) > MaxSimultaneousTasks)
-                _waiter.WaitOne(); // Waiting for one of the currently evaluated tasks to finish before proceeding.
+            // Ensuring no more than "max threads" are allowed in at the same time.
+            _waiter.Wait();
 
             /*
              * Retrieving next due task and preparing it for evaluation.
@@ -280,10 +274,10 @@ namespace magic.lambda.scheduler.utilities
                 var logger = _services.GetService(typeof(ILogger)) as ILogger;
                 logger.LogError(current.Name, err);
             }
-
-            // Checking if we can allow another task to start executing.
-            if (Interlocked.Decrement(ref _runningTasks) == MaxSimultaneousTasks)
-                _waiter.Set();
+            finally
+            {
+                _waiter.Release();
+            }
         }
 
         /*
