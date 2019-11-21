@@ -194,11 +194,13 @@ namespace magic.lambda.scheduler.utilities
              *
              * Notice, if task is over due, we evaluate it 250 milliseconds from
              * now, to make sure we evaluate tasks that for some reasons have
-             * been queued up not being able to evaluate for some reasons.
+             * been queued up but not being able to evaluate at their due dates
+             * for some reasons.
              */
-            var nextDue = next.Due < now ?
-                new TimeSpan(0, 0, 0, 0, 250).TotalMilliseconds :
-                Math.Min((next.Due - now).TotalMilliseconds, new TimeSpan(45, 0, 0, 0).TotalMilliseconds);
+            var nextDue = 
+                Math.Max(
+                    250, 
+                    Math.Min((next.Due - now).TotalMilliseconds, new TimeSpan(45, 0, 0, 0).TotalMilliseconds));
 
             /*
              * Creating our timer, such that it kicks in at next task's due date,
