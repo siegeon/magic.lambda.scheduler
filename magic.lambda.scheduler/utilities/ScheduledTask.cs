@@ -23,11 +23,12 @@ namespace magic.lambda.scheduler.utilities
          */
         public ScheduledTask(Node taskNode)
         {
+            Name = taskNode.GetEx<string>() ?? throw new ArgumentException("No name given to task");
+
             if (!taskNode.Children.Any(x => x.Name == ".lambda"))
-                throw new ArgumentException($"No [.lambda] supplied to task named {taskNode.GetEx<string>()}");
+                throw new ArgumentException($"No [.lambda] supplied to task named {Name}");
 
             RootNode = taskNode.Clone();
-            Name = taskNode.GetEx<string>() ?? throw new ArgumentException("No name given to task");
             Description = taskNode.Children.FirstOrDefault(x => x.Name == "description")?.GetEx<string>() ?? "";
             CalculateDue();
         }

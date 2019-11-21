@@ -8,10 +8,16 @@ using System.Threading;
 
 namespace magic.lambda.scheduler.utilities
 {
+    /*
+     * Helper class to synchronize access to the shared scheduler instance.
+     */
     internal static class SynchronizeScheduler
     {
         readonly static ReaderWriterLockSlim _lock = new ReaderWriterLockSlim();
 
+        /*
+         * Acquires a read lock and invokes the specified Action.
+         */
         public static void Read(Action functor)
         {
             _lock.EnterReadLock();
@@ -25,6 +31,9 @@ namespace magic.lambda.scheduler.utilities
             }
         }
 
+        /*
+         * Acquires a read lock, execute sthe specified function, and returns its result ot caller.
+         */
         public static T Get<T>(Func<T> functor)
         {
             _lock.EnterReadLock();
@@ -38,6 +47,9 @@ namespace magic.lambda.scheduler.utilities
             }
         }
 
+        /*
+         * Acquires a write lock, and invoke sthe spcified Action.
+         */
         public static void Write(Action functor)
         {
             _lock.EnterWriteLock();

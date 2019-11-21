@@ -42,7 +42,7 @@ namespace magic.lambda.scheduler.utilities
             // Creating our task.
             var task = new ScheduledTask(node);
 
-            // Making sure we never add more than 1.000 tasks
+            // Making sure we never add more than 1.000 tasks.
             if (_tasks.Count >= 1000)
                 throw new ApplicationException("The task scheduler only supports a maximum of 1.000 tasks to avoid flooding your server accidenatlly.");
 

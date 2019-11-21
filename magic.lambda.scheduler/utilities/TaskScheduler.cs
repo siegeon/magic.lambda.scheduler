@@ -41,7 +41,7 @@ namespace magic.lambda.scheduler.utilities
         {
             // Sanity checking invocation and decorating instance.
             if (maxSimultaneousTasks < 1 || maxSimultaneousTasks > 64)
-                throw new ArgumentException("Max threads must be a positive integer between 1 and 64");
+                throw new ArgumentException("Max simultaneous tasks must be a positive integer between 1 and 64");
 
             _services = services ?? throw new ArgumentNullException(nameof(services));
             _tasks = new TaskList(tasksFile ?? throw new ArgumentNullException(nameof(tasksFile)));
@@ -86,15 +86,15 @@ namespace magic.lambda.scheduler.utilities
         public void AddTask(Node node)
         {
             /*
-                *  Removing any other tasks with the same name before
-                *  proceeding with add.
-                */
+             *  Removing any other tasks with the same name before
+             *  proceeding with add.
+             */
             _tasks.AddTask(node);
 
             /*
-                * Need to "retouch" our timer in case task is our first due
-                * task in our list of tasks.
-                */
+             * Need to "retouch" our timer in case task is our first due
+             * task in our list of tasks.
+             */
             EnsureTimer();
         }
 
@@ -129,9 +129,9 @@ namespace magic.lambda.scheduler.utilities
             _tasks.DeleteTask(name);
 
             /*
-                * Need to "retouch" our timer in case task is our first due
-                * task in our list of tasks.
-                */
+             * Need to "retouch" our timer in case task is our first due
+             * task in our list of tasks.
+             */
             EnsureTimer();
         }
 
