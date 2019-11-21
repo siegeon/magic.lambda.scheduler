@@ -32,7 +32,7 @@ namespace magic.lambda.scheduler.utilities
         }
 
         /*
-         * Acquires a read lock, execute sthe specified function, and returns its result ot caller.
+         * Acquires a read lock, executes the specified function, and returns its result to caller.
          */
         public static T Get<T>(Func<T> functor)
         {
@@ -48,7 +48,7 @@ namespace magic.lambda.scheduler.utilities
         }
 
         /*
-         * Acquires a write lock, and invoke sthe spcified Action.
+         * Acquires a write lock, and invokes the specified Action.
          */
         public static void Write(Action functor)
         {

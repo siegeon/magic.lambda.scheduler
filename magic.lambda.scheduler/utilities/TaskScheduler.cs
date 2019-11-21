@@ -18,9 +18,12 @@ namespace magic.lambda.scheduler.utilities
     /// Notice, you should make sure you resolve this as a singleton if you are
     /// using an IoC container. Also notice that no tasks will evaluate before
     /// you explicitly somehow invoke Start on your instance.
+    /// 
+    /// You are also responsible to make sure all operations on instance is synchronized.
     /// </summary>
     public sealed class TaskScheduler : IDisposable
     {
+        readonly object _locker = new object();
         readonly IServiceProvider _services;
         readonly SemaphoreSlim _waiter;
         readonly TaskList _tasks;
@@ -154,8 +157,6 @@ namespace magic.lambda.scheduler.utilities
         {
             Running = false;
             _timer?.Dispose();
-            _timer = null;
-
             _waiter?.Dispose();
         }
 
@@ -177,13 +178,12 @@ namespace magic.lambda.scheduler.utilities
              * returning early.
              */
             if (!Running)
-                return; // Scheduler has been explicitly stopped.
+                return;
 
             /*
              * Disposing old timer if there exists one.
              */
             _timer?.Dispose();
-            _timer = null; // To avoid disposing timer twice.
 
             // Retrieving next task if there are any.
             var next = _tasks.NextDueTask();
@@ -224,33 +224,35 @@ namespace magic.lambda.scheduler.utilities
         /*
          * Executes the next upcoming tasks, if any.
          */
-        void ExecuteNextTask(object state)
+        async void ExecuteNextTask(object state)
         {
             // Ensuring no more than "max threads" are allowed in at the same time.
-            _waiter.Wait();
-
-            /*
-             * Retrieving next due task and preparing it for evaluation.
-             * 
-             * Notice, if no tasks are due, we return early.
-             */
-            var current = PrepareTaskForEvaluation();
-            if (current == null)
-                return;
-
-            // Making sure we're able to log exceptions.
+            await _waiter.WaitAsync();
             try
             {
-                // Retrieving task and its lambda object, and evaluating it.
-                var lambda = current.Lambda.Clone();
-                var signaler = _services.GetService(typeof(ISignaler)) as ISignaler;
-                signaler.SignalAsync("wait.eval", lambda).Wait();
-            }
-            catch (Exception err)
-            {
-                // Making sure we log exception using preferred ILogger instance.
-                var logger = _services.GetService(typeof(ILogger)) as ILogger;
-                logger.LogError(current.Name, err);
+                /*
+                 * Retrieving next due task and preparing it for evaluation.
+                 * 
+                 * Notice, if no tasks are due, we return early.
+                 */
+                var current = PrepareTaskForEvaluation();
+                if (current == null)
+                    return;
+
+                // Making sure we're able to log exceptions.
+                try
+                {
+                    // Retrieving task and its lambda object, and evaluating it.
+                    var lambda = current.Lambda.Clone();
+                    var signaler = _services.GetService(typeof(ISignaler)) as ISignaler;
+                    await signaler.SignalAsync("wait.eval", lambda);
+                }
+                catch (Exception err)
+                {
+                    // Making sure we log exception using preferred ILogger instance.
+                    var logger = _services.GetService(typeof(ILogger)) as ILogger;
+                    logger.LogError(current.Name, err);
+                }
             }
             finally
             {
@@ -266,35 +268,45 @@ namespace magic.lambda.scheduler.utilities
         ScheduledTask PrepareTaskForEvaluation()
         {
             /*
-             * Retrieving next task and checking if it's due, and calculating its next
-             * due date, before we reorder tasks again to sort them according to their due dates.
+             * Notice, worst case scenario, multiple threads might have overlapping due dates,
+             * at which point we could in theory get a race condition, having multiple threads
+             * trying to access this method simultaneously.
+             * 
+             * To avoid this problem, we make sure all access is synchronized to this method.
              */
-            var next = _tasks.NextDueTask();
-            if (next == null)
-                return null;
-
-            // Verifying this task actually is due.
-            if (next.Due.AddMilliseconds(-100) > DateTime.Now)
+            lock (_locker)
             {
-                // First task is still not due, hence re-creating timer and returning null.
+                /*
+                 * Retrieving next task and checking if it's due, and calculating its next
+                 * due date, before we reorder tasks again to sort them according to their due dates.
+                 */
+                var next = _tasks.NextDueTask();
+                if (next == null)
+                    return null;
+
+                // Verifying this task actually is due.
+                if (next.Due.AddMilliseconds(-100) > DateTime.Now)
+                {
+                    // First task is still not due, hence re-creating timer and returning null.
+                    EnsureTimer();
+                    return null;
+                }
+
+                // Calculating task's next due date, and reordering tasks afterwards.
+                if (next.Repeats)
+                {
+                    // Task is repeating, hence calculating its next due date, and reordering our tasks.
+                    next.CalculateDue();
+                    _tasks.Sort();
+                }
+                else
+                {
+                    // Task is only supposed to be evaluated once, hence deleting it from list of tasks.
+                    _tasks.DeleteTask(next.Name);
+                }
                 EnsureTimer();
-                return null;
+                return next;
             }
-
-            // Calculating task's next due date, and reordering tasks afterwards.
-            if (next.Repeats)
-            {
-                // Task is repeating, hence calculating its next due date, and reordering our tasks.
-                next.CalculateDue();
-                _tasks.Sort();
-            }
-            else
-            {
-                // Task is only supposed to be evaluated once, hence deleting it from list of tasks.
-                _tasks.DeleteTask(next.Name);
-            }
-            EnsureTimer();
-            return next;
         }
 
         #endregion

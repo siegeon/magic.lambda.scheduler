@@ -12,7 +12,8 @@ using magic.lambda.scheduler.utilities;
 namespace magic.lambda.scheduler
 {
     /// <summary>
-    /// [scheduler.tasks.get] slot that will return an existing task with the specified name.
+    /// [scheduler.tasks.get] slot that will return an existing task with the specified name,
+    /// including its next due date.
     /// </summary>
     [Slot(Name = "scheduler.tasks.get")]
     public class GetTask : ISlot
@@ -35,11 +36,7 @@ namespace magic.lambda.scheduler
         /// <param name="input">Arguments to slot.</param>
         public void Signal(ISignaler signaler, Node input)
         {
-            var name = input.GetEx<string>();
-            var task = SynchronizeScheduler.Get(() => _scheduler.GetTask(name));
-            input.Value = null;
-            input.Clear();
-            input.Add(task ?? throw new ArgumentException($"Task with name of '{name}' was not found"));
+            input.Add(SynchronizeScheduler.Get(() => _scheduler.GetTask(input.GetEx<string>())));
         }
     }
 }
