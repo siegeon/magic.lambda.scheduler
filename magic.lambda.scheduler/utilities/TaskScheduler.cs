@@ -242,7 +242,7 @@ namespace magic.lambda.scheduler.utilities
                 {
                     // Making sure we log exception using preferred ILogger instance.
                     var logger = _services.GetService(typeof(ILogger)) as ILogger;
-                    logger.LogError(current.Name, err);
+                    logger?.LogError(current.Name, err);
                 }
             }
             finally
