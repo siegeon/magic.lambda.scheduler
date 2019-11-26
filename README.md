@@ -11,6 +11,7 @@ Provides the ability to create scheduled tasks for [Magic](https://github.com/po
 * __[scheduler.tasks.delete]__ - Deletes a named scheduled task.
 * __[scheduler.stop]__ - Stops the scheduler, implying all tasks will temporary be paused.
 * __[scheduler.start]__ - Starts the scheduler. Notice, depending upon your configuration, this signal might need to be raised in order to actually start processing tasks.
+* __[scheduler.running]__ - Returns true if the scheduler is actually running.
 
 When creating a task, you can create a task that only executes once. This is done as follows for instance.
 
@@ -26,6 +27,7 @@ The above **[when]** node is a date and time in the future for when you want you
 for evaluation. After the task has been evaluated, it will be removed from your scheduler, and never evaluate again.
 The name of your task in the above example becomes _"task-name"_, and the task can be referenced later using this name.
 The name must be unique, otherwise any previously created tasks with the same name will be overwritten.
+
 To have a task periodically being evaluated, you can choose between a whole range of repetition patterns. For instance,
 to have a task scheduled for evaluation every Sunday at 22:00, you could create a task such as the following.
 
