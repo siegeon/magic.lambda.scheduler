@@ -48,15 +48,15 @@ scheduler.tasks.create:task-01
         public void CreateWhen_04()
         {
             Common.Evaluate(string.Format(@"
-scheduler.tasks.create:task-01
+scheduler.tasks.create:task-04
    when:date:""{0}""
    .lambda
       foo.task.scheduler-04
 scheduler.stop",
                 DateTime.Now.AddSeconds(1).ToString("O")));
-            Assert.False(SchedulerSlot01._invoked);
-            SchedulerSlot01._handle.WaitOne(2000);
-            Assert.False(SchedulerSlot01._invoked); // Scheduler should not be running
+            Assert.False(SchedulerSlot04._invoked);
+            SchedulerSlot01._handle.WaitOne(3000);
+            Assert.False(SchedulerSlot04._invoked); // Scheduler should not be running
         }
 
         [Fact]
