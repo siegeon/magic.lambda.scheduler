@@ -45,6 +45,21 @@ scheduler.tasks.create:task-01
         }
 
         [Fact]
+        public void CreateWhen_04()
+        {
+            Common.Evaluate(string.Format(@"
+scheduler.tasks.create:task-01
+   when:date:""{0}""
+   .lambda
+      foo.task.scheduler-04
+scheduler.stop",
+                DateTime.Now.AddSeconds(1).ToString("O")));
+            Assert.False(SchedulerSlot01._invoked);
+            SchedulerSlot01._handle.WaitOne(2000);
+            Assert.False(SchedulerSlot01._invoked); // Scheduler should not be running
+        }
+
+        [Fact]
         public void Create_01_NoWhenRepeat_Throws()
         {
             Assert.Throws<ArgumentException>(() => Common.Evaluate(@"

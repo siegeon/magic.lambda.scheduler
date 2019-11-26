@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Collections.Generic;
 using magic.node;
+using magic.node.extensions;
 using magic.node.extensions.hyperlambda;
 
 namespace magic.lambda.scheduler.utilities
@@ -119,7 +120,12 @@ namespace magic.lambda.scheduler.utilities
             }
             foreach (var idx in lambda.Children)
             {
-                _tasks.Add(new ScheduledTask(idx));
+                /*
+                 * Making sure we don't load tasks that should have been evaluated in the past.
+                 */
+                var when = idx.Children.FirstOrDefault(x => x.Name == "when");
+                if (when == null || when.Get<DateTime>() > DateTime.Now)
+                    _tasks.Add(new ScheduledTask(idx));
             }
             _tasks.Sort();
         }

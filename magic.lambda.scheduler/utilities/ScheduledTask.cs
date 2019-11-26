@@ -41,7 +41,7 @@ namespace magic.lambda.scheduler.utilities
         /*
          * Description of task.
          */
-        public string Description { get; set; }
+        public string Description { get; private set; }
 
         /*
          * Actual lambda object, which should be evaluedt as task is evaluated.
@@ -83,8 +83,6 @@ namespace magic.lambda.scheduler.utilities
                 Due = dueNode.GetEx<DateTime>();
                 if (Due < DateTime.Now)
                     throw new ArgumentException("[when] date needs to be some time in the future.");
-                if (Due < DateTime.Now)
-                    throw new ArgumentException("[when] date needs to be at least 5 seconds from now to have task actually being evaluated.");
             }
             else
             {
