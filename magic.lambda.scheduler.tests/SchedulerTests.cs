@@ -102,8 +102,8 @@ scheduler.tasks.list",
                 DateTime.Now.AddMinutes(1).ToString("O"),
                 DateTime.Now.AddMinutes(2).ToString("O")));
             Assert.Equal(2, lambda.Children.Skip(2).First().Children.Count());
-            Assert.Equal("task-01", lambda.Children.Skip(2).First().Children.First().GetEx<string>());
-            Assert.Equal("task-02", lambda.Children.Skip(2).First().Children.Skip(1).First().GetEx<string>());
+            Assert.Equal("task-01", lambda.Children.Skip(2).First().Children.First().Children.First(x => x.Name == "name").GetEx<string>());
+            Assert.Equal("task-02", lambda.Children.Skip(2).First().Children.Skip(1).First().Children.First(x => x.Name == "name").GetEx<string>());
         }
 
         [Fact]
@@ -122,8 +122,8 @@ scheduler.tasks.list",
                 DateTime.Now.AddMinutes(1).ToString("O"),
                 DateTime.Now.AddMinutes(2).ToString("O")));
             Assert.Equal(2, lambda.Children.Skip(2).First().Children.Count());
-            Assert.Equal("task-01", lambda.Children.Skip(2).First().Children.First().GetEx<string>());
-            Assert.Equal("task-02", lambda.Children.Skip(2).First().Children.Skip(1).First().GetEx<string>());
+            Assert.Equal("task-01", lambda.Children.Skip(2).First().Children.First().Children.First(x => x.Name == "name").GetEx<string>());
+            Assert.Equal("task-02", lambda.Children.Skip(2).First().Children.Skip(1).First().Children.First(x => x.Name == "name").GetEx<string>());
         }
 
         [Fact]
@@ -142,8 +142,8 @@ scheduler.tasks.create:task-01
                 DateTime.Now.AddHours(2).ToString("O")));
             var lambda = Common.Evaluate("scheduler.tasks.list", false);
             Assert.Equal(2, lambda.Children.First().Children.Count());
-            Assert.Equal("task-01", lambda.Children.First().Children.First().GetEx<string>());
-            Assert.Equal("task-02", lambda.Children.First().Children.Skip(1).First().GetEx<string>());
+            Assert.Equal("task-01", lambda.Children.First().Children.First().Children.First(x => x.Name == "name").GetEx<string>());
+            Assert.Equal("task-02", lambda.Children.First().Children.Skip(1).First().Children.First(x => x.Name == "name").GetEx<string>());
         }
 
         [Fact]

@@ -83,7 +83,7 @@ namespace magic.lambda.scheduler.utilities
                 Due = dueNode.GetEx<DateTime>();
                 if (Due < DateTime.Now)
                     throw new ArgumentException("[when] date needs to be some time in the future.");
-                if (Due.AddSeconds(-5) < DateTime.Now)
+                if (Due < DateTime.Now)
                     throw new ArgumentException("[when] date needs to be at least 5 seconds from now to have task actually being evaluated.");
             }
             else
