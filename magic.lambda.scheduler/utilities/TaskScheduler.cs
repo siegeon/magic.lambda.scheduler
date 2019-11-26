@@ -265,7 +265,7 @@ namespace magic.lambda.scheduler.utilities
              * 
              * To avoid this problem, we make sure all access is synchronized to this method.
              */
-            return SynchronizeScheduler.WriteGet(() =>
+            return SynchronizeScheduler.ReadWrite(() =>
             {
                 // Verifying that we're still running.
                 if (!Running)

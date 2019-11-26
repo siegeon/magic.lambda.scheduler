@@ -16,25 +16,9 @@ namespace magic.lambda.scheduler.utilities
         readonly static ReaderWriterLockSlim _lock = new ReaderWriterLockSlim();
 
         /*
-         * Acquires a read lock and invokes the specified Action.
-         */
-        public static void Read(Action functor)
-        {
-            _lock.EnterReadLock();
-            try
-            {
-                functor();
-            }
-            finally
-            {
-                _lock.ExitReadLock();
-            }
-        }
-
-        /*
          * Acquires a read lock, executes the specified function, and returns its result to caller.
          */
-        public static T Get<T>(Func<T> functor)
+        public static T Read<T>(Func<T> functor)
         {
             _lock.EnterReadLock();
             try
@@ -66,7 +50,7 @@ namespace magic.lambda.scheduler.utilities
         /*
          * Acquires a write lock, and invokes the specified Action.
          */
-        public static T WriteGet<T>(Func<T> functor)
+        public static T ReadWrite<T>(Func<T> functor)
         {
             _lock.EnterWriteLock();
             try
