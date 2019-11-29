@@ -44,8 +44,24 @@ namespace magic.lambda.scheduler.utilities.jobs
         }
         #region [ -- Overridden abstract base class methods -- ]
 
+        /// <summary>
+        /// Returns the node representation of the job.
+        /// </summary>
+        /// <returns>A node representing the declaration of the task when created.</returns>
+        public override Node GetNode()
+        {
+            var result = new Node(Name);
+            if (!string.IsNullOrEmpty(Description))
+                result.Add(new Node("description", Description));
+            result.Add(new Node("repeat", _weekday.ToString(), new Node[] { new Node("time", _hours.ToString("D2") + ":" + _minutes.ToString("D2")) }));
+            result.Add(new Node(".lambda", null, Lambda.Children.Select(x => x.Clone())));
+            return result;
+        }
 
-        internal override DateTime CalculateNextDue()
+        /// <summary>
+        /// Calculates the next due date for the task.
+        /// </summary>
+        protected override void CalculateNextDue()
         {
             /*
              * Iterating forwards in time, until we reach a time and weekday matching
@@ -59,17 +75,7 @@ namespace magic.lambda.scheduler.utilities.jobs
             {
                 when = when.AddDays(1);
             }
-            return when;
-        }
-
-        public override Node GetNode()
-        {
-            var result = new Node(Name);
-            if (!string.IsNullOrEmpty(Description))
-                result.Add(new Node("description", Description));
-            result.Add(new Node("repeat", _weekday.ToString(), new Node[] { new Node("time", _hours.ToString("D2") + ":" + _minutes.ToString("D2")) }));
-            result.Add(new Node(".lambda", null, Lambda.Children.Select(x => x.Clone())));
-            return result;
+            Due = when;
         }
 
         #endregion

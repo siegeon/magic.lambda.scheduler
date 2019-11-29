@@ -49,15 +49,14 @@ namespace magic.lambda.scheduler.utilities
             // Storing logger in case of exceptions during job execution.
             _logger = logger;
 
-            // Making sure we're able to evaluate tasks if autoStart is true.
-            if (autoStart)
-                Running = true;
-
-            // Loading jobs, and initializing them.
             var jobs = new Jobs(tasksFile);
-            foreach (var idx in jobs.List())
+            if (autoStart)
             {
-                idx.EnsureTimer(async (x) => await ExecuteTask(x));
+                Running = true;
+                foreach (var idx in jobs.List())
+                {
+                    idx.Start(async (x) => await ExecuteTask(x));
+                }
             }
 
             // Making sure we have synchronized access to jobs further down the road.
@@ -75,18 +74,14 @@ namespace magic.lambda.scheduler.utilities
         /// </summary>
         public void Start()
         {
-            if (!Running)
+            _tasks.Write(tasks =>
             {
-                _tasks.Write(tasks =>
+                Running = true;
+                foreach (var idx in tasks.List())
                 {
-                    Running = true;
-                    foreach (var idx in tasks.List())
-                    {
-                        idx.Due = idx.CalculateNextDue();
-                        idx.EnsureTimer(async (x) => await ExecuteTask(x));
-                    }
-                });
-            }
+                    idx.Start(async (x) => await ExecuteTask(x));
+                }
+            });
         }
 
         /// <summary>
@@ -94,17 +89,14 @@ namespace magic.lambda.scheduler.utilities
         /// </summary>
         public void Stop()
         {
-            if (Running)
+            _tasks.Write(tasks =>
             {
-                _tasks.Write(tasks =>
+                Running = false;
+                foreach (var idx in tasks.List())
                 {
-                    Running = false;
-                    foreach (var idx in tasks.List())
-                    {
-                        idx.StopTimer();
-                    }
-                });
-            }
+                    idx.Stop();
+                }
+            });
         }
 
         /// <summary>
@@ -123,7 +115,7 @@ namespace magic.lambda.scheduler.utilities
         /// the first task in queue will be the first task returned.
         /// </summary>
         /// <returns>All tasks listed in chronological order of evaluation.</returns>
-        public IEnumerable<Job> ListTasks()
+        public List<Job> List()
         {
             return _tasks.Read((tasks) => tasks.List().ToList());
         }
@@ -167,7 +159,7 @@ namespace magic.lambda.scheduler.utilities
             if (!Running)
             {
                 // Postponing into the future.
-                job.EnsureTimer(async (x) => await ExecuteTask(x));
+                job.Start(async (x) => await ExecuteTask(x));
                 return;
             }
 
@@ -187,8 +179,7 @@ namespace magic.lambda.scheduler.utilities
             {
                 if (job.Repeats)
                 {
-                    job.Due = job.CalculateNextDue();
-                    job.EnsureTimer(async (x) => await ExecuteTask(x));
+                    job.Start(async (x) => await ExecuteTask(x));
                 }
                 else
                 {

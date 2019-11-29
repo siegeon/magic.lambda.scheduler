@@ -108,15 +108,16 @@ namespace magic.lambda.scheduler.utilities
                 default:
                     throw new ApplicationException("You have reached a place in your code which should have been impossible to reach!");
             }
-            result.Due = result.CalculateNextDue();
+            result.CalculateNextDue();
             return result;
         }
 
         /*
          * Creates the Timer timeout, that invokes the specified Action at the time the task should be evaluated.
          */
-        internal void EnsureTimer(Func<Job, Task> callback)
+        internal void Start(Func<Job, Task> callback)
         {
+            CalculateNextDue();
             var now = DateTime.Now;
             var nextDue =
                 Math.Max(
@@ -128,7 +129,7 @@ namespace magic.lambda.scheduler.utilities
         /*
          * Stops the task from being executed.
          */
-        internal void StopTimer()
+        internal void Stop()
         {
             _timer.Change(Timeout.Infinite, Timeout.Infinite);
         }
@@ -143,7 +144,10 @@ namespace magic.lambda.scheduler.utilities
         /*
          * Calculates next due date.
          */
-        internal abstract DateTime CalculateNextDue();
+        /// <summary>
+        /// Calculates the next due date for the job.
+        /// </summary>
+        protected abstract void CalculateNextDue();
 
         #region [ -- Interface implementations -- ]
 

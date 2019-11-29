@@ -35,7 +35,7 @@ namespace magic.lambda.scheduler
         /// <param name="input">Arguments to slot.</param>
         public void Signal(ISignaler signaler, Node input)
         {
-            var tasks = _scheduler.ListTasks();
+            var tasks = _scheduler.List();
             input.AddRange(tasks.Select(x =>
             {
                 return new Node("", null, new Node[]
@@ -44,7 +44,7 @@ namespace magic.lambda.scheduler
                     new Node("due", x.Due),
                     new Node("description", x.Description)
                 });
-            }).ToList());
+            }));
         }
     }
 }

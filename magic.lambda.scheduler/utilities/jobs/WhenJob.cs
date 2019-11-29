@@ -40,11 +40,10 @@ namespace magic.lambda.scheduler.utilities.jobs
 
         #region [ -- Overridden abstract base class methods -- ]
 
-        internal override DateTime CalculateNextDue()
-        {
-            return Due;
-        }
-
+        /// <summary>
+        /// Returns a node representation of the task, as when the task was created.
+        /// </summary>
+        /// <returns>A node representing the task as when created.</returns>
         public override Node GetNode()
         {
             var result = new Node(Name);
@@ -53,6 +52,18 @@ namespace magic.lambda.scheduler.utilities.jobs
             result.Add(new Node("when", Due));
             result.Add(new Node(".lambda", null, Lambda.Children.Select(x => x.Clone())));
             return result;
+        }
+
+        /// <summary>
+        /// Calculates the next due date for the job.
+        /// 
+        /// Notice, do not invoke this method for this type of job, since it will throw an exception,
+        /// since task is not repeating, and its only execution date should have been supplied when
+        /// the job was created.
+        /// </summary>
+        protected override void CalculateNextDue()
+        {
+            throw new ApplicationException($"Tried to calculate the next due date for a non-repeating job.");
         }
 
         #endregion

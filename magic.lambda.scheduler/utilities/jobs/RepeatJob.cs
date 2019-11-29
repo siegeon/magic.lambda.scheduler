@@ -31,6 +31,11 @@ namespace magic.lambda.scheduler.utilities.jobs
         { }
 
         /// <summary>
+        /// Returns true if job is repeating, which this particular type of job will always be doing.
+        /// </summary>
+        public override bool Repeats => true;
+
+        /// <summary>
         /// Virtual constructor method, creating a job that should be repeated according
         /// to some repetition pattern.
         /// </summary>
@@ -95,26 +100,19 @@ namespace magic.lambda.scheduler.utilities.jobs
 
                 default:
 
-                    // Checking if repetition value is an integer between 1 and 28.
-                    if (int.TryParse(repetition, out int dayOfMonth))
-                    {
-                        GetTime(rootTaskNode, out int hours, out int minutes);
-                        return new EveryXDayOfMonth(
-                            name,
-                            description,
-                            lambda,
-                            dayOfMonth,
-                            hours,
-                            minutes);
-                    }
-                    else
-                    {
+                    if (!int.TryParse(repetition, out int dayOfMonth) || dayOfMonth < 1 || dayOfMonth > 28)
                         throw new ArgumentException($"I don't know how to create a repeating job with a repeat pattern of '{repetition}'. Did you intend a day of month? If so, value must be between 1 and 28.");
-                    }
+
+                    GetTime(rootTaskNode, out int hours, out int minutes);
+                    return new EveryXDayOfMonth(
+                        name,
+                        description,
+                        lambda,
+                        dayOfMonth,
+                        hours,
+                        minutes);
             }
         }
-
-        public override bool Repeats => true;
 
         #region [ -- Private helper methods -- ]
 
