@@ -13,51 +13,77 @@ using magic.lambda.scheduler.utilities.jobs;
 
 namespace magic.lambda.scheduler.utilities
 {
-    /*
-     * Class wrapping a single task, with its repetition pattern, or due date,
-     * and its associated lambda object to be evaluated when task is to be evaluated.
-     */
-    internal abstract class Job : IComparable, IDisposable
+    /// <summary>
+    /// Class wrapping a single job, with its repetition pattern, or due date,
+    /// and its associated lambda object to be evaluated when task is to be evaluated.
+    /// </summary>
+    public abstract class Job : IDisposable
     {
-        protected Timer _timer;
+        readonly IServiceProvider _provider;
+        readonly ILogger _logger;
+        bool _disposed;
+        Timer _timer;
 
+        /// <summary>
+        /// Protected constructor to avoid direct instantiation, but
+        /// forcing using factory create method instead.
+        /// </summary>
+        /// <param name="services">Necessary to resolve ISignaler during task evaluation.</param>
+        /// <param name="logger">Necessary in case an exception occurs during task evaluation.</param>
+        /// <param name="name">The name for your task.</param>
+        /// <param name="description">Description for your task.</param>
+        /// <param name="lambda">Actual lambda object to be evaluated when task is due.</param>
         protected Job(
+            IServiceProvider services,
+            ILogger logger,
             string name, 
             string description, 
             Node lambda)
         {
+            _provider = services ?? throw new ArgumentNullException(nameof(services));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             Name = name;
             Description = description;
             Lambda = lambda.Clone();
         }
 
-        /*
-         * Name of task.
-         */
+        /// <summary>
+        /// Name of task.
+        /// </summary>
         public string Name { get; private set; }
 
-        /*
-         * Description of task.
-         */
+        /// <summary>
+        /// Description of task.
+        /// </summary>
         public string Description { get; private set; }
 
-        /*
-         * Actual lambda object, which should be evaluedt as task is evaluated.
-         */
+        /// <summary>
+        /// Actual lambda object to be evaluated as task is due.
+        /// </summary>
         public Node Lambda { get; private set; }
 
-        /*
-         * Calculated due date for the next time the task should be evaluated.
-         */
+        /// <summary>
+        /// The due date for the next time the task should be evaluated.
+        /// </summary>
         public DateTime Due { get; internal set; }
 
-        /*
-         * Returns true if this is a repetetive task, implying the task is declared
-         * to be evaluated multiple times.
-         */
+        /// <summary>
+        /// Returns true if this is a repetetive task, implying the task is declared
+        /// to be evaluated multiple times.
+        /// </summary>
         public abstract bool Repeats { get; }
 
-        public static Job CreateJob(Node taskNode)
+        /// <summary>
+        /// Creates a new Job according to the declaration found in the specified Node instance.
+        /// </summary>
+        /// <param name="services">Service provider that is necessary to later resolve ISignaler as the task is to be evaluated.</param>
+        /// <param name="logger">Logger necessary in case task execution triggers an unhandled exception.</param>
+        /// <param name="taskNode">Declaration of task.</param>
+        /// <returns></returns>
+        public static Job CreateJob(
+            IServiceProvider services,
+            ILogger logger,
+            Node taskNode)
         {
             // Figuring out what type of job caller requests.
             var repetitionPattern = taskNode.Children.Where(x => x.Name == "repeat" || x.Name == "when");
@@ -76,6 +102,8 @@ namespace magic.lambda.scheduler.utilities
                 case "repeat":
 
                     result = RepeatJob.CreateJob(
+                        services,
+                        logger,
                         name,
                         description,
                         lambda,
@@ -86,6 +114,8 @@ namespace magic.lambda.scheduler.utilities
                 case "when":
 
                     result = new WhenJob(
+                        services,
+                        logger,
                         name,
                         description,
                         lambda,
@@ -112,10 +142,11 @@ namespace magic.lambda.scheduler.utilities
             _timer = new Timer(async (state) => await callback(this), null, (int)nextDue, Timeout.Infinite);
         }
 
-        /*
-         * Returns the node representation for this particular instance, such that
-         * it can be serialized to disc, etc.
-         */
+        /// <summary>
+        /// Returns the node representation for this particular instance, such that
+        /// it can be serialized to disc, etc.
+        /// </summary>
+        /// <returns></returns>
         public abstract Node GetNode();
 
         /*
@@ -125,25 +156,28 @@ namespace magic.lambda.scheduler.utilities
 
         #region [ -- Interface implementations -- ]
 
-        /*
-         * Necessary to make it possible to sort tasks according to their due dates,
-         * such that tasks intended to be evaluated first, comes before other tasks in the
-         * TaskList instance containing all tasks.
-         */
-        public int CompareTo(object obj)
-        {
-            if (obj is Job rhs)
-                return Due.CompareTo(rhs.Due);
-            throw new ArgumentException($"You tried to compare a Task to an object of type {obj?.GetType().Name ?? "???"}");
-        }
-
-        #endregion
-
-        #region [ -- Private helper methods -- ]
-
+        /// <summary>
+        /// Will dispose the Timer for the task.
+        /// </summary>
         public void Dispose()
         {
-            _timer?.Dispose();
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        /// <summary>
+        /// Disposable pattern implementation.
+        /// </summary>
+        /// <param name="disposing"></param>
+        protected virtual void Dispose(bool disposing)
+        {
+            if (_disposed)
+                return;
+
+            if (disposing)
+                _timer.Dispose();
+
+            _disposed = true;
         }
 
         #endregion

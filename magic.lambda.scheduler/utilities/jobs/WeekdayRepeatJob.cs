@@ -9,24 +9,38 @@ using magic.node;
 
 namespace magic.lambda.scheduler.utilities.jobs
 {
-    /*
-     * Class wrapping a single task, with its repetition pattern, or due date,
-     * and its associated lambda object to be evaluated when task is to be evaluated.
-     */
-    internal class WeekdayRepeatJob : RepeatJob
+    /// <summary>
+    /// Class wrapping a single task, with its repetition pattern, or due date,
+    /// and its associated lambda object to be evaluated when task is to be evaluated.
+    /// </summary>
+    public class WeekdayRepeatJob : RepeatJob
     {
         readonly DayOfWeek _weekday;
         readonly int _hours;
         readonly int _minutes;
 
+        /// <summary>
+        /// Constructor creating a job that is to be executed once every given weekday,
+        /// at some specified time of the day.
+        /// </summary>
+        /// <param name="services">Necessary to resolve ISignaler during task evaluation.</param>
+        /// <param name="logger">Necessary in case an exception occurs during task evaluation.</param>
+        /// <param name="name">The name for your task.</param>
+        /// <param name="description">Description for your task.</param>
+        /// <param name="lambda">Actual lambda object to be evaluated when task is due.</param>
+        /// <param name="weekday">Which day of the week the job should be executed</param>
+        /// <param name="hours">At what hour during the day the job should be executed.</param>
+        /// <param name="minutes">At what minute, within its hours, the job should be executed.</param>
         public WeekdayRepeatJob(
+            IServiceProvider services,
+            ILogger logger,
             string name, 
             string description, 
             Node lambda,
             DayOfWeek weekday,
             int hours,
             int minutes)
-            : base(name, description, lambda)
+            : base(services, logger, name, description, lambda)
         {
             _weekday = weekday;
             _hours = hours;

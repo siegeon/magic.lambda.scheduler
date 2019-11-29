@@ -21,7 +21,8 @@ namespace magic.lambda.scheduler.utilities
      */
     internal class Jobs : IDisposable
     {
-        // Making sure we have synchronized access to our task list.
+        readonly IServiceProvider _services;
+        readonly ILogger _logger;
         readonly List<Job> _tasks = new List<Job>();
         readonly string _tasksFile;
 
@@ -29,8 +30,13 @@ namespace magic.lambda.scheduler.utilities
          * Creates a new task manager, by loading serialized tasks from the
          * given tasksFile path.
          */
-        public Jobs(string tasksFile)
+        public Jobs(
+            IServiceProvider services, 
+            ILogger logger,
+            string tasksFile)
         {
+            _services = services ?? throw new ArgumentNullException(nameof(services));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _tasksFile = tasksFile ?? throw new ArgumentNullException(nameof(tasksFile));
             ReadTasksFile();
         }
@@ -38,18 +44,10 @@ namespace magic.lambda.scheduler.utilities
         /*
          * Adds a new task to the task manager.
          */
-        public void AddTask(Node node)
+        public void Add(Job task)
         {
-            // Making sure we never add more than 1.000 tasks.
-            if (_tasks.Count >= 1000)
-                throw new ApplicationException("The task scheduler only supports a maximum of 1.000 tasks to avoid flooding your server accidenatlly.");
-
-            // Creating our task.
-            var task = Job.CreateJob(node);
-
             _tasks.RemoveAll(x => x.Name == task.Name);
             _tasks.Add(task);
-            _tasks.Sort();
             SaveTasksFile();
         }
 
@@ -117,7 +115,7 @@ namespace magic.lambda.scheduler.utilities
                  */
                 var when = idx.Children.FirstOrDefault(x => x.Name == "when");
                 if (when == null || when.Get<DateTime>() > DateTime.Now)
-                    _tasks.Add(Job.CreateJob(idx));
+                    _tasks.Add(Job.CreateJob(_services, _logger, idx));
             }
             _tasks.Sort();
         }

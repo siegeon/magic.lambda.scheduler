@@ -24,6 +24,7 @@ namespace magic.lambda.scheduler.utilities
     public sealed class Scheduler : IDisposable
     {
         readonly IServiceProvider _services;
+        readonly ILogger _logger;
         readonly Synchronizer<Jobs> _tasks;
 
         /// <summary>
@@ -38,21 +39,25 @@ namespace magic.lambda.scheduler.utilities
         /// <param name="autoStart">If true, will start service immediately automatically.</param>
         public Scheduler(IServiceProvider services, string tasksFile, bool autoStart)
         {
+            // Need to store service provider to be able to create ISignaler during task execution.
             _services = services ?? throw new ArgumentNullException(nameof(services));
-            _tasks = new Synchronizer<Jobs>(new Jobs(tasksFile));
 
-            // Starting scheduler if we should.
+            // Storing logger in case of exceptions during job execution.
+            _logger = _logger ?? throw new ArgumentNullException(nameof(_logger));
+
+            // Making sure we're able to evaluate tasks if autoStart is true.
             if (autoStart)
                 Running = true;
 
-            // Starting all task timers.
-            _tasks.Read((tasks) =>
+            // Loading jobs, and initializing them.
+            var jobs = new Jobs(_services, _logger, tasksFile);
+            foreach (var idx in jobs.List())
             {
-                foreach (var idx in tasks.List())
-                {
-                    idx.EnsureTimer(async (x) => await ExecuteTask(x));
-                }
-            });
+                idx.EnsureTimer(async (x) => await ExecuteTask(x));
+            }
+
+            // Making sure we have synchronized access to jobs further down the roda.
+            _tasks = new Synchronizer<Jobs>(jobs);
         }
 
         /// <summary>
@@ -82,14 +87,31 @@ namespace magic.lambda.scheduler.utilities
         ///
         /// Notice, will delete any previously created tasks with the same name.
         /// </summary>
-        /// <param name="node">Node declaring your task.</param>
-        public void AddTask(Node node)
+        /// <param name="job">Task to add.</param>
+        public void Add(Job job)
         {
-            /*
-             *  Removing any other tasks with the same name before
-             *  proceeding with add.
-             */
-            _tasks.Write((tasks) => tasks.AddTask(node));
+            _tasks.Write((tasks) => tasks.Add(job));
+        }
+
+        /// <summary>
+        /// Helper constructor to create a new job, without having to resolve
+        /// service provider or logger.
+        /// </summary>
+        /// <param name="node">Job declaration in node format.</param>
+        /// <returns>Newly created job.</returns>
+        public Job CreateJob(Node node)
+        {
+            return Job.CreateJob(_services, _logger, node);
+        }
+
+        /// <summary>
+        /// Lists all tasks in task manager, in order of evaluation, such that
+        /// the first task in queue will be the first task returned.
+        /// </summary>
+        /// <returns>All tasks listed in chronological order of evaluation.</returns>
+        public IEnumerable<Job> ListTasks()
+        {
+            return _tasks.Read((tasks) => tasks.List().ToList());
         }
 
         /// <summary>
@@ -97,21 +119,10 @@ namespace magic.lambda.scheduler.utilities
         /// </summary>
         /// <param name="name">Name of task you wish to retrieve.</param>
         /// <returns>A node representing your task.</returns>
-        public Node GetTask(string name)
+        public Job Get(string name)
         {
             // Getting task with specified name.
-            var task = _tasks.Read((tasks) => tasks.GetTask(name));
-
-            // Checking if named task exists.
-            if (task == null)
-                return null;
-
-            // Creating and returning our result.
-            var result = new Node(task.Name, null, task.GetNode().Children.Select(x => x.Clone()));
-
-            // Making sure we also return upcoming due date as [due] node.
-            result.Add(new Node("due", task.Due));
-            return result;
+            return _tasks.Read((tasks) => tasks.GetTask(name));
         }
 
         /// <summary>
@@ -123,16 +134,6 @@ namespace magic.lambda.scheduler.utilities
             _tasks.Write((tasks) => tasks.DeleteTask(name));
         }
 
-        /// <summary>
-        /// Lists all tasks in task manager, in order of evaluation, such that
-        /// the first task in queue will be the first task returned.
-        /// </summary>
-        /// <returns>All tasks listed in chronological order of evaluation.</returns>
-        public IEnumerable<string> ListTasks()
-        {
-            return _tasks.Read((tasks) => tasks.List().Select(x => x.Name));
-        }
-
         #region [ -- Interface implementations -- ]
 
         /// <summary>
@@ -140,7 +141,7 @@ namespace magic.lambda.scheduler.utilities
         /// </summary>
         public void Dispose()
         {
-            _tasks.Write((tasks) => tasks.Dispose());
+            _tasks.Dispose();
         }
 
         #endregion
