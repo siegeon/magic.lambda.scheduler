@@ -7,7 +7,6 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Collections.Generic;
-using magic.node;
 using magic.signals.contracts;
 
 namespace magic.lambda.scheduler.utilities
@@ -38,7 +37,11 @@ namespace magic.lambda.scheduler.utilities
         /// declaring what tasks your application has scheduled for future
         /// evaluation.</param>
         /// <param name="autoStart">If true, will start service immediately automatically.</param>
-        public Scheduler(IServiceProvider services, ILogger logger, string tasksFile, bool autoStart)
+        public Scheduler(
+            IServiceProvider services, 
+            ILogger logger, 
+            string tasksFile, 
+            bool autoStart)
         {
             // Need to store service provider to be able to create ISignaler during task execution.
             _services = services ?? throw new ArgumentNullException(nameof(services));
@@ -54,10 +57,10 @@ namespace magic.lambda.scheduler.utilities
             var jobs = new Jobs(tasksFile);
             foreach (var idx in jobs.List())
             {
-                //idx.EnsureTimer(async (x) => await ExecuteTask(x));
+                idx.EnsureTimer(async (x) => await ExecuteTask(x));
             }
 
-            // Making sure we have synchronized access to jobs further down the roda.
+            // Making sure we have synchronized access to jobs further down the road.
             _tasks = new Synchronizer<Jobs>(jobs);
         }
 
@@ -72,7 +75,18 @@ namespace magic.lambda.scheduler.utilities
         /// </summary>
         public void Start()
         {
-            Running = true;
+            if (!Running)
+            {
+                _tasks.Write(tasks =>
+                {
+                    Running = true;
+                    foreach (var idx in tasks.List())
+                    {
+                        idx.Due = idx.CalculateNextDue();
+                        idx.EnsureTimer(async (x) => await ExecuteTask(x));
+                    }
+                });
+            }
         }
 
         /// <summary>
@@ -80,7 +94,17 @@ namespace magic.lambda.scheduler.utilities
         /// </summary>
         public void Stop()
         {
-            Running = false;
+            if (Running)
+            {
+                _tasks.Write(tasks =>
+                {
+                    Running = false;
+                    foreach (var idx in tasks.List())
+                    {
+                        idx.StopTimer();
+                    }
+                });
+            }
         }
 
         /// <summary>

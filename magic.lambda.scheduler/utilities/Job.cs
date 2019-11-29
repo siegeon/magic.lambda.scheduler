@@ -125,6 +125,14 @@ namespace magic.lambda.scheduler.utilities
             _timer = new Timer(async (state) => await callback(this), null, (int)nextDue, Timeout.Infinite);
         }
 
+        /*
+         * Stops the task from being executed.
+         */
+        internal void StopTimer()
+        {
+            _timer.Change(Timeout.Infinite, Timeout.Infinite);
+        }
+
         /// <summary>
         /// Returns the node representation for this particular instance, such that
         /// it can be serialized to disc, etc.
