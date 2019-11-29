@@ -20,15 +20,13 @@ namespace magic.lambda.scheduler.utilities.jobs
         readonly int _minutes;
 
         public EveryXDayOfMonth(
-            IServiceProvider services,
-            ILogger logger,
             string name, 
             string description, 
             Node lambda,
             int dayOfMonth,
             int hours,
             int minutes)
-            : base(services, logger, name, description, lambda)
+            : base(name, description, lambda)
         {
             if (dayOfMonth < 0 || dayOfMonth > 28)
                 throw new ArgumentException($"{nameof(dayOfMonth)} must be between 0 and 28");

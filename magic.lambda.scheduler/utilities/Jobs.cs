@@ -21,8 +21,6 @@ namespace magic.lambda.scheduler.utilities
      */
     internal class Jobs : IDisposable
     {
-        readonly IServiceProvider _services;
-        readonly ILogger _logger;
         readonly List<Job> _tasks = new List<Job>();
         readonly string _tasksFile;
 
@@ -30,13 +28,8 @@ namespace magic.lambda.scheduler.utilities
          * Creates a new task manager, by loading serialized tasks from the
          * given tasksFile path.
          */
-        public Jobs(
-            IServiceProvider services, 
-            ILogger logger,
-            string tasksFile)
+        public Jobs(string tasksFile)
         {
-            _services = services ?? throw new ArgumentNullException(nameof(services));
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _tasksFile = tasksFile ?? throw new ArgumentNullException(nameof(tasksFile));
             ReadTasksFile();
         }
@@ -115,7 +108,7 @@ namespace magic.lambda.scheduler.utilities
                  */
                 var when = idx.Children.FirstOrDefault(x => x.Name == "when");
                 if (when == null || when.Get<DateTime>() > DateTime.Now)
-                    _tasks.Add(Job.CreateJob(_services, _logger, idx));
+                    _tasks.Add(Job.CreateJob(idx));
             }
             _tasks.Sort();
         }

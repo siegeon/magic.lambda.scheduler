@@ -31,29 +31,30 @@ namespace magic.lambda.scheduler.utilities
         /// Creates a new background service, responsible for scheduling and
         /// evaluating tasks that have been scheduled for future evaluation.
         /// </summary>
-        /// <param name="services">Service provider to resolve ISignaler and
-        /// ILogger if necessary.</param>
+        /// <param name="services">Service provider to resolve ISignaler.</param>
+        /// <param name="logger">Logging provider necessary to be able to log tasks that are
+        /// not executed successfully.</param>
         /// <param name="tasksFile">The path to your tasks file,
         /// declaring what tasks your application has scheduled for future
         /// evaluation.</param>
         /// <param name="autoStart">If true, will start service immediately automatically.</param>
-        public Scheduler(IServiceProvider services, string tasksFile, bool autoStart)
+        public Scheduler(IServiceProvider services, ILogger logger, string tasksFile, bool autoStart)
         {
             // Need to store service provider to be able to create ISignaler during task execution.
             _services = services ?? throw new ArgumentNullException(nameof(services));
 
             // Storing logger in case of exceptions during job execution.
-            _logger = _logger ?? throw new ArgumentNullException(nameof(_logger));
+            _logger = logger;
 
             // Making sure we're able to evaluate tasks if autoStart is true.
             if (autoStart)
                 Running = true;
 
             // Loading jobs, and initializing them.
-            var jobs = new Jobs(_services, _logger, tasksFile);
+            var jobs = new Jobs(tasksFile);
             foreach (var idx in jobs.List())
             {
-                idx.EnsureTimer(async (x) => await ExecuteTask(x));
+                //idx.EnsureTimer(async (x) => await ExecuteTask(x));
             }
 
             // Making sure we have synchronized access to jobs further down the roda.
@@ -91,17 +92,6 @@ namespace magic.lambda.scheduler.utilities
         public void Add(Job job)
         {
             _tasks.Write((tasks) => tasks.Add(job));
-        }
-
-        /// <summary>
-        /// Helper constructor to create a new job, without having to resolve
-        /// service provider or logger.
-        /// </summary>
-        /// <param name="node">Job declaration in node format.</param>
-        /// <returns>Newly created job.</returns>
-        public Job CreateJob(Node node)
-        {
-            return Job.CreateJob(_services, _logger, node);
         }
 
         /// <summary>
@@ -167,8 +157,7 @@ namespace magic.lambda.scheduler.utilities
             catch (Exception err)
             {
                 // Making sure we log exception using preferred ILogger instance.
-                var logger = _services.GetService(typeof(ILogger)) as ILogger;
-                logger?.LogError(job.Name, err);
+                _logger?.LogError(job.Name, err);
             }
             finally
             {

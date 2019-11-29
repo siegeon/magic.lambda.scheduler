@@ -20,26 +20,20 @@ namespace magic.lambda.scheduler.utilities.jobs
         /// Constructor creating a job that is to be executed multiple times, according to some sort
         /// of repetition pattern.
         /// </summary>
-        /// <param name="services">Necessary to resolve ISignaler during task evaluation.</param>
-        /// <param name="logger">Necessary in case an exception occurs during task evaluation.</param>
         /// <param name="name">The name for your task.</param>
         /// <param name="description">Description for your task.</param>
         /// <param name="lambda">Actual lambda object to be evaluated when task is due.</param>
         public RepeatJob(
-            IServiceProvider services,
-            ILogger logger,
             string name, 
             string description, 
             Node lambda)
-            : base(services, logger, name, description, lambda)
+            : base(name, description, lambda)
         { }
 
         /// <summary>
         /// Virtual constructor method, creating a job that should be repeated according
         /// to some repetition pattern.
         /// </summary>
-        /// <param name="services">Necessary to resolve ISignaler during task evaluation.</param>
-        /// <param name="logger">Necessary in case an exception occurs during task evaluation.</param>
         /// <param name="name">The name for your task.</param>
         /// <param name="description">Description for your task.</param>
         /// <param name="lambda">Actual lambda object to be evaluated when task is due.</param>
@@ -48,8 +42,6 @@ namespace magic.lambda.scheduler.utilities.jobs
         /// constructors down in the food chain.</param>
         /// <returns>A new RepeatJob of some sort.</returns>
         public static RepeatJob CreateJob(
-            IServiceProvider services,
-            ILogger logger,
             string name, 
             string description, 
             Node lambda,
@@ -68,8 +60,6 @@ namespace magic.lambda.scheduler.utilities.jobs
 
                     GetTime(rootTaskNode, out int hoursWeekday, out int minutesWeekday);
                     return new WeekdayRepeatJob(
-                        services,
-                        logger,
                         name,
                         description,
                         lambda,
@@ -83,8 +73,6 @@ namespace magic.lambda.scheduler.utilities.jobs
                 case "days":
 
                     return new EveryEntityRepeatJob(
-                        services,
-                        logger,
                         name, 
                         description, 
                         lambda, 
@@ -99,8 +87,6 @@ namespace magic.lambda.scheduler.utilities.jobs
 
                     GetTime(rootTaskNode, out int hoursLastDay, out int minutesLastDay);
                     return new LastDayOfMonthJob(
-                        services,
-                        logger,
                         name,
                         description,
                         lambda,
@@ -114,8 +100,6 @@ namespace magic.lambda.scheduler.utilities.jobs
                     {
                         GetTime(rootTaskNode, out int hours, out int minutes);
                         return new EveryXDayOfMonth(
-                            services,
-                            logger,
                             name,
                             description,
                             lambda,

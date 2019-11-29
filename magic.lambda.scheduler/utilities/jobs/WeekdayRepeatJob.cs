@@ -23,8 +23,6 @@ namespace magic.lambda.scheduler.utilities.jobs
         /// Constructor creating a job that is to be executed once every given weekday,
         /// at some specified time of the day.
         /// </summary>
-        /// <param name="services">Necessary to resolve ISignaler during task evaluation.</param>
-        /// <param name="logger">Necessary in case an exception occurs during task evaluation.</param>
         /// <param name="name">The name for your task.</param>
         /// <param name="description">Description for your task.</param>
         /// <param name="lambda">Actual lambda object to be evaluated when task is due.</param>
@@ -32,15 +30,13 @@ namespace magic.lambda.scheduler.utilities.jobs
         /// <param name="hours">At what hour during the day the job should be executed.</param>
         /// <param name="minutes">At what minute, within its hours, the job should be executed.</param>
         public WeekdayRepeatJob(
-            IServiceProvider services,
-            ILogger logger,
             string name, 
             string description, 
             Node lambda,
             DayOfWeek weekday,
             int hours,
             int minutes)
-            : base(services, logger, name, description, lambda)
+            : base(name, description, lambda)
         {
             _weekday = weekday;
             _hours = hours;

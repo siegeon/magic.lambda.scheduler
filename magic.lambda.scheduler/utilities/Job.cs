@@ -19,8 +19,6 @@ namespace magic.lambda.scheduler.utilities
     /// </summary>
     public abstract class Job : IDisposable
     {
-        readonly IServiceProvider _provider;
-        readonly ILogger _logger;
         bool _disposed;
         Timer _timer;
 
@@ -28,20 +26,14 @@ namespace magic.lambda.scheduler.utilities
         /// Protected constructor to avoid direct instantiation, but
         /// forcing using factory create method instead.
         /// </summary>
-        /// <param name="services">Necessary to resolve ISignaler during task evaluation.</param>
-        /// <param name="logger">Necessary in case an exception occurs during task evaluation.</param>
         /// <param name="name">The name for your task.</param>
         /// <param name="description">Description for your task.</param>
         /// <param name="lambda">Actual lambda object to be evaluated when task is due.</param>
         protected Job(
-            IServiceProvider services,
-            ILogger logger,
             string name, 
             string description, 
             Node lambda)
         {
-            _provider = services ?? throw new ArgumentNullException(nameof(services));
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             Name = name;
             Description = description;
             Lambda = lambda.Clone();
@@ -76,14 +68,9 @@ namespace magic.lambda.scheduler.utilities
         /// <summary>
         /// Creates a new Job according to the declaration found in the specified Node instance.
         /// </summary>
-        /// <param name="services">Service provider that is necessary to later resolve ISignaler as the task is to be evaluated.</param>
-        /// <param name="logger">Logger necessary in case task execution triggers an unhandled exception.</param>
         /// <param name="taskNode">Declaration of task.</param>
-        /// <returns></returns>
-        public static Job CreateJob(
-            IServiceProvider services,
-            ILogger logger,
-            Node taskNode)
+        /// <returns>Newly created job.</returns>
+        public static Job CreateJob(Node taskNode)
         {
             // Figuring out what type of job caller requests.
             var repetitionPattern = taskNode.Children.Where(x => x.Name == "repeat" || x.Name == "when");
@@ -102,8 +89,6 @@ namespace magic.lambda.scheduler.utilities
                 case "repeat":
 
                     result = RepeatJob.CreateJob(
-                        services,
-                        logger,
                         name,
                         description,
                         lambda,
@@ -114,8 +99,6 @@ namespace magic.lambda.scheduler.utilities
                 case "when":
 
                     result = new WhenJob(
-                        services,
-                        logger,
                         name,
                         description,
                         lambda,

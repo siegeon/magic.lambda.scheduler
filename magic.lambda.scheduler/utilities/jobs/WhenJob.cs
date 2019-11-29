@@ -18,20 +18,16 @@ namespace magic.lambda.scheduler.utilities.jobs
         /// <summary>
         /// Constructor creating a job that is to be executed only once, and then discarded.
         /// </summary>
-        /// <param name="services">Necessary to resolve ISignaler during task evaluation.</param>
-        /// <param name="logger">Necessary in case an exception occurs during task evaluation.</param>
         /// <param name="name">The name for your task.</param>
         /// <param name="description">Description for your task.</param>
         /// <param name="lambda">Actual lambda object to be evaluated when task is due.</param>
         /// <param name="when">Date of when job should be executed.</param>
         public WhenJob(
-            IServiceProvider services,
-            ILogger logger,
             string name, 
             string description, 
             Node lambda,
             DateTime when)
-            : base(services, logger, name, description, lambda)
+            : base(name, description, lambda)
         {
             Due = when;
         }

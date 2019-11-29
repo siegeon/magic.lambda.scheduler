@@ -27,14 +27,12 @@ namespace magic.lambda.scheduler.utilities.jobs
         readonly private long _entityValue;
 
         public EveryEntityRepeatJob(
-            IServiceProvider services,
-            ILogger logger,
             string name, 
             string description, 
             Node lambda,
             RepetitionPattern entity,
             long entityValue)
-            : base(services, logger, name, description, lambda)
+            : base(name, description, lambda)
         {
             // Sanity checking and decorating instance.
             _entity = entity;

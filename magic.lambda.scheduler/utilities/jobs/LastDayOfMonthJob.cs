@@ -19,14 +19,12 @@ namespace magic.lambda.scheduler.utilities.jobs
         readonly int _minutes;
 
         public LastDayOfMonthJob(
-            IServiceProvider services,
-            ILogger logger,
             string name, 
             string description, 
             Node lambda,
             int hours,
             int minutes)
-            : base(services, logger, name, description, lambda)
+            : base(name, description, lambda)
         {
             if (hours < 0 || hours > 23)
                 throw new ArgumentException($"{nameof(hours)} must be between 0 and 23");
