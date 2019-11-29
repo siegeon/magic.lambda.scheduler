@@ -63,13 +63,6 @@ namespace magic.lambda.scheduler.utilities.jobs
         /// </summary>
         protected override void CalculateNextDue()
         {
-            /*
-             * Iterating forwards in time, until we reach a time and weekday matching
-             * the specified pattern.
-             * 
-             * Notice, this implies that no tasks created for example for the current day,
-             * on an earlier hour than Now, will be evaluated before a week from now.
-             */
             var when = DateTime.Now.ToUniversalTime().Date.AddHours(_hours).AddMinutes(_minutes);
             while (when.AddMilliseconds(250) < DateTime.Now || _weekday != when.DayOfWeek)
             {

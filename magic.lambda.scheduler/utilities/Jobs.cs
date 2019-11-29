@@ -21,44 +21,48 @@ namespace magic.lambda.scheduler.utilities
      */
     internal class Jobs : IDisposable
     {
-        readonly List<Job> _tasks = new List<Job>();
-        readonly string _tasksFile;
+        readonly List<Job> _jobs = new List<Job>();
+        readonly string _jobFile;
 
         /*
          * Creates a new task manager, by loading serialized tasks from the
          * given tasksFile path.
          */
-        public Jobs(string tasksFile)
+        public Jobs(string jobFile)
         {
-            _tasksFile = tasksFile ?? throw new ArgumentNullException(nameof(tasksFile));
-            ReadTasksFile();
+            _jobFile = jobFile ?? throw new ArgumentNullException(nameof(jobFile));
+            ReadJobFile();
         }
 
         /*
          * Adds a new task to the task manager.
          */
-        public void Add(Job task)
+        public void Add(Job job)
         {
-            _tasks.RemoveAll(x => x.Name == task.Name);
-            _tasks.Add(task);
-            SaveTasksFile();
+            _jobs.RemoveAll(x => x.Name == job.Name);
+            _jobs.Add(job);
+            SaveJobFile();
         }
 
         /*
          * Deletes an existing task from the task manager.
          */
-        public void DeleteTask(string taskName)
+        public void Delete(string jobName)
         {
-            _tasks.RemoveAll(x => x.Name == taskName);
-            SaveTasksFile();
+            var job = _jobs.Find(x => x.Name == jobName);
+            if (job == null)
+                return;
+            job.Stop();
+            _jobs.Remove(job);
+            SaveJobFile();
         }
 
         /*
          * Returns the task with the given name, if any.
          */
-        public Job GetTask(string name)
+        public Job Get(string jobName)
         {
-            return _tasks.FirstOrDefault(x => x.Name == name);
+            return _jobs.FirstOrDefault(x => x.Name == jobName);
         }
 
         /*
@@ -66,7 +70,7 @@ namespace magic.lambda.scheduler.utilities
          */
         public IEnumerable<Job> List()
         {
-            return _tasks;
+            return _jobs;
         }
 
         /*
@@ -75,7 +79,7 @@ namespace magic.lambda.scheduler.utilities
          */
         public void Sort()
         {
-            _tasks.Sort();
+            _jobs.Sort();
         }
 
         /*
@@ -83,7 +87,7 @@ namespace magic.lambda.scheduler.utilities
          */
         public void Save()
         {
-            SaveTasksFile();
+            SaveJobFile();
         }
 
         #region [ -- Private helper methods -- ]
@@ -91,12 +95,12 @@ namespace magic.lambda.scheduler.utilities
         /*
          * Loads tasks file from disc.
          */
-        void ReadTasksFile()
+        void ReadJobFile()
         {
             var lambda = new Node();
-            if (File.Exists(_tasksFile))
+            if (File.Exists(_jobFile))
             {
-                using (var stream = File.OpenRead(_tasksFile))
+                using (var stream = File.OpenRead(_jobFile))
                 {
                     lambda = new Parser(stream).Lambda();
                 }
@@ -108,18 +112,18 @@ namespace magic.lambda.scheduler.utilities
                  */
                 var when = idx.Children.FirstOrDefault(x => x.Name == "when");
                 if (when == null || when.Get<DateTime>() > DateTime.Now)
-                    _tasks.Add(Job.CreateJob(idx));
+                    _jobs.Add(Job.CreateJob(idx));
             }
-            _tasks.Sort();
+            _jobs.Sort();
         }
 
         /*
          * Saves tasks file to disc.
          */
-        void SaveTasksFile()
+        void SaveJobFile()
         {
-            var hyper = Generator.GetHyper(_tasks.Select(x => x.GetNode()));
-            using (var stream = File.CreateText(_tasksFile))
+            var hyper = Generator.GetHyper(_jobs.Select(x => x.GetNode()));
+            using (var stream = File.CreateText(_jobFile))
             {
                 stream.Write(hyper);
             }
@@ -127,7 +131,7 @@ namespace magic.lambda.scheduler.utilities
 
         public void Dispose()
         {
-            foreach (var idx in _tasks)
+            foreach (var idx in _jobs)
             {
                 idx.Dispose();
             }

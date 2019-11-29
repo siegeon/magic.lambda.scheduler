@@ -52,7 +52,7 @@ namespace magic.lambda.scheduler.tests
             var tasksFile = AppDomain.CurrentDomain.BaseDirectory + "tasks.hl";
             if (deleteTasksFile && File.Exists(tasksFile))
                 File.Delete(tasksFile);
-            services.AddSingleton((svc) => new Scheduler(svc, null, tasksFile, true));
+            services.AddSingleton((svc) => new Scheduler(svc, null, tasksFile, true, 4));
             var provider = services.BuildServiceProvider();
 
             // Ensuring BackgroundService is created and started.

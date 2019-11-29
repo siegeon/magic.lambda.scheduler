@@ -8,6 +8,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using magic.signals.contracts;
+using System.Threading;
 
 namespace magic.lambda.scheduler.utilities
 {
@@ -22,6 +23,7 @@ namespace magic.lambda.scheduler.utilities
     /// </summary>
     public sealed class Scheduler : IDisposable
     {
+        readonly SemaphoreSlim _sempahore;
         readonly IServiceProvider _services;
         readonly ILogger _logger;
         readonly Synchronizer<Jobs> _tasks;
@@ -37,11 +39,13 @@ namespace magic.lambda.scheduler.utilities
         /// declaring what tasks your application has scheduled for future
         /// evaluation.</param>
         /// <param name="autoStart">If true, will start service immediately automatically.</param>
+        /// <param name="maxThreads">Maximum number of concurrent jobs to execute at the same time.</param>
         public Scheduler(
             IServiceProvider services, 
-            ILogger logger, 
-            string tasksFile, 
-            bool autoStart)
+            ILogger logger,
+            string tasksFile,
+            bool autoStart,
+            int maxThreads)
         {
             // Need to store service provider to be able to create ISignaler during task execution.
             _services = services ?? throw new ArgumentNullException(nameof(services));
@@ -49,18 +53,11 @@ namespace magic.lambda.scheduler.utilities
             // Storing logger in case of exceptions during job execution.
             _logger = logger;
 
-            var jobs = new Jobs(tasksFile);
-            if (autoStart)
-            {
-                Running = true;
-                foreach (var idx in jobs.List())
-                {
-                    idx.Start(async (x) => await ExecuteTask(x));
-                }
-            }
+            _sempahore = new SemaphoreSlim(0, maxThreads);
 
-            // Making sure we have synchronized access to jobs further down the road.
-            _tasks = new Synchronizer<Jobs>(jobs);
+            _tasks = new Synchronizer<Jobs>(new Jobs(tasksFile));
+            if (autoStart)
+                Start();
         }
 
         /// <summary>
@@ -79,7 +76,7 @@ namespace magic.lambda.scheduler.utilities
                 Running = true;
                 foreach (var idx in tasks.List())
                 {
-                    idx.Start(async (x) => await ExecuteTask(x));
+                    idx.Start(async (x) => await Execute(x));
                 }
             });
         }
@@ -108,6 +105,7 @@ namespace magic.lambda.scheduler.utilities
         public void Add(Job job)
         {
             _tasks.Write((tasks) => tasks.Add(job));
+            job.Start(async (x) => await Execute(x));
         }
 
         /// <summary>
@@ -128,16 +126,16 @@ namespace magic.lambda.scheduler.utilities
         public Job Get(string name)
         {
             // Getting task with specified name.
-            return _tasks.Read((tasks) => tasks.GetTask(name));
+            return _tasks.Read((tasks) => tasks.Get(name));
         }
 
         /// <summary>
         /// Deletes an existing task from your task manager.
         /// </summary>
         /// <param name="name">Name of task to delete.</param>
-        public void DeleteTask(string name)
+        public void Delete(string name)
         {
-            _tasks.Write((tasks) => tasks.DeleteTask(name));
+            _tasks.Write((tasks) => tasks.Delete(name));
         }
 
         #region [ -- Interface implementations -- ]
@@ -154,14 +152,16 @@ namespace magic.lambda.scheduler.utilities
 
         #region [ -- Private helper methods -- ]
 
-        async Task ExecuteTask(Job job)
+        async Task Execute(Job job)
         {
             if (!Running)
             {
                 // Postponing into the future.
-                job.Start(async (x) => await ExecuteTask(x));
+                job.Start(async (x) => await Execute(x));
                 return;
             }
+
+            await _sempahore.WaitAsync();
 
             try
             {
@@ -179,15 +179,16 @@ namespace magic.lambda.scheduler.utilities
             {
                 if (job.Repeats)
                 {
-                    job.Start(async (x) => await ExecuteTask(x));
+                    job.Start(async (x) => await Execute(x));
                 }
                 else
                 {
                     _tasks.Write((tasks) =>
                     {
-                        tasks.DeleteTask(job.Name);
+                        tasks.Delete(job.Name);
                     });
                 }
+                _sempahore.Release();
             }
         }
 
