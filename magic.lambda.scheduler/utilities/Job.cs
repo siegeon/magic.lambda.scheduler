@@ -129,13 +129,24 @@ namespace magic.lambda.scheduler.utilities
          */
         internal void Start(Func<Job, Task> callback)
         {
-            _timer?.Dispose();
-            var now = DateTime.Now;
+            Due = CalculateNextDue();
             var nextDue =
                 Math.Max(
                     250,
-                    Math.Min((Due - now).TotalMilliseconds, new TimeSpan(45, 0, 0, 0).TotalMilliseconds));
-            _timer = new Timer(async (state) => await callback(this), null, (long)nextDue, Timeout.Infinite);
+                    Math.Min((Due - DateTime.Now).TotalMilliseconds, new TimeSpan(45, 0, 0, 0).TotalMilliseconds));
+            _timer?.Dispose();
+            _timer = new Timer(
+                async (state) =>
+                {
+                    // Verifying job is actually due, which might not be true, if job's repetition pattern exceeds 45 days.
+                    if (Due.AddMilliseconds(-250) > DateTime.Now)
+                        Start(callback);
+                    else
+                        await callback(this);
+                }, 
+                null, 
+                (long)nextDue, 
+                Timeout.Infinite);
         }
 
         /*
@@ -143,16 +154,7 @@ namespace magic.lambda.scheduler.utilities
          */
         internal void Stop()
         {
-            _timer.Change(Timeout.Infinite, Timeout.Infinite);
-        }
-
-        /*
-         * Refreshes the job by calculating the job's next due date some time
-         * into the future.
-         */
-        internal void RefreshDueDate()
-        {
-            CalculateNextDue();
+            _timer?.Dispose();
         }
 
         /// <summary>
@@ -168,7 +170,7 @@ namespace magic.lambda.scheduler.utilities
         /// <summary>
         /// Calculates the next due date for the job.
         /// </summary>
-        protected abstract void CalculateNextDue();
+        protected abstract DateTime CalculateNextDue();
 
         #region [ -- Interface implementations -- ]
 

@@ -74,7 +74,7 @@ namespace magic.lambda.scheduler.utilities.jobs
         /// <summary>
         /// Calculates the next due date for the job.
         /// </summary>
-        protected override void CalculateNextDue()
+        protected override DateTime CalculateNextDue()
         {
             var candidate = new DateTime(
                 DateTime.Now.Year,
@@ -99,7 +99,7 @@ namespace magic.lambda.scheduler.utilities.jobs
                     0,
                     DateTimeKind.Utc);
             }
-            Due = candidate;
+            return candidate;
         }
 
         #endregion

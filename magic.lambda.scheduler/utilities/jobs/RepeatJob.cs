@@ -121,7 +121,6 @@ namespace magic.lambda.scheduler.utilities.jobs
             }
 
             // Calculating next due date, but not starting the job, before it's added to some scheduler of some sort.
-            job.CalculateNextDue();
             return job;
         }
 

@@ -88,25 +88,21 @@ namespace magic.lambda.scheduler.utilities.jobs
         /// <summary>
         /// Calculates the job's next due date.
         /// </summary>
-        protected override void CalculateNextDue()
+        protected override DateTime CalculateNextDue()
         {
             switch (_repetition)
             {
                 case RepetitionEntityType.seconds:
-                    Due = DateTime.Now.AddSeconds(_repetitionValue);
-                    break;
+                    return DateTime.Now.AddSeconds(_repetitionValue);
 
                 case RepetitionEntityType.minutes:
-                    Due = DateTime.Now.AddMinutes(_repetitionValue);
-                    break;
+                    return DateTime.Now.AddMinutes(_repetitionValue);
 
                 case RepetitionEntityType.hours:
-                    Due = DateTime.Now.AddHours(_repetitionValue);
-                    break;
+                    return DateTime.Now.AddHours(_repetitionValue);
 
                 case RepetitionEntityType.days:
-                    Due = DateTime.Now.AddDays(_repetitionValue);
-                    break;
+                    return DateTime.Now.AddDays(_repetitionValue);
 
                 default:
                     throw new ApplicationException("Oops, you've made it into an impossible code branch!");

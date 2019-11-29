@@ -62,14 +62,14 @@ namespace magic.lambda.scheduler.utilities.jobs
         /// <summary>
         /// Calculates the next due date for the job.
         /// </summary>
-        protected override void CalculateNextDue()
+        protected override DateTime CalculateNextDue()
         {
             var when = DateTime.Now.ToUniversalTime().Date.AddHours(_hours).AddMinutes(_minutes);
             while (when.AddMilliseconds(250) < DateTime.Now || _weekday != when.DayOfWeek)
             {
                 when = when.AddDays(1);
             }
-            Due = when;
+            return when;
         }
 
         #endregion

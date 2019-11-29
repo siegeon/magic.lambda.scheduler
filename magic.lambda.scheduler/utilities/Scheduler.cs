@@ -107,8 +107,12 @@ namespace magic.lambda.scheduler.utilities
         /// <param name="job">Job to add.</param>
         public void Add(Job job)
         {
-            _jobs.Write((jobs) => jobs.Add(job));
-            job.Start(async (x) => await Execute(x));
+            _jobs.Write((jobs) =>
+            {
+                jobs.Add(job);
+                if (Running)
+                    job.Start(async (x) => await Execute(x));
+            });
         }
 
         /// <summary>
@@ -164,11 +168,7 @@ namespace magic.lambda.scheduler.utilities
         async Task Execute(Job job)
         {
             if (!Running)
-            {
-                // No jobs are to be executed, but we still keep track of next due dates for jobs.
-                job.Start(async (x) => await Execute(x));
                 return;
-            }
 
             // Making sure no more than "maxThreads" are executed simultaneously.
             await _sempahore.WaitAsync();
@@ -187,7 +187,6 @@ namespace magic.lambda.scheduler.utilities
             {
                 if (job.Repeats)
                 {
-                    job.RefreshDueDate();
                     job.Start(async (x) => await Execute(x));
                 }
                 else

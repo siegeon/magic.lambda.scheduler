@@ -64,9 +64,9 @@ namespace magic.lambda.scheduler.utilities.jobs
         /// since job is not repeating, and its only execution date should have been supplied when
         /// the job was created.
         /// </summary>
-        protected override void CalculateNextDue()
+        protected override DateTime CalculateNextDue()
         {
-            throw new ApplicationException($"Tried to calculate the next due date for a non-repeating job.");
+            return Due;
         }
 
         #endregion
