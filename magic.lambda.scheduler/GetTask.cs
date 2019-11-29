@@ -36,9 +36,9 @@ namespace magic.lambda.scheduler
         /// <param name="input">Arguments to slot.</param>
         public void Signal(ISignaler signaler, Node input)
         {
-            var task = _scheduler.Get(input.GetEx<string>());
-            var node = task.GetNode();
-            node.Add(new Node("due", task.Due));
+            var job = _scheduler.Get(input.GetEx<string>());
+            var node = job.GetNode();
+            node.Add(new Node("due", job.Due));
             input.Add(node);
         }
     }

@@ -49,10 +49,10 @@ namespace magic.lambda.scheduler.tests
             var types = new SignalsProvider(InstantiateAllTypes<ISlot>(services));
             services.AddTransient<ISignalsProvider>((svc) => types);
             services.AddTransient<ILogger, Logger>();
-            var tasksFile = AppDomain.CurrentDomain.BaseDirectory + "tasks.hl";
-            if (deleteJobFile && File.Exists(tasksFile))
-                File.Delete(tasksFile);
-            services.AddSingleton((svc) => new Scheduler(svc, null, tasksFile, true, 4));
+            var jobFile = AppDomain.CurrentDomain.BaseDirectory + "tasks.hl";
+            if (deleteJobFile && File.Exists(jobFile))
+                File.Delete(jobFile);
+            services.AddSingleton((svc) => new Scheduler(svc, null, jobFile, true, 4));
             var provider = services.BuildServiceProvider();
 
             // Ensuring BackgroundService is created and started.

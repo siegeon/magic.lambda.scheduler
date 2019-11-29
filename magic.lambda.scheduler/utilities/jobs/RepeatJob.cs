@@ -135,7 +135,7 @@ namespace magic.lambda.scheduler.utilities.jobs
             var timeEntities = rootJobNode.Children
                 .First(x => x.Name == "repeat").Children
                     .FirstOrDefault(x => x.Name == "time")?.GetEx<string>()?.Split(':') ??
-                throw new ArgumentException("No [time] value supplied when trying to create a task.");
+                throw new ArgumentException("No [time] value supplied when trying to create a job.");
 
             if (timeEntities.Length != 2)
                 throw new ArgumentException("[time] must be declared as HH:mm.");
