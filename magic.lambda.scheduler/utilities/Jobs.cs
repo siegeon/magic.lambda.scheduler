@@ -73,23 +73,6 @@ namespace magic.lambda.scheduler.utilities
             return _jobs;
         }
 
-        /*
-         * Sorts all tasks, which will be performed according to their upcoming
-         * due dates, due to that Task implement IComparable on Due date.
-         */
-        public void Sort()
-        {
-            _jobs.Sort();
-        }
-
-        /*
-         * Saves tasks file to disc.
-         */
-        public void Save()
-        {
-            SaveJobFile();
-        }
-
         #region [ -- Private helper methods -- ]
 
         /*
@@ -112,9 +95,8 @@ namespace magic.lambda.scheduler.utilities
                  */
                 var when = idx.Children.FirstOrDefault(x => x.Name == "when");
                 if (when == null || when.Get<DateTime>() > DateTime.Now)
-                    _jobs.Add(Job.CreateJob(idx));
+                    _jobs.Add(Job.CreateJob(idx, true));
             }
-            _jobs.Sort();
         }
 
         /*

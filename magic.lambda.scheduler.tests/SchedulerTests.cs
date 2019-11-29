@@ -30,9 +30,9 @@ scheduler.tasks.create:task-01
    when:date:""{0}""
    .lambda
       foo.task.scheduler-01",
-                DateTime.Now.AddSeconds(2).ToString("O")));
+                DateTime.Now.AddSeconds(1).ToString("O")));
             Assert.False(SchedulerSlot01._invoked);
-            SchedulerSlot01._handle.WaitOne(4000);
+            SchedulerSlot01._handle.WaitOne(2000);
             Assert.True(SchedulerSlot01._invoked);
         }
 
@@ -94,10 +94,10 @@ scheduler.tasks.create
             Common.Evaluate(@"
 scheduler.tasks.create:task-01
    repeat:seconds
-      value:5
+      value:1
    .lambda
       foo.task.scheduler-02");
-            SchedulerSlot02._handle.WaitOne(12000);
+            SchedulerSlot02._handle.WaitOne(3000);
             Assert.Equal(2, SchedulerSlot02._invoked);
         }
 
@@ -155,6 +155,8 @@ scheduler.tasks.create:task-01
       .foo",
                 DateTime.Now.AddHours(1).ToString("O"),
                 DateTime.Now.AddHours(2).ToString("O")));
+
+            // Notice, this will reload our job file.
             var lambda = Common.Evaluate("scheduler.tasks.list", false);
             Assert.Equal(2, lambda.Children.First().Children.Count());
             Assert.Equal("task-01", lambda.Children.First().Children.First().Children.First(x => x.Name == "name").GetEx<string>());

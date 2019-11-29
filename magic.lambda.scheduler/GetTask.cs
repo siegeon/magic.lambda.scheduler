@@ -37,7 +37,9 @@ namespace magic.lambda.scheduler
         public void Signal(ISignaler signaler, Node input)
         {
             var task = _scheduler.Get(input.GetEx<string>());
-            input.Add(task.GetNode());
+            var node = task.GetNode();
+            node.Add(new Node("due", task.Due));
+            input.Add(node);
         }
     }
 }

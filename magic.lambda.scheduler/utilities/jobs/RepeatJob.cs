@@ -53,6 +53,7 @@ namespace magic.lambda.scheduler.utilities.jobs
             string repetition,
             Node rootTaskNode)
         {
+            RepeatJob job;
             switch (repetition)
             {
                 case "Sunday":
@@ -64,20 +65,21 @@ namespace magic.lambda.scheduler.utilities.jobs
                 case "Saturday":
 
                     GetTime(rootTaskNode, out int hoursWeekday, out int minutesWeekday);
-                    return new WeekdayRepeatJob(
+                    job = new WeekdayRepeatJob(
                         name,
                         description,
                         lambda,
                         (DayOfWeek)Enum.Parse(typeof(DayOfWeek),repetition),
                         hoursWeekday,
                         minutesWeekday);
+                    break;
 
                 case "seconds":
                 case "minutes":
                 case "hours":
                 case "days":
 
-                    return new EveryEntityRepeatJob(
+                    job = new EveryEntityRepeatJob(
                         name, 
                         description, 
                         lambda, 
@@ -87,16 +89,18 @@ namespace magic.lambda.scheduler.utilities.jobs
                             .Children
                                 .FirstOrDefault(x => x.Name == "value")?.GetEx<long>() ?? 
                                 throw new ArgumentException($"No [value] supplied to '{repetition}' task during creation."));
+                    break;
 
                 case "last-day-of-month":
 
                     GetTime(rootTaskNode, out int hoursLastDay, out int minutesLastDay);
-                    return new LastDayOfMonthJob(
+                    job = new LastDayOfMonthJob(
                         name,
                         description,
                         lambda,
                         hoursLastDay,
                         minutesLastDay);
+                    break;
 
                 default:
 
@@ -104,14 +108,17 @@ namespace magic.lambda.scheduler.utilities.jobs
                         throw new ArgumentException($"I don't know how to create a repeating job with a repeat pattern of '{repetition}'. Did you intend a day of month? If so, value must be between 1 and 28.");
 
                     GetTime(rootTaskNode, out int hours, out int minutes);
-                    return new EveryXDayOfMonth(
+                    job = new EveryXDayOfMonth(
                         name,
                         description,
                         lambda,
                         dayOfMonth,
                         hours,
                         minutes);
+                    break;
             }
+            job.CalculateNextDue();
+            return job;
         }
 
         #region [ -- Private helper methods -- ]

@@ -47,14 +47,9 @@ namespace magic.lambda.scheduler.utilities
             bool autoStart,
             int maxThreads)
         {
-            // Need to store service provider to be able to create ISignaler during task execution.
             _services = services ?? throw new ArgumentNullException(nameof(services));
-
-            // Storing logger in case of exceptions during job execution.
             _logger = logger;
-
-            _sempahore = new SemaphoreSlim(0, maxThreads);
-
+            _sempahore = new SemaphoreSlim(maxThreads);
             _tasks = new Synchronizer<Jobs>(new Jobs(tasksFile));
             if (autoStart)
                 Start();

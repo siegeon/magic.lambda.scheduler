@@ -69,8 +69,9 @@ namespace magic.lambda.scheduler.utilities
         /// Creates a new Job according to the declaration found in the specified Node instance.
         /// </summary>
         /// <param name="taskNode">Declaration of task.</param>
+        /// <param name="fromDisc">If true, will fetch the name of the task from the name of the node.</param>
         /// <returns>Newly created job.</returns>
-        public static Job CreateJob(Node taskNode)
+        public static Job CreateJob(Node taskNode, bool fromDisc = false)
         {
             // Figuring out what type of job caller requests.
             var repetitionPattern = taskNode.Children.Where(x => x.Name == "repeat" || x.Name == "when");
@@ -78,7 +79,10 @@ namespace magic.lambda.scheduler.utilities
                 throw new ArgumentException("A task must have exactly one [repeat] or [when] argument.");
 
             // Finding common arguments for job.
-            var name = taskNode.GetEx<string>() ?? throw new ArgumentException("No name give to task");
+            var name = fromDisc ? 
+                taskNode.Name : 
+                taskNode.GetEx<string>() ?? throw new ArgumentException("No name give to task");
+
             var description = taskNode.Children.FirstOrDefault(x => x.Name == "description")?.GetEx<string>();
             var lambda = taskNode.Children.FirstOrDefault(x => x.Name == ".lambda") ?? throw new ArgumentException($"No [.lambda] given to task named '{name}'");
 
@@ -108,7 +112,6 @@ namespace magic.lambda.scheduler.utilities
                 default:
                     throw new ApplicationException("You have reached a place in your code which should have been impossible to reach!");
             }
-            result.CalculateNextDue();
             return result;
         }
 
@@ -117,13 +120,13 @@ namespace magic.lambda.scheduler.utilities
          */
         internal void Start(Func<Job, Task> callback)
         {
-            CalculateNextDue();
+            _timer?.Dispose();
             var now = DateTime.Now;
             var nextDue =
                 Math.Max(
                     250,
                     Math.Min((Due - now).TotalMilliseconds, new TimeSpan(45, 0, 0, 0).TotalMilliseconds));
-            _timer = new Timer(async (state) => await callback(this), null, (int)nextDue, Timeout.Infinite);
+            _timer = new Timer(async (state) => await callback(this), null, (long)nextDue, Timeout.Infinite);
         }
 
         /*
