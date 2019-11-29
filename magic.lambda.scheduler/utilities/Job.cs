@@ -15,7 +15,7 @@ namespace magic.lambda.scheduler.utilities
 {
     /// <summary>
     /// Class wrapping a single job, with its repetition pattern, or due date,
-    /// and its associated lambda object to be evaluated when task is to be evaluated.
+    /// and its associated lambda object to be executed when the job is due.
     /// </summary>
     public abstract class Job : IDisposable
     {
@@ -24,11 +24,11 @@ namespace magic.lambda.scheduler.utilities
 
         /// <summary>
         /// Protected constructor to avoid direct instantiation, but
-        /// forcing using factory create method instead.
+        /// forcing instantiation through factory create method instead.
         /// </summary>
-        /// <param name="name">The name for your task.</param>
-        /// <param name="description">Description for your task.</param>
-        /// <param name="lambda">Actual lambda object to be evaluated when task is due.</param>
+        /// <param name="name">The name of your job.</param>
+        /// <param name="description">Description for your job.</param>
+        /// <param name="lambda">Actual lambda object to be evaluated when job is due.</param>
         protected Job(
             string name, 
             string description, 
@@ -40,51 +40,57 @@ namespace magic.lambda.scheduler.utilities
         }
 
         /// <summary>
-        /// Name of task.
+        /// Name of job.
         /// </summary>
         public string Name { get; private set; }
 
         /// <summary>
-        /// Description of task.
+        /// Description of job.
         /// </summary>
         public string Description { get; private set; }
 
         /// <summary>
-        /// Actual lambda object to be evaluated as task is due.
+        /// Actual lambda object to be executed when job is due.
         /// </summary>
         public Node Lambda { get; private set; }
 
         /// <summary>
-        /// The due date for the next time the task should be evaluated.
+        /// The due date for the next time the job should be executed.
         /// </summary>
         public DateTime Due { get; internal set; }
 
         /// <summary>
-        /// Returns true if this is a repetetive task, implying the task is declared
-        /// to be evaluated multiple times.
+        /// Returns true if this is a repetetive job, implying the job is declared
+        /// to be executed multiple times on an interval.
         /// </summary>
         public abstract bool Repeats { get; }
 
         /// <summary>
-        /// Creates a new Job according to the declaration found in the specified Node instance.
+        /// Creates a new job according to the declaration found in the specified node.
         /// </summary>
-        /// <param name="taskNode">Declaration of task.</param>
-        /// <param name="fromDisc">If true, will fetch the name of the task from the name of the node.</param>
+        /// <param name="jobNode">Declaration of job.</param>
+        /// <param name="fromPersistentStorage">If true, will fetch the name of the job from the
+        /// name of the node instead of from its value.</param>
         /// <returns>Newly created job.</returns>
-        public static Job CreateJob(Node taskNode, bool fromDisc = false)
+        public static Job CreateJob(Node jobNode, bool fromPersistentStorage = false)
         {
             // Figuring out what type of job caller requests.
-            var repetitionPattern = taskNode.Children.Where(x => x.Name == "repeat" || x.Name == "when");
+            var repetitionPattern = jobNode.Children.Where(x => x.Name == "repeat" || x.Name == "when");
             if (repetitionPattern.Count() != 1)
-                throw new ArgumentException("A task must have exactly one [repeat] or [when] argument.");
+                throw new ArgumentException("A job must have exactly one [repeat] or [when] argument.");
 
             // Finding common arguments for job.
-            var name = fromDisc ? 
-                taskNode.Name : 
-                taskNode.GetEx<string>() ?? throw new ArgumentException("No name give to task");
+            var name = fromPersistentStorage ? 
+                jobNode.Name : 
+                jobNode.GetEx<string>() ?? 
+                throw new ArgumentException("No name give to job");
 
-            var description = taskNode.Children.FirstOrDefault(x => x.Name == "description")?.GetEx<string>();
-            var lambda = taskNode.Children.FirstOrDefault(x => x.Name == ".lambda") ?? throw new ArgumentException($"No [.lambda] given to task named '{name}'");
+            var description = jobNode.Children
+                .FirstOrDefault(x => x.Name == "description")?.GetEx<string>();
+
+            var lambda = jobNode.Children
+                .FirstOrDefault(x => x.Name == ".lambda") ?? 
+                throw new ArgumentException($"No [.lambda] given to job named '{name}'");
 
             // Creating actual job instance.
             Job result;
@@ -97,7 +103,7 @@ namespace magic.lambda.scheduler.utilities
                         description,
                         lambda,
                         repetitionPattern.First().GetEx<string>(),
-                        taskNode);
+                        jobNode);
                     break;
 
                 case "when":
@@ -112,11 +118,14 @@ namespace magic.lambda.scheduler.utilities
                 default:
                     throw new ApplicationException("You have reached a place in your code which should have been impossible to reach!");
             }
+
+            // Notice, we do not actually start a job, before it's added to a scheduler of some sort.
             return result;
         }
 
         /*
-         * Creates the Timer timeout, that invokes the specified Action at the time the task should be evaluated.
+         * Creates the Timer, and its timeout timeout,
+         * that will invoke the specified Action at the time the job should be executed.
          */
         internal void Start(Func<Job, Task> callback)
         {
@@ -130,11 +139,20 @@ namespace magic.lambda.scheduler.utilities
         }
 
         /*
-         * Stops the task from being executed.
+         * Stops the job from being executed.
          */
         internal void Stop()
         {
             _timer.Change(Timeout.Infinite, Timeout.Infinite);
+        }
+
+        /*
+         * Refreshes the job by calculating the job's next due date some time
+         * into the future.
+         */
+        internal void RefreshDueDate()
+        {
+            CalculateNextDue();
         }
 
         /// <summary>
@@ -155,7 +173,7 @@ namespace magic.lambda.scheduler.utilities
         #region [ -- Interface implementations -- ]
 
         /// <summary>
-        /// Will dispose the Timer for the task.
+        /// Will dispose the Timer for the job.
         /// </summary>
         public void Dispose()
         {
@@ -171,10 +189,8 @@ namespace magic.lambda.scheduler.utilities
         {
             if (_disposed)
                 return;
-
             if (disposing)
-                _timer.Dispose();
-
+                _timer?.Dispose();
             _disposed = true;
         }
 

@@ -10,8 +10,8 @@ using magic.node;
 namespace magic.lambda.scheduler.utilities.jobs
 {
     /// <summary>
-    /// Class wrapping a single task, with its repetition pattern, or due date,
-    /// and its associated lambda object to be evaluated when task is to be evaluated.
+    /// Class wrapping a single job, with a weekly repetition pattern,
+    /// and its associated lambda object to be executed when job is to be executed.
     /// </summary>
     public class WeekdayRepeatJob : RepeatJob
     {
@@ -20,12 +20,12 @@ namespace magic.lambda.scheduler.utilities.jobs
         readonly int _minutes;
 
         /// <summary>
-        /// Constructor creating a job that is to be executed once every given weekday,
+        /// Constructor creating a job that is to be executed once every specified weekday,
         /// at some specified time of the day.
         /// </summary>
-        /// <param name="name">The name for your task.</param>
-        /// <param name="description">Description for your task.</param>
-        /// <param name="lambda">Actual lambda object to be evaluated when task is due.</param>
+        /// <param name="name">The name of your job.</param>
+        /// <param name="description">Description of your job.</param>
+        /// <param name="lambda">Actual lambda object to be executed when job is due.</param>
         /// <param name="weekday">Which day of the week the job should be executed</param>
         /// <param name="hours">At what hour during the day the job should be executed.</param>
         /// <param name="minutes">At what minute, within its hours, the job should be executed.</param>
@@ -42,12 +42,11 @@ namespace magic.lambda.scheduler.utilities.jobs
             _hours = hours;
             _minutes = minutes;
         }
-        #region [ -- Overridden abstract base class methods -- ]
 
         /// <summary>
         /// Returns the node representation of the job.
         /// </summary>
-        /// <returns>A node representing the declaration of the task when created.</returns>
+        /// <returns>A node representing the declaration of the job as when created.</returns>
         public override Node GetNode()
         {
             var result = new Node(Name);
@@ -58,8 +57,10 @@ namespace magic.lambda.scheduler.utilities.jobs
             return result;
         }
 
+        #region [ -- Overridden abstract base class methods -- ]
+
         /// <summary>
-        /// Calculates the next due date for the task.
+        /// Calculates the next due date for the job.
         /// </summary>
         protected override void CalculateNextDue()
         {

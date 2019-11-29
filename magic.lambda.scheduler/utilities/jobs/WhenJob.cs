@@ -10,17 +10,17 @@ using magic.node;
 namespace magic.lambda.scheduler.utilities.jobs
 {
     /// <summary>
-    /// Class wrapping a single task, with its repetition pattern, or due date,
-    /// and its associated lambda object to be evaluated when task is to be evaluated.
+    /// Class wrapping a single job, with its repetition pattern, or due date,
+    /// and its associated lambda object to be executed when job is due.
     /// </summary>
     public class WhenJob : Job
     {
         /// <summary>
         /// Constructor creating a job that is to be executed only once, and then discarded.
         /// </summary>
-        /// <param name="name">The name for your task.</param>
-        /// <param name="description">Description for your task.</param>
-        /// <param name="lambda">Actual lambda object to be evaluated when task is due.</param>
+        /// <param name="name">The name of your job.</param>
+        /// <param name="description">Description for your job.</param>
+        /// <param name="lambda">Actual lambda object to be executed when job is due.</param>
         /// <param name="when">Date of when job should be executed.</param>
         public WhenJob(
             string name, 
@@ -29,6 +29,9 @@ namespace magic.lambda.scheduler.utilities.jobs
             DateTime when)
             : base(name, description, lambda)
         {
+            if (when < DateTime.Now)
+                throw new ArgumentException($"Due date of job must be some time in the future.");
+
             Due = when;
         }
 
@@ -41,9 +44,9 @@ namespace magic.lambda.scheduler.utilities.jobs
         #region [ -- Overridden abstract base class methods -- ]
 
         /// <summary>
-        /// Returns a node representation of the task, as when the task was created.
+        /// Returns the node representation of the job.
         /// </summary>
-        /// <returns>A node representing the task as when created.</returns>
+        /// <returns>A node representing the declaration of the job as when created.</returns>
         public override Node GetNode()
         {
             var result = new Node(Name);
@@ -58,7 +61,7 @@ namespace magic.lambda.scheduler.utilities.jobs
         /// Calculates the next due date for the job.
         /// 
         /// Notice, do not invoke this method for this type of job, since it will throw an exception,
-        /// since task is not repeating, and its only execution date should have been supplied when
+        /// since job is not repeating, and its only execution date should have been supplied when
         /// the job was created.
         /// </summary>
         protected override void CalculateNextDue()

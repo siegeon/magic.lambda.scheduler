@@ -10,15 +10,16 @@ using magic.node;
 namespace magic.lambda.scheduler.utilities.jobs
 {
     /// <summary>
-    /// Class wrapping a single task, with its repetition pattern, or due date,
-    /// and its associated lambda object to be evaluated when task is to be evaluated.
+    /// Class wrapping a single job, with its repetition pattern being "every n'th of x",
+    /// where n is a positive integer value, and x is some sort of entity, such as "days", "hours", etc -
+    /// And its associated lambda object to be executed when the job is due.
     /// </summary>
     public class EveryEntityRepeatJob : RepeatJob
     {
         /// <summary>
         /// Repetition pattern for job.
         /// </summary>
-        public enum RepetitionPattern
+        public enum RepetitionEntityType
         {
             /// <summary>
             /// Every n second.
@@ -41,7 +42,7 @@ namespace magic.lambda.scheduler.utilities.jobs
             days
         };
 
-        readonly private RepetitionPattern _repetition;
+        readonly private RepetitionEntityType _repetition;
         readonly private long _repetitionValue;
 
         /// <summary>
@@ -49,28 +50,29 @@ namespace magic.lambda.scheduler.utilities.jobs
         /// </summary>
         /// <param name="name">Name of new job.</param>
         /// <param name="description">Description of job.</param>
-        /// <param name="lambda">Lambda object to evaluate as job is being executed.</param>
+        /// <param name="lambda">Lambda object to execute as job is due.</param>
         /// <param name="repetition">Repetition pattern.</param>
         /// <param name="repetitionValue">Number of entities declared through repetition pattern.</param>
         public EveryEntityRepeatJob(
             string name, 
             string description, 
             Node lambda,
-            RepetitionPattern repetition,
+            RepetitionEntityType repetition,
             long repetitionValue)
             : base(name, description, lambda)
         {
             // Sanity checking and decorating instance.
+            if (repetitionValue < 1)
+                throw new ArgumentException("Repetition value must be a positive integer value.");
+
             _repetition = repetition;
             _repetitionValue = repetitionValue;
         }
 
-        #region [ -- Overridden abstract base class methods -- ]
-
         /// <summary>
-        /// Returns a node representation of the job.
+        /// Returns the node representation of the job.
         /// </summary>
-        /// <returns>The node representing the job, as supplied when job was created.</returns>
+        /// <returns>A node representing the declaration of the job as when created.</returns>
         public override Node GetNode()
         {
             var result = new Node(Name);
@@ -81,26 +83,28 @@ namespace magic.lambda.scheduler.utilities.jobs
             return result;
         }
 
+        #region [ -- Overridden abstract base class methods -- ]
+
         /// <summary>
-        /// Calculates the task's next due date.
+        /// Calculates the job's next due date.
         /// </summary>
         protected override void CalculateNextDue()
         {
             switch (_repetition)
             {
-                case RepetitionPattern.seconds:
+                case RepetitionEntityType.seconds:
                     Due = DateTime.Now.AddSeconds(_repetitionValue);
                     break;
 
-                case RepetitionPattern.minutes:
+                case RepetitionEntityType.minutes:
                     Due = DateTime.Now.AddMinutes(_repetitionValue);
                     break;
 
-                case RepetitionPattern.hours:
+                case RepetitionEntityType.hours:
                     Due = DateTime.Now.AddHours(_repetitionValue);
                     break;
 
-                case RepetitionPattern.days:
+                case RepetitionEntityType.days:
                     Due = DateTime.Now.AddDays(_repetitionValue);
                     break;
 

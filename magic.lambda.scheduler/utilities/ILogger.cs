@@ -9,15 +9,15 @@ namespace magic.lambda.scheduler.utilities
 {
     /// <summary>
     /// Interface necessary to provide in order to log errors occurring
-    /// during evaluation of tasks.
+    /// during execution of jobs.
     /// </summary>
     public interface ILogger
     {
         /// <summary>
-        /// Invoked when an error occurs during evaluation of task.
+        /// Invoked when an error occurs during execution of a job.
         /// </summary>
-        /// <param name="taskName">Nameof task that created the error.</param>
+        /// <param name="jobName">Name of job that created the error.</param>
         /// <param name="err">Exception that occurred.</param>
-        void LogError(string taskName, Exception err);
+        void LogError(string jobName, Exception err);
     }
 }

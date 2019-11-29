@@ -5,52 +5,56 @@
 
 using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using magic.signals.contracts;
-using System.Threading;
 
 namespace magic.lambda.scheduler.utilities
 {
     /// <summary>
-    /// The background service responsible for scheduling and evaluating tasks.
+    /// The background service responsible for scheduling and executing jobs.
     ///
     /// Notice, you should make sure you resolve this as a singleton if you are
-    /// using an IoC container. Also notice that no tasks will evaluate before
-    /// you explicitly somehow invoke Start on your instance.
+    /// using an IoC container. Also notice that no jobs will execute before
+    /// you explicitly somehow invoke Start on your instance, which you can do
+    /// automatically by instantiating the class with autoStart set to true.
     /// 
-    /// You are also responsible to make sure all operations on instance is synchronized.
+    /// The class is thread safe, and all operations towards its internal
+    /// list of jobs is synchronized
     /// </summary>
     public sealed class Scheduler : IDisposable
     {
         readonly SemaphoreSlim _sempahore;
         readonly IServiceProvider _services;
         readonly ILogger _logger;
-        readonly Synchronizer<Jobs> _tasks;
+        readonly Synchronizer<Jobs> _jobs;
 
         /// <summary>
-        /// Creates a new background service, responsible for scheduling and
-        /// evaluating tasks that have been scheduled for future evaluation.
+        /// Creates a new scheduler, responsible for scheduling and
+        /// executing jobs that have been scheduled for future execution.
         /// </summary>
         /// <param name="services">Service provider to resolve ISignaler.</param>
-        /// <param name="logger">Logging provider necessary to be able to log tasks that are
+        /// <param name="logger">Logging provider necessary to be able to log jobs that are
         /// not executed successfully.</param>
-        /// <param name="tasksFile">The path to your tasks file,
-        /// declaring what tasks your application has scheduled for future
-        /// evaluation.</param>
+        /// <param name="jobFile">The path to your job file,
+        /// declaring what jobs your application has scheduled for future
+        /// execution. Jobs will be serialized into this file, such that if the
+        /// process for some reasons is taken down, the jobs will be reloaded the next
+        /// time the scheduler is instantiated again.</param>
         /// <param name="autoStart">If true, will start service immediately automatically.</param>
-        /// <param name="maxThreads">Maximum number of concurrent jobs to execute at the same time.</param>
+        /// <param name="maxThreads">Maximum number of concurrent jobs to execute simultaneously.</param>
         public Scheduler(
-            IServiceProvider services, 
+            IServiceProvider services,
             ILogger logger,
-            string tasksFile,
+            string jobFile,
             bool autoStart,
             int maxThreads)
         {
             _services = services ?? throw new ArgumentNullException(nameof(services));
             _logger = logger;
             _sempahore = new SemaphoreSlim(maxThreads);
-            _tasks = new Synchronizer<Jobs>(new Jobs(tasksFile));
+            _jobs = new Synchronizer<Jobs>(new Jobs(jobFile));
             if (autoStart)
                 Start();
         }
@@ -62,14 +66,15 @@ namespace magic.lambda.scheduler.utilities
 
         /// <summary>
         /// Starts your scheduler. You must invoke this method in order to
-        /// start your scheduler.
+        /// start your scheduler, or instantiate the class with autoStart set
+        /// to true.
         /// </summary>
         public void Start()
         {
-            _tasks.Write(tasks =>
+            _jobs.Write(jobs =>
             {
                 Running = true;
-                foreach (var idx in tasks.List())
+                foreach (var idx in jobs.List())
                 {
                     idx.Start(async (x) => await Execute(x));
                 }
@@ -77,14 +82,15 @@ namespace magic.lambda.scheduler.utilities
         }
 
         /// <summary>
-        /// Stops your scheduler, such that no more tasks will be evaluated.
+        /// Stops your scheduler, such that no more jobs will be executed, before it
+        /// is explicitly started again.
         /// </summary>
         public void Stop()
         {
-            _tasks.Write(tasks =>
+            _jobs.Write(jobs =>
             {
                 Running = false;
-                foreach (var idx in tasks.List())
+                foreach (var idx in jobs.List())
                 {
                     idx.Stop();
                 }
@@ -92,95 +98,103 @@ namespace magic.lambda.scheduler.utilities
         }
 
         /// <summary>
-        /// Creates a new task.
+        /// Adds a new job to the scheduler.
         ///
-        /// Notice, will delete any previously created tasks with the same name.
+        /// Notice, any previously added jobs with the same name will be deleted.
+        /// The jobs added through this method will also be serialized to disc,
+        /// to the specified jobs file.
         /// </summary>
-        /// <param name="job">Task to add.</param>
+        /// <param name="job">Job to add.</param>
         public void Add(Job job)
         {
-            _tasks.Write((tasks) => tasks.Add(job));
+            _jobs.Write((jobs) => jobs.Add(job));
             job.Start(async (x) => await Execute(x));
         }
 
         /// <summary>
-        /// Lists all tasks in task manager, in order of evaluation, such that
-        /// the first task in queue will be the first task returned.
+        /// Returns all jobs in the scheduler to caller.
         /// </summary>
-        /// <returns>All tasks listed in chronological order of evaluation.</returns>
+        /// <returns>All jobs registered in the scheduler.</returns>
         public List<Job> List()
         {
-            return _tasks.Read((tasks) => tasks.List().ToList());
+            return _jobs.Read((jobs) => jobs.List().ToList());
         }
 
         /// <summary>
-        /// Returns a previously created task to caller.
+        /// Returns a previously created job to caller.
         /// </summary>
-        /// <param name="name">Name of task you wish to retrieve.</param>
-        /// <returns>A node representing your task.</returns>
-        public Job Get(string name)
+        /// <param name="jobName">Name of job you wish to retrieve.</param>
+        /// <returns>A node representing your job.</returns>
+        public Job Get(string jobName)
         {
-            // Getting task with specified name.
-            return _tasks.Read((tasks) => tasks.Get(name));
+            // Getting job with specified name.
+            return _jobs.Read((jobs) => jobs.Get(jobName));
         }
 
         /// <summary>
-        /// Deletes an existing task from your task manager.
+        /// Deletes an existing job from your scheduler.
         /// </summary>
-        /// <param name="name">Name of task to delete.</param>
-        public void Delete(string name)
+        /// <param name="jobName">Name of job to delete.</param>
+        public void Delete(string jobName)
         {
-            _tasks.Write((tasks) => tasks.Delete(name));
+            _jobs.Write((jobs) => jobs.Delete(jobName));
         }
 
         #region [ -- Interface implementations -- ]
 
         /// <summary>
-        /// Disposes the TaskList.
+        /// Disposes the scheduler.
         /// </summary>
         public void Dispose()
         {
-            _tasks.Dispose();
+            _jobs.Dispose();
         }
 
         #endregion
 
         #region [ -- Private helper methods -- ]
 
+        /*
+         * Callback method that is executed when a job is due.
+         * 
+         * Simply evaluates the lambda associated with the job, and recalculates
+         * when the job is due again next, if the job is repeating - Otherwise, it'll
+         * delete the job from the list of jobs after having executed it.
+         */
         async Task Execute(Job job)
         {
             if (!Running)
             {
-                // Postponing into the future.
+                // No jobs are to be executed, but we still keep track of next due dates for jobs.
                 job.Start(async (x) => await Execute(x));
                 return;
             }
 
+            // Making sure no more than "maxThreads" are executed simultaneously.
             await _sempahore.WaitAsync();
 
             try
             {
-                // Retrieving task and its lambda object, and evaluating it.
                 var lambda = job.Lambda.Clone();
                 var signaler = _services.GetService(typeof(ISignaler)) as ISignaler;
                 await signaler.SignalAsync("wait.eval", lambda);
             }
             catch (Exception err)
             {
-                // Making sure we log exception using preferred ILogger instance.
                 _logger?.LogError(job.Name, err);
             }
             finally
             {
                 if (job.Repeats)
                 {
+                    job.RefreshDueDate();
                     job.Start(async (x) => await Execute(x));
                 }
                 else
                 {
-                    _tasks.Write((tasks) =>
+                    _jobs.Write((jobs) =>
                     {
-                        tasks.Delete(job.Name);
+                        jobs.Delete(job.Name);
                     });
                 }
                 _sempahore.Release();

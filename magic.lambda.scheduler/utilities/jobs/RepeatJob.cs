@@ -11,8 +11,8 @@ using magic.node.extensions;
 namespace magic.lambda.scheduler.utilities.jobs
 {
     /// <summary>
-    /// Class wrapping a single task, with its repetition pattern, or due date,
-    /// and its associated lambda object to be evaluated when task is to be evaluated.
+    /// Class wrapping a single repeating job, with its repetition pattern,
+    /// and its associated lambda object to be executed when the job is due.
     /// </summary>
     public abstract class RepeatJob : Job
     {
@@ -20,10 +20,10 @@ namespace magic.lambda.scheduler.utilities.jobs
         /// Constructor creating a job that is to be executed multiple times, according to some sort
         /// of repetition pattern.
         /// </summary>
-        /// <param name="name">The name for your task.</param>
-        /// <param name="description">Description for your task.</param>
-        /// <param name="lambda">Actual lambda object to be evaluated when task is due.</param>
-        public RepeatJob(
+        /// <param name="name">The name of your job.</param>
+        /// <param name="description">Description for your job.</param>
+        /// <param name="lambda">Actual lambda object to be executed when job is due.</param>
+        protected RepeatJob(
             string name, 
             string description, 
             Node lambda)
@@ -31,27 +31,29 @@ namespace magic.lambda.scheduler.utilities.jobs
         { }
 
         /// <summary>
-        /// Returns true if job is repeating, which this particular type of job will always be doing.
+        /// Returns true if job is repeating.
+        /// 
+        /// Notice, this type of job will always return true.
         /// </summary>
         public override bool Repeats => true;
 
         /// <summary>
-        /// Virtual constructor method, creating a job that should be repeated according
+        /// Factory constructor method, creating a job that should be repeated according
         /// to some repetition pattern.
         /// </summary>
-        /// <param name="name">The name for your task.</param>
-        /// <param name="description">Description for your task.</param>
-        /// <param name="lambda">Actual lambda object to be evaluated when task is due.</param>
+        /// <param name="name">The name of your job.</param>
+        /// <param name="description">Description for your job.</param>
+        /// <param name="lambda">Actual lambda object to be evaluated when job is due.</param>
         /// <param name="repetition">String representation of the job's repetition pattern.</param>
-        /// <param name="rootTaskNode">Root node for job declaration, necessary to further parametrize
-        /// constructors down in the food chain.</param>
+        /// <param name="rootJobNode">Root node for job declaration, necessary to further parametrize
+        /// constructors downwards in the food chain.</param>
         /// <returns>A new RepeatJob of some sort.</returns>
         public static RepeatJob CreateJob(
             string name, 
             string description, 
             Node lambda,
             string repetition,
-            Node rootTaskNode)
+            Node rootJobNode)
         {
             RepeatJob job;
             switch (repetition)
@@ -64,7 +66,7 @@ namespace magic.lambda.scheduler.utilities.jobs
                 case "Friday":
                 case "Saturday":
 
-                    GetTime(rootTaskNode, out int hoursWeekday, out int minutesWeekday);
+                    GetTime(rootJobNode, out int hoursWeekday, out int minutesWeekday);
                     job = new WeekdayRepeatJob(
                         name,
                         description,
@@ -83,17 +85,17 @@ namespace magic.lambda.scheduler.utilities.jobs
                         name, 
                         description, 
                         lambda, 
-                        (EveryEntityRepeatJob.RepetitionPattern)Enum.Parse(typeof(EveryEntityRepeatJob.RepetitionPattern), repetition), 
-                        rootTaskNode.Children
+                        (EveryEntityRepeatJob.RepetitionEntityType)Enum.Parse(typeof(EveryEntityRepeatJob.RepetitionEntityType), repetition), 
+                        rootJobNode.Children
                             .FirstOrDefault(x => x.Name == "repeat")?
                             .Children
                                 .FirstOrDefault(x => x.Name == "value")?.GetEx<long>() ?? 
-                                throw new ArgumentException($"No [value] supplied to '{repetition}' task during creation."));
+                                throw new ArgumentException($"No [value] supplied to '{repetition}' job during creation."));
                     break;
 
                 case "last-day-of-month":
 
-                    GetTime(rootTaskNode, out int hoursLastDay, out int minutesLastDay);
+                    GetTime(rootJobNode, out int hoursLastDay, out int minutesLastDay);
                     job = new LastDayOfMonthJob(
                         name,
                         description,
@@ -107,7 +109,7 @@ namespace magic.lambda.scheduler.utilities.jobs
                     if (!int.TryParse(repetition, out int dayOfMonth) || dayOfMonth < 1 || dayOfMonth > 28)
                         throw new ArgumentException($"I don't know how to create a repeating job with a repeat pattern of '{repetition}'. Did you intend a day of month? If so, value must be between 1 and 28.");
 
-                    GetTime(rootTaskNode, out int hours, out int minutes);
+                    GetTime(rootJobNode, out int hours, out int minutes);
                     job = new EveryXDayOfMonth(
                         name,
                         description,
@@ -117,20 +119,27 @@ namespace magic.lambda.scheduler.utilities.jobs
                         minutes);
                     break;
             }
+
+            // Calculating next due date, but not starting the job, before it's added to some scheduler of some sort.
             job.CalculateNextDue();
             return job;
         }
 
         #region [ -- Private helper methods -- ]
 
-        static void GetTime(Node rootTaskNode, out int hours, out int minutes)
+        /*
+         * Parses a string in "HH:mm" format, returning hours and minutes to caller as out parameters.
+         */
+        static void GetTime(Node rootJobNode, out int hours, out int minutes)
         {
-            var timeEntities = rootTaskNode.Children
+            var timeEntities = rootJobNode.Children
                 .First(x => x.Name == "repeat").Children
                     .FirstOrDefault(x => x.Name == "time")?.GetEx<string>()?.Split(':') ??
                 throw new ArgumentException("No [time] value supplied when trying to create a task.");
+
             if (timeEntities.Length != 2)
                 throw new ArgumentException("[time] must be declared as HH:mm.");
+
             hours = int.Parse(timeEntities[0]);
             minutes = int.Parse(timeEntities[1]);
         }

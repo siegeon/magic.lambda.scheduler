@@ -10,8 +10,8 @@ using magic.node;
 namespace magic.lambda.scheduler.utilities.jobs
 {
     /// <summary>
-    /// Class wrapping a single task, with its repetition pattern, or due date,
-    /// and its associated lambda object to be evaluated when task is to be evaluated.
+    /// Class wrapping a single job, with its repetition pattern being "every n'th day of month",
+    /// at some specified time, and its associated lambda object to be executed when the job is due.
     /// </summary>
     public class EveryXDayOfMonth : RepeatJob
     {
@@ -22,10 +22,10 @@ namespace magic.lambda.scheduler.utilities.jobs
         /// <summary>
         /// Creates a new job that repeats every n'th day of the month.
         /// </summary>
-        /// <param name="name">Name of new job.</param>
-        /// <param name="description">Description of job.</param>
-        /// <param name="lambda">Lambda object to be executed whne job is due.</param>
-        /// <param name="dayOfMonth">Which day of the month job should execute. Integer value between 1 and 28.</param>
+        /// <param name="name">Name of the new job.</param>
+        /// <param name="description">Description for the job.</param>
+        /// <param name="lambda">Lambda object to be executed when job is due.</param>
+        /// <param name="dayOfMonth">Which day of the month the job should execute. Integer value between 1 and 28.</param>
         /// <param name="hours">At which time of the day the job should execute. Integer value between 0 and 23.</param>
         /// <param name="minutes">At which minute within the hour the job should execute. Integer value between 0 and 59.</param>
         public EveryXDayOfMonth(
@@ -37,23 +37,23 @@ namespace magic.lambda.scheduler.utilities.jobs
             int minutes)
             : base(name, description, lambda)
         {
+            // Sanity checking invocation
             if (dayOfMonth < 0 || dayOfMonth > 28)
                 throw new ArgumentException($"{nameof(dayOfMonth)} must be between 0 and 28");
             if (hours < 0 || hours > 23)
                 throw new ArgumentException($"{nameof(hours)} must be between 0 and 23");
             if (minutes < 0 || minutes > 59)
                 throw new ArgumentException($"{nameof(hours)} must be between 0 and 59");
+
             _dayOfMonth = dayOfMonth;
             _hours = hours;
             _minutes = minutes;
         }
 
-        #region [ -- Overridden abstract base class methods -- ]
-
         /// <summary>
-        /// Returns a node representation of the job.
+        /// Returns the node representation of the job.
         /// </summary>
-        /// <returns>Node representing the job as when cerated.</returns>
+        /// <returns>A node representing the declaration of the job as when created.</returns>
         public override Node GetNode()
         {
             var result = new Node(Name);
@@ -63,6 +63,8 @@ namespace magic.lambda.scheduler.utilities.jobs
             result.Add(new Node(".lambda", null, Lambda.Children.Select(x => x.Clone())));
             return result;
         }
+
+        #region [ -- Overridden abstract base class methods -- ]
 
         /// <summary>
         /// Calculates the next due date for the job.
@@ -77,6 +79,7 @@ namespace magic.lambda.scheduler.utilities.jobs
                 _minutes,
                 0,
                 DateTimeKind.Utc);
+
             if (nextDate.AddMilliseconds(250) < DateTime.Now)
                 Due = nextDate.AddMonths(1);
             else
