@@ -49,7 +49,7 @@ namespace magic.lambda.scheduler.utilities
         /*
          * Calculated due date for the next time the task should be evaluated.
          */
-        public DateTime Due { get; protected set; }
+        public DateTime Due { get; internal set; }
 
         /*
          * Returns true if this is a repetetive task, implying the task is declared
@@ -70,28 +70,33 @@ namespace magic.lambda.scheduler.utilities
             var lambda = taskNode.Children.FirstOrDefault(x => x.Name == ".lambda") ?? throw new ArgumentException($"No [.lambda] given to task named '{name}'");
 
             // Creating actual job instance.
+            Job result;
             switch (repetitionPattern.First().Name)
             {
                 case "repeat":
 
-                    return RepeatJob.CreateJob(
+                    result = RepeatJob.CreateJob(
                         name,
                         description,
                         lambda,
                         repetitionPattern.First().GetEx<string>(),
                         taskNode);
+                    break;
 
                 case "when":
 
-                    return new WhenJob(
+                    result = new WhenJob(
                         name,
                         description,
                         lambda,
                         repetitionPattern.First().GetEx<DateTime>());
+                    break;
 
                 default:
                     throw new ApplicationException("You have reached a place in your code which should have been impossible to reach!");
             }
+            result.Due = result.CalculateNextDue();
+            return result;
         }
 
         /*

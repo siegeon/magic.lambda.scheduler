@@ -17,13 +17,13 @@ namespace magic.lambda.scheduler
     [Slot(Name = "scheduler.tasks.list")]
     public class ListTasks : ISlot
     {
-        readonly TaskScheduler _scheduler;
+        readonly Scheduler _scheduler;
 
         /// <summary>
         /// Creates a new instance of your slot.
         /// </summary>
         /// <param name="scheduler">Which background service to use.</param>
-        public ListTasks(TaskScheduler scheduler)
+        public ListTasks(Scheduler scheduler)
         {
             _scheduler = scheduler ?? throw new ArgumentNullException(nameof(scheduler));
         }

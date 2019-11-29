@@ -16,13 +16,13 @@ namespace magic.lambda.scheduler
     [Slot(Name = "scheduler.stop")]
     public class StopScheduler : ISlot
     {
-        readonly TaskScheduler _scheduler;
+        readonly Scheduler _scheduler;
 
         /// <summary>
         /// Creates a new instance of your slot.
         /// </summary>
         /// <param name="scheduler">Which background service to use.</param>
-        public StopScheduler(TaskScheduler scheduler)
+        public StopScheduler(Scheduler scheduler)
         {
             _scheduler = scheduler ?? throw new ArgumentNullException(nameof(scheduler));
         }

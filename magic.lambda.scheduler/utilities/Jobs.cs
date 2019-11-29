@@ -19,7 +19,7 @@ namespace magic.lambda.scheduler.utilities
      *
      * Also responsible for loading and saving tasks to disc, etc.
      */
-    internal class TaskList : IDisposable
+    internal class Jobs : IDisposable
     {
         // Making sure we have synchronized access to our task list.
         readonly List<Job> _tasks = new List<Job>();
@@ -29,7 +29,7 @@ namespace magic.lambda.scheduler.utilities
          * Creates a new task manager, by loading serialized tasks from the
          * given tasksFile path.
          */
-        public TaskList(string tasksFile)
+        public Jobs(string tasksFile)
         {
             _tasksFile = tasksFile ?? throw new ArgumentNullException(nameof(tasksFile));
             ReadTasksFile();

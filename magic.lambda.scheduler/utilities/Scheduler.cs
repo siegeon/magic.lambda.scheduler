@@ -21,10 +21,10 @@ namespace magic.lambda.scheduler.utilities
     /// 
     /// You are also responsible to make sure all operations on instance is synchronized.
     /// </summary>
-    public sealed class TaskScheduler : IDisposable
+    public sealed class Scheduler : IDisposable
     {
         readonly IServiceProvider _services;
-        readonly Synchronizer<TaskList> _tasks;
+        readonly Synchronizer<Jobs> _tasks;
 
         /// <summary>
         /// Creates a new background service, responsible for scheduling and
@@ -36,10 +36,10 @@ namespace magic.lambda.scheduler.utilities
         /// declaring what tasks your application has scheduled for future
         /// evaluation.</param>
         /// <param name="autoStart">If true, will start service immediately automatically.</param>
-        public TaskScheduler(IServiceProvider services, string tasksFile, bool autoStart)
+        public Scheduler(IServiceProvider services, string tasksFile, bool autoStart)
         {
             _services = services ?? throw new ArgumentNullException(nameof(services));
-            _tasks = new Synchronizer<TaskList>(new TaskList(tasksFile));
+            _tasks = new Synchronizer<Jobs>(new Jobs(tasksFile));
 
             // Starting scheduler if we should.
             if (autoStart)
@@ -173,6 +173,7 @@ namespace magic.lambda.scheduler.utilities
             {
                 if (job.Repeats)
                 {
+                    job.Due = job.CalculateNextDue();
                     job.EnsureTimer(async (x) => await ExecuteTask(x));
                 }
                 else
