@@ -19,10 +19,10 @@ namespace magic.lambda.scheduler.utilities
      *
      * Also responsible for loading and saving tasks to disc, etc.
      */
-    internal class TaskList
+    internal class TaskList : IDisposable
     {
         // Making sure we have synchronized access to our task list.
-        readonly List<ScheduledTask> _tasks = new List<ScheduledTask>();
+        readonly List<Job> _tasks = new List<Job>();
         readonly string _tasksFile;
 
         /*
@@ -40,12 +40,12 @@ namespace magic.lambda.scheduler.utilities
          */
         public void AddTask(Node node)
         {
-            // Creating our task.
-            var task = new ScheduledTask(node);
-
             // Making sure we never add more than 1.000 tasks.
             if (_tasks.Count >= 1000)
                 throw new ApplicationException("The task scheduler only supports a maximum of 1.000 tasks to avoid flooding your server accidenatlly.");
+
+            // Creating our task.
+            var task = Job.CreateJob(node);
 
             _tasks.RemoveAll(x => x.Name == task.Name);
             _tasks.Add(task);
@@ -65,25 +65,17 @@ namespace magic.lambda.scheduler.utilities
         /*
          * Returns the task with the given name, if any.
          */
-        public ScheduledTask GetTask(string name)
+        public Job GetTask(string name)
         {
             return _tasks.FirstOrDefault(x => x.Name == name);
         }
 
         /*
-         * Returns the next upcoming task from the task manager.
-         */
-        public ScheduledTask NextDueTask()
-        {
-            return _tasks.FirstOrDefault();
-        }
-
-        /*
          * Returns all tasks to caller.
          */
-        public IEnumerable<ScheduledTask> List()
+        public IEnumerable<Job> List()
         {
-            return _tasks.ToList();
+            return _tasks;
         }
 
         /*
@@ -125,7 +117,7 @@ namespace magic.lambda.scheduler.utilities
                  */
                 var when = idx.Children.FirstOrDefault(x => x.Name == "when");
                 if (when == null || when.Get<DateTime>() > DateTime.Now)
-                    _tasks.Add(new ScheduledTask(idx));
+                    _tasks.Add(Job.CreateJob(idx));
             }
             _tasks.Sort();
         }
@@ -135,10 +127,18 @@ namespace magic.lambda.scheduler.utilities
          */
         void SaveTasksFile()
         {
-            var hyper = Generator.GetHyper(_tasks.Select(x => x.RootNode));
+            var hyper = Generator.GetHyper(_tasks.Select(x => x.GetNode()));
             using (var stream = File.CreateText(_tasksFile))
             {
                 stream.Write(hyper);
+            }
+        }
+
+        public void Dispose()
+        {
+            foreach (var idx in _tasks)
+            {
+                idx.Dispose();
             }
         }
 

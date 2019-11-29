@@ -5,7 +5,7 @@
 
 using System;
 using System.Linq;
-using System.Threading;
+using System.Threading.Tasks;
 using System.Collections.Generic;
 using magic.node;
 using magic.signals.contracts;
@@ -24,8 +24,7 @@ namespace magic.lambda.scheduler.utilities
     public sealed class TaskScheduler : IDisposable
     {
         readonly IServiceProvider _services;
-        readonly TaskList _tasks;
-        readonly Timer _timer;
+        readonly Synchronizer<TaskList> _tasks;
 
         /// <summary>
         /// Creates a new background service, responsible for scheduling and
@@ -40,12 +39,20 @@ namespace magic.lambda.scheduler.utilities
         public TaskScheduler(IServiceProvider services, string tasksFile, bool autoStart)
         {
             _services = services ?? throw new ArgumentNullException(nameof(services));
-            _tasks = new TaskList(tasksFile);
-            _timer = new Timer(ExecuteNextTask);
+            _tasks = new Synchronizer<TaskList>(new TaskList(tasksFile));
 
             // Starting scheduler if we should.
             if (autoStart)
-                Start();
+                Running = true;
+
+            // Starting all task timers.
+            _tasks.Read((tasks) =>
+            {
+                foreach (var idx in tasks.List())
+                {
+                    idx.EnsureTimer(async (x) => await ExecuteTask(x));
+                }
+            });
         }
 
         /// <summary>
@@ -60,7 +67,6 @@ namespace magic.lambda.scheduler.utilities
         public void Start()
         {
             Running = true;
-            EnsureTimer();
         }
 
         /// <summary>
@@ -69,7 +75,6 @@ namespace magic.lambda.scheduler.utilities
         public void Stop()
         {
             Running = false;
-            _timer.Change(Timeout.Infinite, Timeout.Infinite);
         }
 
         /// <summary>
@@ -84,13 +89,7 @@ namespace magic.lambda.scheduler.utilities
              *  Removing any other tasks with the same name before
              *  proceeding with add.
              */
-            _tasks.AddTask(node);
-
-            /*
-             * Need to "retouch" our timer in case task is our first due
-             * task in our list of tasks.
-             */
-            EnsureTimer();
+            _tasks.Write((tasks) => tasks.AddTask(node));
         }
 
         /// <summary>
@@ -101,14 +100,14 @@ namespace magic.lambda.scheduler.utilities
         public Node GetTask(string name)
         {
             // Getting task with specified name.
-            var task = _tasks.GetTask(name);
+            var task = _tasks.Read((tasks) => tasks.GetTask(name));
 
             // Checking if named task exists.
             if (task == null)
                 return null;
 
             // Creating and returning our result.
-            var result = new Node(task.Name, null, task.RootNode.Children.Select(x => x.Clone()));
+            var result = new Node(task.Name, null, task.GetNode().Children.Select(x => x.Clone()));
 
             // Making sure we also return upcoming due date as [due] node.
             result.Add(new Node("due", task.Due));
@@ -121,13 +120,7 @@ namespace magic.lambda.scheduler.utilities
         /// <param name="name">Name of task to delete.</param>
         public void DeleteTask(string name)
         {
-            _tasks.DeleteTask(name);
-
-            /*
-             * Need to "retouch" our timer in case task is our first due
-             * task in our list of tasks.
-             */
-            EnsureTimer();
+            _tasks.Write((tasks) => tasks.DeleteTask(name));
         }
 
         /// <summary>
@@ -137,93 +130,36 @@ namespace magic.lambda.scheduler.utilities
         /// <returns>All tasks listed in chronological order of evaluation.</returns>
         public IEnumerable<string> ListTasks()
         {
-            return _tasks.List().Select(x => x.Name);
+            return _tasks.Read((tasks) => tasks.List().Select(x => x.Name));
         }
 
         #region [ -- Interface implementations -- ]
 
         /// <summary>
-        /// IDisposable implementation.
+        /// Disposes the TaskList.
         /// </summary>
         public void Dispose()
         {
-            Running = false;
-            _timer?.Dispose();
+            _tasks.Write((tasks) => tasks.Dispose());
         }
 
         #endregion
 
         #region [ -- Private helper methods -- ]
 
-        /*
-         * Creates the timer such that it is invoked when the due date for the
-         * next upcoming task is due.
-         *
-         * Notice, assumes the "_locker" has been locked during invocation of
-         * the method.
-         */
-        void EnsureTimer()
+        async Task ExecuteTask(Job job)
         {
-            /*
-             * Checking if timer actually is running, and if not,
-             * returning early.
-             */
             if (!Running)
+            {
+                // Postponing into the future.
+                job.EnsureTimer(async (x) => await ExecuteTask(x));
                 return;
+            }
 
-            // Retrieving next task if there are any.
-            var next = _tasks.NextDueTask();
-            if (next == null)
-                return; // No more tasks, hence not creating timer.
-
-            /*
-             * Checking if task is overdue, at which point we evaluate it
-             * immediately.
-             */
-            var now = DateTime.Now;
-
-            /*
-             * Figuring out when to evaluate next task.
-             *
-             * Notice, if task is over due, we evaluate it 250 milliseconds from
-             * now, to make sure we evaluate tasks that for some reasons have
-             * been queued up but not being able to evaluate at their due dates
-             * for some reasons.
-             */
-            var nextDue = 
-                Math.Max(
-                    250, 
-                    Math.Min((next.Due - now).TotalMilliseconds, new TimeSpan(45, 0, 0, 0).TotalMilliseconds));
-
-            /*
-             * Creating our timer, such that it kicks in at next task's due date,
-             * or (max) 45 days from now.
-             * 
-             * Notice, if next task is not due when timer kicks in, the timer will simply
-             * be re-created, and nothing else will occur.
-             */
-            _timer.Change((long)nextDue, Timeout.Infinite);
-        }
-
-        /*
-         * Executes the next upcoming tasks, if any.
-         */
-        async void ExecuteNextTask(object state)
-        {
-            /*
-             * Retrieving next due task and preparing it for evaluation.
-             * 
-             * Notice, if no tasks are due, we return early.
-             */
-            var current = SynchronizeScheduler.Read(() => _tasks.NextDueTask());
-            if (current == null)
-                return;
-
-            // Making sure we're able to log exceptions.
             try
             {
                 // Retrieving task and its lambda object, and evaluating it.
-                var lambda = current.Lambda.Clone();
+                var lambda = job.Lambda.Clone();
                 var signaler = _services.GetService(typeof(ISignaler)) as ISignaler;
                 await signaler.SignalAsync("wait.eval", lambda);
             }
@@ -231,23 +167,21 @@ namespace magic.lambda.scheduler.utilities
             {
                 // Making sure we log exception using preferred ILogger instance.
                 var logger = _services.GetService(typeof(ILogger)) as ILogger;
-                logger?.LogError(current.Name, err);
+                logger?.LogError(job.Name, err);
             }
             finally
             {
-                SynchronizeScheduler.Write(() =>
+                if (job.Repeats)
                 {
-                    if (current.Repeats)
+                    job.EnsureTimer(async (x) => await ExecuteTask(x));
+                }
+                else
+                {
+                    _tasks.Write((tasks) =>
                     {
-                        current.CalculateDue();
-                        _tasks.Sort();
-                    }
-                    else
-                    {
-                        _tasks.DeleteTask(current.Name);
-                    }
-                    EnsureTimer();
-                });
+                        tasks.DeleteTask(job.Name);
+                    });
+                }
             }
         }
 

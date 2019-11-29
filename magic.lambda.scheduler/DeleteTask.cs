@@ -35,7 +35,7 @@ namespace magic.lambda.scheduler
         /// <param name="input">Arguments to slot.</param>
         public void Signal(ISignaler signaler, Node input)
         {
-            SynchronizeScheduler.Write(() => _scheduler.DeleteTask(input.GetEx<string>()));
+            _scheduler.DeleteTask(input.GetEx<string>());
         }
     }
 }

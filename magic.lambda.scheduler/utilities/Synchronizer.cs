@@ -10,20 +10,43 @@ namespace magic.lambda.scheduler.utilities
 {
     /*
      * Helper class to synchronize access to the shared scheduler instance.
+     * TODO : Merge into utility library.
      */
-    internal static class SynchronizeScheduler
+    internal class Synchronizer<T>
     {
-        readonly static ReaderWriterLockSlim _lock = new ReaderWriterLockSlim();
+        readonly ReaderWriterLockSlim _lock = new ReaderWriterLockSlim();
+        readonly T _shared;
+
+        public Synchronizer(T shared)
+        {
+            _shared = shared;
+        }
 
         /*
-         * Acquires a read lock, executes the specified function, and returns its result to caller.
+         * Acquires a read lock and executes the specified function.
          */
-        public static T Read<T>(Func<T> functor)
+        public void Read(Action<T> functor)
         {
             _lock.EnterReadLock();
             try
             {
-                return functor();
+                functor(_shared);
+            }
+            finally
+            {
+                _lock.ExitReadLock();
+            }
+        }
+
+        /*
+         * Acquires a read lock, executes the specified function, and returns its result to caller.
+         */
+        public T2 Read<T2>(Func<T, T2> functor)
+        {
+            _lock.EnterReadLock();
+            try
+            {
+                return functor(_shared);
             }
             finally
             {
@@ -34,12 +57,12 @@ namespace magic.lambda.scheduler.utilities
         /*
          * Acquires a write lock, and invokes the specified Action.
          */
-        public static void Write(Action functor)
+        public void Write(Action<T> functor)
         {
             _lock.EnterWriteLock();
             try
             {
-                functor();
+                functor(_shared);
             }
             finally
             {
@@ -50,12 +73,12 @@ namespace magic.lambda.scheduler.utilities
         /*
          * Acquires a write lock, and invokes the specified Action.
          */
-        public static T ReadWrite<T>(Func<T> functor)
+        public T2 ReadWrite<T2>(Func<T, T2> functor)
         {
             _lock.EnterWriteLock();
             try
             {
-                return functor();
+                return functor(_shared);
             }
             finally
             {
