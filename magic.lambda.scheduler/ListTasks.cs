@@ -17,13 +17,13 @@ namespace magic.lambda.scheduler
     [Slot(Name = "scheduler.tasks.list")]
     public class ListTasks : ISlot
     {
-        readonly TaskScheduler _scheduler;
+        readonly Scheduler _scheduler;
 
         /// <summary>
         /// Creates a new instance of your slot.
         /// </summary>
         /// <param name="scheduler">Which background service to use.</param>
-        public ListTasks(TaskScheduler scheduler)
+        public ListTasks(Scheduler scheduler)
         {
             _scheduler = scheduler ?? throw new ArgumentNullException(nameof(scheduler));
         }
@@ -35,18 +35,16 @@ namespace magic.lambda.scheduler
         /// <param name="input">Arguments to slot.</param>
         public void Signal(ISignaler signaler, Node input)
         {
-            input.AddRange(SynchronizeScheduler.Read(() =>
+            var jobs = _scheduler.List();
+            jobs.Sort((lhs, rhs) => lhs.Due.CompareTo(rhs.Due));
+            input.AddRange(jobs.Select(x =>
             {
-                return _scheduler.ListTasks().Select(x =>
+                return new Node("", null, new Node[]
                 {
-                    var task = _scheduler.GetTask(x);
-                    return new Node("", null, new Node[]
-                    {
-                        new Node("name", x),
-                        new Node("due", task.Children.FirstOrDefault(y => y.Name == "due").Value),
-                        new Node("description", task.Children.FirstOrDefault(y => y.Name == "description")?.Value)
-                    });
-                }).ToList();
+                    new Node("name", x.Name),
+                    new Node("due", x.Due),
+                    new Node("description", x.Description)
+                });
             }));
         }
     }

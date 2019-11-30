@@ -20,7 +20,7 @@ namespace magic.lambda.scheduler.tests
     {
         public class Logger : ILogger
         {
-            public void LogError(string taskName, Exception err)
+            public void LogError(string jobName, Exception err)
             {
                 /*
                  * Our implementation here in its unit tests simply rethrows
@@ -29,11 +29,16 @@ namespace magic.lambda.scheduler.tests
                  */
                 throw err;
             }
+
+            public void LogInfo(string description)
+            {
+                // No reasons to do anything here ...
+            }
         }
 
-        static public Node Evaluate(string hl, bool deleteTasksFile = true)
+        static public Node Evaluate(string hl, bool deleteJobFile = true)
         {
-            var services = Initialize(deleteTasksFile);
+            var services = Initialize(deleteJobFile);
             var lambda = new Parser(hl).Lambda();
             var signaler = services.GetService(typeof(ISignaler)) as ISignaler;
             signaler.Signal("eval", lambda);
@@ -42,21 +47,21 @@ namespace magic.lambda.scheduler.tests
 
         #region [ -- Private helper methods -- ]
 
-        static IServiceProvider Initialize(bool deleteTasksFile)
+        static IServiceProvider Initialize(bool deleteJobFile)
         {
             var services = new ServiceCollection();
             services.AddTransient<ISignaler, Signaler>();
             var types = new SignalsProvider(InstantiateAllTypes<ISlot>(services));
             services.AddTransient<ISignalsProvider>((svc) => types);
             services.AddTransient<ILogger, Logger>();
-            var tasksFile = AppDomain.CurrentDomain.BaseDirectory + "tasks.hl";
-            if (deleteTasksFile && File.Exists(tasksFile))
-                File.Delete(tasksFile);
-            services.AddSingleton((svc) => new TaskScheduler(svc, tasksFile, true));
+            var jobFile = AppDomain.CurrentDomain.BaseDirectory + "tasks.hl";
+            if (deleteJobFile && File.Exists(jobFile))
+                File.Delete(jobFile);
+            services.AddSingleton((svc) => new Scheduler(svc, null, jobFile, true, 4));
             var provider = services.BuildServiceProvider();
 
             // Ensuring BackgroundService is created and started.
-            var backgroundServices = provider.GetService<TaskScheduler>();
+            var backgroundServices = provider.GetService<Scheduler>();
             backgroundServices.Start();
             return provider;
         }

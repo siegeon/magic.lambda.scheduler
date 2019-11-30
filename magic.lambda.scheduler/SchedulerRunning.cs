@@ -17,13 +17,13 @@ namespace magic.lambda.scheduler
     [Slot(Name = "scheduler.running")]
     public class SchedulerRunning : ISlot
     {
-        readonly TaskScheduler _scheduler;
+        readonly Scheduler _scheduler;
 
         /// <summary>
         /// Creates a new instance of your slot.
         /// </summary>
         /// <param name="scheduler">Which background service to use.</param>
-        public SchedulerRunning(TaskScheduler scheduler)
+        public SchedulerRunning(Scheduler scheduler)
         {
             _scheduler = scheduler ?? throw new ArgumentNullException(nameof(scheduler));
         }
@@ -35,7 +35,7 @@ namespace magic.lambda.scheduler
         /// <param name="input">Arguments to slot.</param>
         public void Signal(ISignaler signaler, Node input)
         {
-            input.Value = SynchronizeScheduler.Read(() => _scheduler.Running);
+            input.Value = _scheduler.Running;
         }
     }
 }
