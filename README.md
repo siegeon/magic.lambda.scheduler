@@ -19,7 +19,10 @@ When creating a task, you can create a task that only executes once. This is don
 scheduler.tasks.create:task-name
    when:date:"2019-12-24T17:00"
    .lambda
-      /* Your tasks lambda object goes here /*
+
+      /*
+       * Your tasks lambda object goes here
+       */
       .foo-something
 ```
 
@@ -27,6 +30,15 @@ The above **[when]** node is a date and time in the future for when you want you
 for evaluation. After the task has been evaluated, it will be removed from your scheduler, and never evaluate again.
 The name of your task in the above example becomes _"task-name"_, and the task can be referenced later using this name.
 The name must be unique, otherwise any previously created tasks with the same name will be overwritten.
+
+## Hyperlambda task declarations
+
+The whole idea with the Magic Scheduler is that it allows you to declare your tasks dynamically, passing in Hyperlambda
+as your task's declaration. Hyperlambda of course, is Turing Complete, which allows you to _dynamically_ declare your
+tasks, without requiring recompilation or restart of your server. This gives you a highly dynamic and agile environment
+through which you can declare your tasks, according to your business needs and requirements.
+
+## Repeating tasks
 
 To have a task periodically being evaluated, you can choose between a whole range of repetition patterns. For instance,
 to have a task scheduled for evaluation every Sunday at 22:00, you could create a task such as the following.
@@ -103,19 +115,23 @@ scheduler.tasks.create:task-name
 
 The above will evaluate your task every 5th of the month, at 23:55 hours.
 
-**Notice** - All times are interpreted as UTC times, and _not_ necessarily your local time. Have this in mind as you create your tasks.
+**Notice** - All times are interpreted as UTC times, and _not_ necessarily your local time. Have this in mind as you
+create your tasks.
 
 ## Internals
 
-Internally the scheduler will create one `System.Threading.Timer` for each task in your system, but it will never exhaust your resources
-since only one intersupt is internally kept by the operating system, for the first task, and it only allows a configurable amount of threads
-to execute simultaneously, with a `SemaphoreSlim`, preventing more than x number of tasks to execute simultaneously, depending upon your
-configuration settings, or how you instantiated the scheduler.
+Internally the scheduler will create one `System.Threading.Timer` for each task in your system, but it will
+not exhaust your server's resources, since only one interrupt is internally kept by the operating system, for the first
+task in chronological order, and it only allows a configurable amount of threads to execute simultaneously,
+with a `SemaphoreSlim`, preventing more than x number of tasks to execute simultaneously, depending upon your
+configuration settings, or how you instantiated the scheduler. In addition, no tasks are re-scheduled before after
+having been executed, implying that regardless of what small amount of repetition pattern you create for your tasks,
+the same job will never executed on two different threads simultaneously.
 
-The timer is only reset after the execution of the task, implying even if your task requires 5 seconds to execute, and your repetition
-pattern is 2 seconds, the same task will never have multiple executions simultaneously occurring. All access to the internal task list
-is synchronized with a `ReaderWriterLockSlim`, allowing multiple readers entrance at the same time, but only one writer, making the
-scheduler highly optimized for having many repeated tasks, executing in parallel and simultaneously.
+All access to the internal task list is synchronized with a `ReaderWriterLockSlim`, allowing multiple readers entrance
+at the same time, but only one writer, making the scheduler highly optimized for having many repeated tasks,
+executing simultaneously.
 
-In addition, the thing is _"async to the core"_, implying no threads will ever be spent waiting much for other threads to finish,
-but rather returned to the thread pool immediately, for then to be reanimated as they are given access to the shared resource.
+In addition, the thing is _"async to the core"_, implying no threads will ever be spent waiting much for other threads
+to finish, but rather returned to the thread pool immediately, for then to be _"reanimated"_ as they are given access to
+the shared resource.
