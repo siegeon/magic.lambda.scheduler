@@ -142,7 +142,12 @@ namespace magic.lambda.scheduler.utilities
         /// <param name="jobName">Name of job to delete.</param>
         public void Delete(string jobName)
         {
-            _jobs.Write((jobs) => jobs.Delete(jobName));
+            _jobs.Write((jobs) =>
+            {
+                var job = jobs.Get(jobName);
+                job.Stop();
+                jobs.Delete(job);
+            });
         }
 
         #region [ -- Interface implementations -- ]
@@ -188,9 +193,14 @@ namespace magic.lambda.scheduler.utilities
                 _jobs.Write((jobs) =>
                 {
                     if (!(job is RepeatJob))
-                        jobs.Delete(job.Name);
+                    {
+                        job.Stop();
+                        jobs.Delete(job);
+                    }
                     else if (Running)
+                    {
                         job.Schedule(async (x) => await Execute(x));
+                    }
                 });
                 _sempahore.Release();
             }

@@ -54,14 +54,10 @@ namespace magic.lambda.scheduler.utilities
         /// Will also specifically stop the job, to avoid that it is executed in the future,
         /// and discards the job's timer instance.
         /// </summary>
-        /// <param name="jobName">Name of job to delete.</param>
-        public void Delete(string jobName)
+        /// <param name="job">Job to delete.</param>
+        public void Delete(Job job)
         {
-            var job = _jobs.Find(x => x.Name == jobName);
-            if (job == null)
-                return;
             _jobs.Remove(job);
-            job.Dispose();
             SaveJobs();
         }
 
