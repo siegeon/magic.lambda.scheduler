@@ -32,9 +32,9 @@ namespace magic.lambda.scheduler.utilities.jobs
             DateTime when)
             : base(name, description, lambda)
         {
+            // Making sure we never create a job that should have been executed in the past.
             if (when.AddMilliseconds(250) < DateTime.Now)
-                throw new ArgumentException($"Due date of job must be some time in the future.");
-
+                when = DateTime.Now.AddMilliseconds(250);
             Due = when;
         }
 

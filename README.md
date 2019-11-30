@@ -137,3 +137,11 @@ executing simultaneously.
 In addition, the thing is _"async to the core"_, implying no threads will ever be spent waiting much for other threads
 to finish, but rather returned to the thread pool immediately, for then to be _"reanimated"_ as they are given access to
 the shared resource.
+
+**Notice** - If your task's **[when]** date is in the past, it will be moved 250 milliseconds into the future. This
+allows you to create a task with some past date, resulting in a thread from your thread pool, executing your task
+250 milliseconds into the future. In such a regard, this allows you to create _"fire and forget"_ execution of
+your Hyperlambda code, where you don't care (that much) about the resulting execution.
+
+Any exceptions occurring during execution of your tasks, will be logged, and every time a task starts and finishes,
+it will create a log entry for you, and log the number of milliseconds that was spent executing the task.

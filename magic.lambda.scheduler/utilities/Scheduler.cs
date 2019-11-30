@@ -6,6 +6,7 @@
 using System;
 using System.Linq;
 using System.Threading;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using magic.signals.contracts;
@@ -181,8 +182,10 @@ namespace magic.lambda.scheduler.utilities
                 _logger?.LogInfo($"Job with name of '{job.Name}' started executing.");
                 var lambda = job.Lambda.Clone();
                 var signaler = _services.GetService(typeof(ISignaler)) as ISignaler;
+                var timer = Stopwatch.StartNew();
                 await signaler.SignalAsync("wait.eval", lambda);
-                _logger?.LogInfo($"Job with name of '{job.Name}' executed successfully.");
+                var time = timer.ElapsedMilliseconds;
+                _logger?.LogInfo($"Job with name of '{job.Name}' executed successfully in {time} milliseconds.");
             }
             catch (Exception err)
             {
