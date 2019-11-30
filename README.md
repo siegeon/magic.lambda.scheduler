@@ -119,14 +119,14 @@ The above will evaluate your task every 5th of the month, at 23:55 hours.
 create your tasks.
 
 ## Internals
-
+ex
 Internally the scheduler will create one `System.Threading.Timer` for each task in your system, but it will
 not exhaust your server's resources, since only one interrupt is internally kept by the operating system.
 The Magic Scheduler also allows a configurable amount of maximum threads to execute simultaneously,
 with a `SemaphoreSlim`, preventing more than x number of tasks to execute simultaneously, depending upon your
 configuration settings. In addition, no tasks are re-scheduled before after
 having been executed, implying that regardless of what small amount of repetition pattern you create for your tasks,
-the same job will never executed on two different threads simultaneously. Have this in mind as you create your tasks,
+the same job will never execute on two different threads simultaneously. Have this in mind as you create your tasks,
 since the repetition interval is not the time between two consecutive _starts_ of jobs, it becomes the time from
 when your job is _done_ executing, and until it starts executing _again_.
 
@@ -145,3 +145,13 @@ your Hyperlambda code, where you don't care (that much) about the resulting exec
 
 Any exceptions occurring during execution of your tasks, will be logged, and every time a task starts and finishes,
 it will create a log entry for you, and log the number of milliseconds that was spent executing the task.
+
+**Notice** - If your application stops for some reasons, and some amount of time passes, enough for some of your
+jobs to end up in the _past_ - When the application starts again, all of these jobs will be executed automatically
+immediately on different threads during startup. If this is not what you want, make sure you configure the Magic
+Scheduler to _not_ start automatically, giving you time to explicitly delete jobs, before you start executing
+your scheduled tasks.
+
+The scheduler will serialize jobs into a _"jobs.hl"_ file, which you can configure as you see fit, never dropping
+tasks. However, no tasks are attempted to be executed again if the task themselves fails. So retrying executing
+failed tasks is up to you to implement for yourself.
