@@ -19,7 +19,10 @@ When creating a task, you can create a task that only executes once. This is don
 scheduler.tasks.create:task-name
    when:date:"2019-12-24T17:00"
    .lambda
-      /* Your tasks lambda object goes here /*
+
+      /*
+       * Your tasks lambda object goes here
+       */
       .foo-something
 ```
 
@@ -27,6 +30,15 @@ The above **[when]** node is a date and time in the future for when you want you
 for evaluation. After the task has been evaluated, it will be removed from your scheduler, and never evaluate again.
 The name of your task in the above example becomes _"task-name"_, and the task can be referenced later using this name.
 The name must be unique, otherwise any previously created tasks with the same name will be overwritten.
+
+## Hyperlambda task declarations
+
+The whole idea with the Magic Scheduler is that it allows you to declare your tasks dynamically, passing in Hyperlambda
+as your task's declaration. Hyperlambda of course, is Turing Complete, which allows you to _dynamically_ declare your
+tasks, without requiring recompilation or restart of your server. This gives you a highly dynamic and agile environment
+through which you can declare your tasks, according to your business needs and requirements.
+
+## Repeating tasks
 
 To have a task periodically being evaluated, you can choose between a whole range of repetition patterns. For instance,
 to have a task scheduled for evaluation every Sunday at 22:00, you could create a task such as the following.
