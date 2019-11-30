@@ -129,7 +129,7 @@ having been executed, implying that regardless of what small amount of repetitio
 the same job will never execute on two different threads simultaneously. Have this in mind as you create your tasks,
 since the repetition interval is not the time between two consecutive _starts_ of jobs, it becomes the time from
 when your job is _done_ executing, and until it starts executing _again_. This is by design, to prevent the same task
-to execute simultaneously on multiple threads, which is highly unlikely what you would want.
+from executing simultaneously on multiple threads, which is highly unlikely what you would want from a task scheduler.
 
 All access to the internal task list is synchronized with a `ReaderWriterLockSlim`, allowing multiple readers entrance
 at the same time, but only one writer, making the scheduler highly optimized for having many repeated tasks,
