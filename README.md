@@ -21,7 +21,7 @@ scheduler.tasks.create:task-name
    .lambda
 
       /*
-       * Your tasks lambda object goes here
+       * Your task's lambda object goes here
        */
       .foo-something
 ```
