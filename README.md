@@ -121,12 +121,14 @@ create your tasks.
 ## Internals
 
 Internally the scheduler will create one `System.Threading.Timer` for each task in your system, but it will
-not exhaust your server's resources, since only one interrupt is internally kept by the operating system, for the first
-task in chronological order, and it only allows a configurable amount of threads to execute simultaneously,
+not exhaust your server's resources, since only one interrupt is internally kept by the operating system.
+The Magic Scheduler also allows a configurable amount of maximum threads to execute simultaneously,
 with a `SemaphoreSlim`, preventing more than x number of tasks to execute simultaneously, depending upon your
-configuration settings, or how you instantiated the scheduler. In addition, no tasks are re-scheduled before after
+configuration settings. In addition, no tasks are re-scheduled before after
 having been executed, implying that regardless of what small amount of repetition pattern you create for your tasks,
-the same job will never executed on two different threads simultaneously.
+the same job will never executed on two different threads simultaneously. Have this in mind as you create your tasks,
+since the repetition interval is not the time between two consecutive _starts_ of jobs, it becomes the time from
+when your job is _done_ executing, and until it starts executing _again_.
 
 All access to the internal task list is synchronized with a `ReaderWriterLockSlim`, allowing multiple readers entrance
 at the same time, but only one writer, making the scheduler highly optimized for having many repeated tasks,
