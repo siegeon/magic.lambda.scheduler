@@ -119,7 +119,7 @@ The above will evaluate your task every 5th of the month, at 23:55 hours.
 create your tasks.
 
 ## Internals
-ex
+
 Internally the scheduler will create one `System.Threading.Timer` for each task in your system, but it will
 not exhaust your server's resources, since only one interrupt is internally kept by the operating system.
 The Magic Scheduler also allows a configurable amount of maximum threads to execute simultaneously,
