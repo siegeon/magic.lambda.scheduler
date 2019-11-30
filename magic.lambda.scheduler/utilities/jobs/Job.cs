@@ -9,9 +9,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using magic.node;
 using magic.node.extensions;
-using magic.lambda.scheduler.utilities.jobs;
 
-namespace magic.lambda.scheduler.utilities
+namespace magic.lambda.scheduler.utilities.jobs
 {
     /// <summary>
     /// Class wrapping a single job, with its repetition pattern, or due date,
@@ -58,12 +57,6 @@ namespace magic.lambda.scheduler.utilities
         /// The due date for the next time the job should be executed.
         /// </summary>
         public DateTime Due { get; internal set; }
-
-        /// <summary>
-        /// Returns true if this is a repetetive job, implying the job is declared
-        /// to be executed multiple times on an interval.
-        /// </summary>
-        public abstract bool Repeats { get; }
 
         /// <summary>
         /// Creates a new job according to the declaration found in the specified node.

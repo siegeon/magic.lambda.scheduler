@@ -4,7 +4,6 @@
  */
 
 using System;
-using System.Linq;
 using magic.node;
 
 namespace magic.lambda.scheduler.utilities.jobs
@@ -16,7 +15,7 @@ namespace magic.lambda.scheduler.utilities.jobs
     /// Notice, this type of job is only execueted onde, for then to be deleted
     /// from the scheduler after execution.
     /// </summary>
-    public class WhenJob : Job
+    public sealed class WhenJob : Job
     {
         /// <summary>
         /// Constructor creating a job that is to be executed only once,
@@ -38,12 +37,6 @@ namespace magic.lambda.scheduler.utilities.jobs
 
             Due = when;
         }
-
-        /// <summary>
-        /// Returns whether or not job should be repeated, which is always false
-        /// for this type of job.
-        /// </summary>
-        public override bool Repeats => false;
 
         #region [ -- Overridden abstract base class methods -- ]
 

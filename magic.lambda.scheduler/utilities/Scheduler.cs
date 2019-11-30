@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using magic.signals.contracts;
+using magic.lambda.scheduler.utilities.jobs;
 
 namespace magic.lambda.scheduler.utilities
 {
@@ -186,7 +187,7 @@ namespace magic.lambda.scheduler.utilities
             {
                 _jobs.Write((jobs) =>
                 {
-                    if (!job.Repeats)
+                    if (!(job is RepeatJob))
                         jobs.Delete(job.Name);
                     else if (Running)
                         job.Schedule(async (x) => await Execute(x));

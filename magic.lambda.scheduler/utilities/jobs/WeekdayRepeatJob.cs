@@ -4,7 +4,6 @@
  */
 
 using System;
-using System.Linq;
 using magic.node;
 
 namespace magic.lambda.scheduler.utilities.jobs
@@ -14,7 +13,7 @@ namespace magic.lambda.scheduler.utilities.jobs
     /// declaration of what hour during the day job should be executed,
     /// and its associated lambda object to be executed when job is to be executed.
     /// </summary>
-    public class WeekdayRepeatJob : RepeatJob
+    public sealed class WeekdayRepeatJob : RepeatJob
     {
         readonly DayOfWeek _weekday;
         readonly int _hours;

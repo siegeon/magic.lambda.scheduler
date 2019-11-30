@@ -4,7 +4,6 @@
  */
 
 using System;
-using System.Linq;
 using magic.node;
 
 namespace magic.lambda.scheduler.utilities.jobs
@@ -13,7 +12,7 @@ namespace magic.lambda.scheduler.utilities.jobs
     /// Class wrapping a single job, with its repetition pattern being "every n'th day of month",
     /// at some specified time, and its associated lambda object to be executed when the job is due.
     /// </summary>
-    public class EveryXDayOfMonth : RepeatJob
+    public sealed class EveryXDayOfMonth : RepeatJob
     {
         readonly int _dayOfMonth;
         readonly int _hours;

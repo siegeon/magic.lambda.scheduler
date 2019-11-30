@@ -4,7 +4,6 @@
  */
 
 using System;
-using System.Linq;
 using magic.node;
 
 namespace magic.lambda.scheduler.utilities.jobs
@@ -14,7 +13,7 @@ namespace magic.lambda.scheduler.utilities.jobs
     /// where n is a positive integer value, and x is some sort of entity, such as "days", "hours", etc -
     /// And its associated lambda object to be executed when the job is due.
     /// </summary>
-    public class EveryEntityRepeatJob : RepeatJob
+    public sealed class EveryEntityRepeatJob : RepeatJob
     {
         /// <summary>
         /// Repetition pattern for job.

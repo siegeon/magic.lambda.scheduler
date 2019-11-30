@@ -4,7 +4,6 @@
  */
 
 using System;
-using System.Linq;
 using magic.node;
 
 namespace magic.lambda.scheduler.utilities.jobs
@@ -14,7 +13,7 @@ namespace magic.lambda.scheduler.utilities.jobs
     /// "every last day of the month", at some specified time, and its
     /// associated lambda object to be executed when job is due.
     /// </summary>
-    public class LastDayOfMonthJob : RepeatJob
+    public sealed class LastDayOfMonthJob : RepeatJob
     {
         readonly int _hours;
         readonly int _minutes;

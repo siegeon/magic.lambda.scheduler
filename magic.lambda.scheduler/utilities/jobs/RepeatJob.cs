@@ -31,13 +31,6 @@ namespace magic.lambda.scheduler.utilities.jobs
         { }
 
         /// <summary>
-        /// Returns true if job is repeating.
-        /// 
-        /// Notice, this type of job will always return true.
-        /// </summary>
-        public override bool Repeats => true;
-
-        /// <summary>
         /// Factory constructor method, creating a job that should be repeated according
         /// to some repetition pattern.
         /// </summary>
