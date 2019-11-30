@@ -103,19 +103,23 @@ scheduler.tasks.create:task-name
 
 The above will evaluate your task every 5th of the month, at 23:55 hours.
 
-**Notice** - All times are interpreted as UTC times, and _not_ necessarily your local time. Have this in mind as you create your tasks.
+**Notice** - All times are interpreted as UTC times, and _not_ necessarily your local time. Have this in mind as you
+create your tasks.
 
 ## Internals
 
-Internally the scheduler will create one `System.Threading.Timer` for each task in your system, but it will never exhaust your resources
-since only one intersupt is internally kept by the operating system, for the first task, and it only allows a configurable amount of threads
-to execute simultaneously, with a `SemaphoreSlim`, preventing more than x number of tasks to execute simultaneously, depending upon your
-configuration settings, or how you instantiated the scheduler.
+Internally the scheduler will create one `System.Threading.Timer` for each task in your system, but it will
+not exhaust your server's resources, since only one interrupt is internally kept by the operating system, for the first
+task in chronological order, and it only allows a configurable amount of threads to execute simultaneously,
+with a `SemaphoreSlim`, preventing more than x number of tasks to execute simultaneously, depending upon your
+configuration settings, or how you instantiated the scheduler. In addition, no tasks are re-scheduled before after
+having been executed, implying that regardless of what small amount of repetition pattern you create for your tasks,
+the same job will never executed on two different threads simultaneously.
 
-The timer is only reset after the execution of the task, implying even if your task requires 5 seconds to execute, and your repetition
-pattern is 2 seconds, the same task will never have multiple executions simultaneously occurring. All access to the internal task list
-is synchronized with a `ReaderWriterLockSlim`, allowing multiple readers entrance at the same time, but only one writer, making the
-scheduler highly optimized for having many repeated tasks, executing in parallel and simultaneously.
+All access to the internal task list is synchronized with a `ReaderWriterLockSlim`, allowing multiple readers entrance
+at the same time, but only one writer, making the scheduler highly optimized for having many repeated tasks,
+executing simultaneously.
 
-In addition, the thing is _"async to the core"_, implying no threads will ever be spent waiting much for other threads to finish,
-but rather returned to the thread pool immediately, for then to be reanimated as they are given access to the shared resource.
+In addition, the thing is _"async to the core"_, implying no threads will ever be spent waiting much for other threads
+to finish, but rather returned to the thread pool immediately, for then to be _"reanimated"_ as they are given access to
+the shared resource.
