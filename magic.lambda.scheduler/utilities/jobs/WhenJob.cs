@@ -10,13 +10,17 @@ using magic.node;
 namespace magic.lambda.scheduler.utilities.jobs
 {
     /// <summary>
-    /// Class wrapping a single job, with its repetition pattern, or due date,
+    /// Class wrapping a single job, with its due date,
     /// and its associated lambda object to be executed when job is due.
+    ///
+    /// Notice, this type of job is only execueted onde, for then to be deleted
+    /// from the scheduler after execution.
     /// </summary>
     public class WhenJob : Job
     {
         /// <summary>
-        /// Constructor creating a job that is to be executed only once, and then discarded.
+        /// Constructor creating a job that is to be executed only once,
+        /// and then deleted.
         /// </summary>
         /// <param name="name">The name of your job.</param>
         /// <param name="description">Description for your job.</param>
@@ -29,7 +33,7 @@ namespace magic.lambda.scheduler.utilities.jobs
             DateTime when)
             : base(name, description, lambda)
         {
-            if (when < DateTime.Now)
+            if (when.AddMilliseconds(250) < DateTime.Now)
                 throw new ArgumentException($"Due date of job must be some time in the future.");
 
             Due = when;
@@ -49,11 +53,8 @@ namespace magic.lambda.scheduler.utilities.jobs
         /// <returns>A node representing the declaration of the job as when created.</returns>
         public override Node GetNode()
         {
-            var result = new Node(Name);
-            if (!string.IsNullOrEmpty(Description))
-                result.Add(new Node("description", Description));
+            var result = base.GetNode();
             result.Add(new Node("when", Due));
-            result.Add(new Node(".lambda", null, Lambda.Children.Select(x => x.Clone())));
             return result;
         }
 

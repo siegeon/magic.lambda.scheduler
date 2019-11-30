@@ -19,5 +19,12 @@ namespace magic.lambda.scheduler.utilities
         /// <param name="jobName">Name of job that created the error.</param>
         /// <param name="err">Exception that occurred.</param>
         void LogError(string jobName, Exception err);
+
+        /// <summary>
+        /// Invoked when a job is being scheduled for execution.
+        /// </summary>
+        /// <param name="description">Will contain a description of the job, and
+        /// its name.</param>
+        void LogInfo(string description);
     }
 }

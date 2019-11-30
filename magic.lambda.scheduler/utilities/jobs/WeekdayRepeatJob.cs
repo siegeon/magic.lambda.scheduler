@@ -10,7 +10,8 @@ using magic.node;
 namespace magic.lambda.scheduler.utilities.jobs
 {
     /// <summary>
-    /// Class wrapping a single job, with a weekly repetition pattern,
+    /// Class wrapping a single job, with a weekly repetition pattern, a
+    /// declaration of what hour during the day job should be executed,
     /// and its associated lambda object to be executed when job is to be executed.
     /// </summary>
     public class WeekdayRepeatJob : RepeatJob
@@ -43,28 +44,36 @@ namespace magic.lambda.scheduler.utilities.jobs
             _minutes = minutes;
         }
 
+        #region [ -- Overridden abstract base class methods -- ]
+
         /// <summary>
         /// Returns the node representation of the job.
         /// </summary>
         /// <returns>A node representing the declaration of the job as when created.</returns>
         public override Node GetNode()
         {
-            var result = new Node(Name);
-            if (!string.IsNullOrEmpty(Description))
-                result.Add(new Node("description", Description));
-            result.Add(new Node("repeat", _weekday.ToString(), new Node[] { new Node("time", _hours.ToString("D2") + ":" + _minutes.ToString("D2")) }));
-            result.Add(new Node(".lambda", null, Lambda.Children.Select(x => x.Clone())));
+            var result = base.GetNode();
+            result.Add(
+                new Node(
+                    "repeat",
+                    _weekday.ToString(),
+                    new Node[]
+                    {
+                        new Node("time", FormatHours(_hours, _minutes))
+                    }));
             return result;
         }
-
-        #region [ -- Overridden abstract base class methods -- ]
 
         /// <summary>
         /// Calculates the next due date for the job.
         /// </summary>
         protected override DateTime CalculateNextDue()
         {
-            var when = DateTime.Now.ToUniversalTime().Date.AddHours(_hours).AddMinutes(_minutes);
+            var when = DateTime.Now
+                .Date
+                .AddHours(_hours)
+                .AddMinutes(_minutes);
+
             while (when.AddMilliseconds(250) < DateTime.Now || _weekday != when.DayOfWeek)
             {
                 when = when.AddDays(1);

@@ -104,20 +104,19 @@ namespace magic.lambda.scheduler.utilities
          */
         void LoadJobs()
         {
-            var lambda = new Node();
             if (File.Exists(_jobFile))
             {
                 using (var stream = File.OpenRead(_jobFile))
                 {
-                    lambda = new Parser(stream).Lambda();
+                    var lambda = new Parser(stream).Lambda();
+                    foreach (var idx in lambda.Children)
+                    {
+                        // Making sure we ignore jobs that should have been executed in the past.
+                        var when = idx.Children.FirstOrDefault(x => x.Name == "when");
+                        if (when == null || when.Get<DateTime>() > DateTime.Now)
+                            _jobs.Add(Job.CreateJob(idx, true));
+                    }
                 }
-            }
-            foreach (var idx in lambda.Children)
-            {
-                // Making sure we ignore jobs that should have been executed in the past.
-                var when = idx.Children.FirstOrDefault(x => x.Name == "when");
-                if (when == null || when.Get<DateTime>() > DateTime.Now)
-                    _jobs.Add(Job.CreateJob(idx, true));
             }
         }
 

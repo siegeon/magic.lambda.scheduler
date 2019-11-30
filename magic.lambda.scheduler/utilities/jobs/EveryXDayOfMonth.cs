@@ -21,6 +21,8 @@ namespace magic.lambda.scheduler.utilities.jobs
 
         /// <summary>
         /// Creates a new job that repeats every n'th day of the month.
+        ///
+        /// The day must be between 1 and 28.
         /// </summary>
         /// <param name="name">Name of the new job.</param>
         /// <param name="description">Description for the job.</param>
@@ -38,10 +40,12 @@ namespace magic.lambda.scheduler.utilities.jobs
             : base(name, description, lambda)
         {
             // Sanity checking invocation
-            if (dayOfMonth < 0 || dayOfMonth > 28)
-                throw new ArgumentException($"{nameof(dayOfMonth)} must be between 0 and 28");
+            if (dayOfMonth < 1 || dayOfMonth > 28)
+                throw new ArgumentException($"{nameof(dayOfMonth)} must be between 1 and 28");
+
             if (hours < 0 || hours > 23)
                 throw new ArgumentException($"{nameof(hours)} must be between 0 and 23");
+
             if (minutes < 0 || minutes > 59)
                 throw new ArgumentException($"{nameof(hours)} must be between 0 and 59");
 
@@ -50,21 +54,25 @@ namespace magic.lambda.scheduler.utilities.jobs
             _minutes = minutes;
         }
 
+        #region [ -- Overridden abstract base class methods -- ]
+
         /// <summary>
         /// Returns the node representation of the job.
         /// </summary>
         /// <returns>A node representing the declaration of the job as when created.</returns>
         public override Node GetNode()
         {
-            var result = new Node(Name);
-            if (!string.IsNullOrEmpty(Description))
-                result.Add(new Node("description", Description));
-            result.Add(new Node("repeat", _dayOfMonth, new Node[] { new Node("time", _hours.ToString("D2") + ":" + _minutes.ToString("D2")) }));
-            result.Add(new Node(".lambda", null, Lambda.Children.Select(x => x.Clone())));
+            var result = base.GetNode();
+            result.Add(
+                new Node(
+                    "repeat",
+                    _dayOfMonth,
+                    new Node[]
+                    {
+                        new Node("time", FormatHours(_hours, _minutes))
+                    }));
             return result;
         }
-
-        #region [ -- Overridden abstract base class methods -- ]
 
         /// <summary>
         /// Calculates the next due date for the job.

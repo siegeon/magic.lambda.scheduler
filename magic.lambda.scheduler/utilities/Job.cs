@@ -123,50 +123,27 @@ namespace magic.lambda.scheduler.utilities
             return result;
         }
 
-        /*
-         * Creates the Timer, and its timeout timeout,
-         * that will invoke the specified Action at the time the job should be executed.
-         */
-        internal void Start(Func<Job, Task> callback)
-        {
-            Due = CalculateNextDue();
-            var nextDue =
-                Math.Max(
-                    250,
-                    Math.Min((Due - DateTime.Now).TotalMilliseconds, new TimeSpan(45, 0, 0, 0).TotalMilliseconds));
-            _timer?.Dispose();
-            _timer = new Timer(
-                async (state) =>
-                {
-                    // Verifying job is actually due, which might not be true, if job's repetition pattern exceeds 45 days.
-                    if (Due.AddMilliseconds(-250) > DateTime.Now)
-                        Start(callback);
-                    else
-                        await callback(this);
-                }, 
-                null, 
-                (long)nextDue, 
-                Timeout.Infinite);
-        }
-
-        /*
-         * Stops the job from being executed.
-         */
-        internal void Stop()
-        {
-            _timer?.Dispose();
-        }
-
         /// <summary>
         /// Returns the node representation for this particular instance, such that
         /// it can be serialized to disc, etc.
         /// </summary>
         /// <returns></returns>
-        public abstract Node GetNode();
+        public virtual Node GetNode()
+        {
+            var result = new Node(Name);
 
-        /*
-         * Calculates next due date.
-         */
+            if (!string.IsNullOrEmpty(Description))
+                result.Add(new Node("description", Description));
+
+            result.Add(
+                new Node(
+                    ".lambda",
+                    null,
+                    Lambda.Children.Select(x => x.Clone())));
+
+            return result;
+        }
+
         /// <summary>
         /// Calculates the next due date for the job.
         /// </summary>
@@ -186,7 +163,8 @@ namespace magic.lambda.scheduler.utilities
         /// <summary>
         /// Disposable pattern implementation.
         /// </summary>
-        /// <param name="disposing"></param>
+        /// <param name="disposing">If true, will dispose the instance - Otherwise
+        /// it will do nothing.</param>
         protected virtual void Dispose(bool disposing)
         {
             if (_disposed)
@@ -194,6 +172,46 @@ namespace magic.lambda.scheduler.utilities
             if (disposing)
                 _timer?.Dispose();
             _disposed = true;
+        }
+
+        #endregion
+
+        #region [ -- Internal and private helper methods -- ]
+
+        /*
+         * Creates the Timer, and its timeout timeout,
+         * that will invoke the specified Func at the time the job should be executed.
+         */
+        internal void Schedule(Func<Job, Task> callback)
+        {
+            Due = CalculateNextDue();
+            var nextDue = Math.Max(
+                250,
+                Math.Min(
+                    (Due - DateTime.Now).TotalMilliseconds,
+                    new TimeSpan(45, 0, 0, 0).TotalMilliseconds));
+            _timer?.Dispose();
+            _timer = new Timer(
+                async (state) =>
+                {
+                    // Verifying job is actually due, which might not be true, if job's repetition pattern exceeds 45 days.
+                    if (Due.AddMilliseconds(-250) > DateTime.Now)
+                        Schedule(callback);
+                    else
+                        await callback(this);
+                }, 
+                null, 
+                (long)nextDue, 
+                Timeout.Infinite);
+        }
+
+        /*
+         * Stops the job from being executed.
+         */
+        internal void Stop()
+        {
+            _timer?.Dispose();
+            _timer = null;
         }
 
         #endregion

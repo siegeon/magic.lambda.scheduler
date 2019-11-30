@@ -69,21 +69,25 @@ namespace magic.lambda.scheduler.utilities.jobs
             _repetitionValue = repetitionValue;
         }
 
+        #region [ -- Overridden abstract base class methods -- ]
+
         /// <summary>
         /// Returns the node representation of the job.
         /// </summary>
         /// <returns>A node representing the declaration of the job as when created.</returns>
         public override Node GetNode()
         {
-            var result = new Node(Name);
-            if (!string.IsNullOrEmpty(Description))
-                result.Add(new Node("description", Description));
-            result.Add(new Node("repeat", _repetition.ToString(), new Node[] { new Node("value", _repetitionValue) }));
-            result.Add(new Node(".lambda", null, Lambda.Children.Select(x => x.Clone())));
+            var result = base.GetNode();
+            result.Add(
+                new Node(
+                    "repeat",
+                    _repetition.ToString(),
+                    new Node[]
+                    {
+                        new Node("value", _repetitionValue)
+                    }));
             return result;
         }
-
-        #region [ -- Overridden abstract base class methods -- ]
 
         /// <summary>
         /// Calculates the job's next due date.

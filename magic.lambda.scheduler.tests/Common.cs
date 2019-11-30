@@ -29,6 +29,11 @@ namespace magic.lambda.scheduler.tests
                  */
                 throw err;
             }
+
+            public void LogInfo(string description)
+            {
+                // No reasons to do anything here ...
+            }
         }
 
         static public Node Evaluate(string hl, bool deleteJobFile = true)

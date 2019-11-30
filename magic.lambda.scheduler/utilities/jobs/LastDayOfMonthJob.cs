@@ -10,8 +10,9 @@ using magic.node;
 namespace magic.lambda.scheduler.utilities.jobs
 {
     /// <summary>
-    /// Class wrapping a single job, with its repetition pattern being "every last day of month",
-    /// and its associated lambda object to be executed when job is due.
+    /// Class wrapping a single job, with its repetition pattern being
+    /// "every last day of the month", at some specified time, and its
+    /// associated lambda object to be executed when job is due.
     /// </summary>
     public class LastDayOfMonthJob : RepeatJob
     {
@@ -19,8 +20,8 @@ namespace magic.lambda.scheduler.utilities.jobs
         readonly int _minutes;
 
         /// <summary>
-        /// Creates a new job that only executes on the very last day of the month, at some specific
-        /// hour and minute during each last day of the month.
+        /// Creates a new job that only executes on the very last day of the month,
+        /// at some specific hour and minute during each last day of the month.
         /// </summary>
         /// <param name="name">Name of job.</param>
         /// <param name="description">Description for job.</param>
@@ -45,31 +46,25 @@ namespace magic.lambda.scheduler.utilities.jobs
             _minutes = minutes;
         }
 
+        #region [ -- Overridden abstract base class methods -- ]
+
         /// <summary>
         /// Returns the node representation of the job.
         /// </summary>
         /// <returns>A node representing the declaration of the job as when created.</returns>
         public override Node GetNode()
         {
-            var result = new Node(Name);
-
-            if (!string.IsNullOrEmpty(Description))
-                result.Add(new Node("description", Description));
-
+            var result = base.GetNode();
             result.Add(
                 new Node(
                     "repeat", 
                     "last-day-of-month", 
-                    new Node[] { 
-                        new Node("time", _hours.ToString("D2") + ":" + _minutes.ToString("D2"))
+                    new Node[]
+                    {
+                        new Node("time", FormatHours(_hours, _minutes))
                     }));
-
-            result.Add(new Node(".lambda", null, Lambda.Children.Select(x => x.Clone())));
-
             return result;
         }
-
-        #region [ -- Overridden abstract base class methods -- ]
 
         /// <summary>
         /// Calculates the next due date for the job.
@@ -85,7 +80,7 @@ namespace magic.lambda.scheduler.utilities.jobs
                 0,
                 DateTimeKind.Utc);
 
-            if (candidate < DateTime.Now)
+            if (candidate.AddMilliseconds(250) < DateTime.Now)
             {
                 // Shifting date one month ahead, since candidate date has already passed.
                 var year = DateTime.Now.Month == 12 ? DateTime.Now.Year + 1 : DateTime.Now.Year;

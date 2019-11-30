@@ -11,7 +11,7 @@ using magic.node.extensions;
 namespace magic.lambda.scheduler.utilities.jobs
 {
     /// <summary>
-    /// Class wrapping a single repeating job, with its repetition pattern,
+    /// Abstract class wrapping a single repeating job, with its repetition pattern,
     /// and its associated lambda object to be executed when the job is due.
     /// </summary>
     public abstract class RepeatJob : Job
@@ -122,6 +122,18 @@ namespace magic.lambda.scheduler.utilities.jobs
 
             // Calculating next due date, but not starting the job, before it's added to some scheduler of some sort.
             return job;
+        }
+
+        /// <summary>
+        /// Helper method to format hours and minutes in "HH:mm" format for
+        /// derived classes.
+        /// </summary>
+        /// <param name="hours">Number of hours.</param>
+        /// <param name="minutes">Number of minutes.</param>
+        /// <returns></returns>
+        protected string FormatHours(int hours, int minutes)
+        {
+            return hours.ToString("D2") + ":" + minutes.ToString("D2");
         }
 
         #region [ -- Private helper methods -- ]

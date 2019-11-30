@@ -76,7 +76,7 @@ namespace magic.lambda.scheduler.utilities
                 Running = true;
                 foreach (var idx in jobs.List())
                 {
-                    idx.Start(async (x) => await Execute(x));
+                    idx.Schedule(async (x) => await Execute(x));
                 }
             });
         }
@@ -111,7 +111,7 @@ namespace magic.lambda.scheduler.utilities
             {
                 jobs.Add(job);
                 if (Running)
-                    job.Start(async (x) => await Execute(x));
+                    job.Schedule(async (x) => await Execute(x));
             });
         }
 
@@ -162,22 +162,21 @@ namespace magic.lambda.scheduler.utilities
          * Callback method that is executed when a job is due.
          * 
          * Simply evaluates the lambda associated with the job, and recalculates
-         * when the job is due again next, if the job is repeating - Otherwise, it'll
+         * when the job is due again, if the job is repeating - Otherwise, it'll
          * delete the job from the list of jobs after having executed it.
          */
         async Task Execute(Job job)
         {
-            if (!Running)
-                return;
-
             // Making sure no more than "maxThreads" are executed simultaneously.
             await _sempahore.WaitAsync();
 
             try
             {
+                _logger?.LogInfo($"Job with name of '{job.Name}' started executing.");
                 var lambda = job.Lambda.Clone();
                 var signaler = _services.GetService(typeof(ISignaler)) as ISignaler;
                 await signaler.SignalAsync("wait.eval", lambda);
+                _logger?.LogInfo($"Job with name of '{job.Name}' executed successfully.");
             }
             catch (Exception err)
             {
@@ -185,17 +184,13 @@ namespace magic.lambda.scheduler.utilities
             }
             finally
             {
-                if (job.Repeats)
+                _jobs.Write((jobs) =>
                 {
-                    job.Start(async (x) => await Execute(x));
-                }
-                else
-                {
-                    _jobs.Write((jobs) =>
-                    {
+                    if (!job.Repeats)
                         jobs.Delete(job.Name);
-                    });
-                }
+                    else if (Running)
+                        job.Schedule(async (x) => await Execute(x));
+                });
                 _sempahore.Release();
             }
         }
