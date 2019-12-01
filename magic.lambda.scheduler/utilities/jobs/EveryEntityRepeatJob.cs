@@ -50,15 +50,17 @@ namespace magic.lambda.scheduler.utilities.jobs
         /// <param name="name">Name of new job.</param>
         /// <param name="description">Description of job.</param>
         /// <param name="lambda">Lambda object to execute as job is due.</param>
+        /// <param name="persisted">If true, then job is persisted to disc.</param>
         /// <param name="repetition">Repetition pattern.</param>
         /// <param name="repetitionValue">Number of entities declared through repetition pattern.</param>
         public EveryEntityRepeatJob(
             string name, 
             string description, 
             Node lambda,
+            bool persisted,
             RepetitionEntityType repetition,
             long repetitionValue)
-            : base(name, description, lambda)
+            : base(name, description, lambda, persisted)
         {
             // Sanity checking and decorating instance.
             if (repetitionValue < 1)

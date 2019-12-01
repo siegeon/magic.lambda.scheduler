@@ -24,13 +24,15 @@ namespace magic.lambda.scheduler.utilities.jobs
         /// <param name="name">The name of your job.</param>
         /// <param name="description">Description for your job.</param>
         /// <param name="lambda">Actual lambda object to be executed when job is due.</param>
+        /// <param name="persisted">If true, then job is persisted to disc.</param>
         /// <param name="when">Date of when job should be executed.</param>
         public WhenJob(
             string name, 
             string description, 
             Node lambda,
+            bool persisted,
             DateTime when)
-            : base(name, description, lambda)
+            : base(name, description, lambda, persisted)
         {
             // Making sure we never create a job that should have been executed in the past.
             if (when.AddMilliseconds(25) < DateTime.Now)
@@ -48,6 +50,7 @@ namespace magic.lambda.scheduler.utilities.jobs
         {
             var result = base.GetNode();
             result.Add(new Node("when", Due));
+            result.Add(new Node("persisted", Persisted));
             return result;
         }
 

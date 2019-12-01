@@ -132,6 +132,20 @@ scheduler.tasks.create:task-immediate-loop-{0}
         }
 
         [Fact]
+        public void CreateImmediate_04_NotPersisted()
+        {
+            Common.Evaluate(@"
+scheduler.tasks.create:task-08
+   immediate
+   persisted:bool:false
+   .lambda
+      foo.task.scheduler-08");
+            Assert.False(SchedulerSlot08._invoked);
+            SchedulerSlot08._handle.WaitOne(500);
+            Assert.True(SchedulerSlot08._invoked);
+        }
+
+        [Fact]
         public void Create_01_NoWhenRepeat_Throws()
         {
             Assert.Throws<ArgumentException>(() => Common.Evaluate(@"

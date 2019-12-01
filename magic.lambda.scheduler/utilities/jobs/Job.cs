@@ -31,11 +31,13 @@ namespace magic.lambda.scheduler.utilities.jobs
         protected Job(
             string name, 
             string description, 
-            Node lambda)
+            Node lambda,
+            bool persisted)
         {
             Name = name;
             Description = description;
             Lambda = lambda.Clone();
+            Persisted = persisted;
         }
 
         /// <summary>
@@ -57,6 +59,11 @@ namespace magic.lambda.scheduler.utilities.jobs
         /// The due date for the next time the job should be executed.
         /// </summary>
         public DateTime Due { get; internal set; }
+
+        /// <summary>
+        /// If true, then job is persisted to disc.
+        /// </summary>
+        public bool Persisted { get; private set; }
 
         /// <summary>
         /// Creates a new job according to the declaration found in the specified node.
@@ -85,6 +92,9 @@ namespace magic.lambda.scheduler.utilities.jobs
             var description = jobNode.Children
                 .FirstOrDefault(x => x.Name == "description")?.GetEx<string>();
 
+            var persisted = jobNode.Children
+                .FirstOrDefault(x => x.Name == "persisted")?.GetEx<bool>() ?? true;
+
             var lambda = jobNode.Children
                 .FirstOrDefault(x => x.Name == ".lambda") ?? 
                 throw new ArgumentException($"No [.lambda] given to job named '{name}'");
@@ -98,6 +108,7 @@ namespace magic.lambda.scheduler.utilities.jobs
                         name,
                         description,
                         lambda,
+                        persisted,
                         repetitionPattern.First().GetEx<string>(),
                         jobNode);
 
@@ -107,6 +118,7 @@ namespace magic.lambda.scheduler.utilities.jobs
                         name,
                         description,
                         lambda,
+                        persisted,
                         repetitionPattern.First().GetEx<DateTime>());
 
                 case "immediate":
@@ -114,6 +126,7 @@ namespace magic.lambda.scheduler.utilities.jobs
                         name,
                         description,
                         lambda,
+                        persisted,
                         DateTime.Now);
 
                 default:

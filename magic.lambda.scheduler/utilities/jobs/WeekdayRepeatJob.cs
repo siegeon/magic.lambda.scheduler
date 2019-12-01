@@ -26,6 +26,7 @@ namespace magic.lambda.scheduler.utilities.jobs
         /// <param name="name">The name of your job.</param>
         /// <param name="description">Description of your job.</param>
         /// <param name="lambda">Actual lambda object to be executed when job is due.</param>
+        /// <param name="persisted">If true, then job is persisted to disc.</param>
         /// <param name="weekday">Which day of the week the job should be executed</param>
         /// <param name="hours">At what hour during the day the job should be executed.</param>
         /// <param name="minutes">At what minute, within its hours, the job should be executed.</param>
@@ -33,10 +34,11 @@ namespace magic.lambda.scheduler.utilities.jobs
             string name, 
             string description, 
             Node lambda,
+            bool persisted,
             DayOfWeek weekday,
             int hours,
             int minutes)
-            : base(name, description, lambda)
+            : base(name, description, lambda, persisted)
         {
             _weekday = weekday;
             _hours = hours;

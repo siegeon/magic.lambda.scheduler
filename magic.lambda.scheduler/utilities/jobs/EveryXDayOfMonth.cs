@@ -26,6 +26,7 @@ namespace magic.lambda.scheduler.utilities.jobs
         /// <param name="name">Name of the new job.</param>
         /// <param name="description">Description for the job.</param>
         /// <param name="lambda">Lambda object to be executed when job is due.</param>
+        /// <param name="persisted">If true, then job is persisted to disc.</param>
         /// <param name="dayOfMonth">Which day of the month the job should execute. Integer value between 1 and 28.</param>
         /// <param name="hours">At which time of the day the job should execute. Integer value between 0 and 23.</param>
         /// <param name="minutes">At which minute within the hour the job should execute. Integer value between 0 and 59.</param>
@@ -33,10 +34,11 @@ namespace magic.lambda.scheduler.utilities.jobs
             string name, 
             string description, 
             Node lambda,
+            bool persisted,
             int dayOfMonth,
             int hours,
             int minutes)
-            : base(name, description, lambda)
+            : base(name, description, lambda, persisted)
         {
             // Sanity checking invocation
             if (dayOfMonth < 1 || dayOfMonth > 28)

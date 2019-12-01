@@ -25,15 +25,17 @@ namespace magic.lambda.scheduler.utilities.jobs
         /// <param name="name">Name of job.</param>
         /// <param name="description">Description for job.</param>
         /// <param name="lambda">Lambda object to be executed when job is due.</param>
+        /// <param name="persisted">If true, then job is persisted to disc.</param>
         /// <param name="hours">At which hour during the day the job should executed.</param>
         /// <param name="minutes">At which minute, within the hour, the job should execute.</param>
         public LastDayOfMonthJob(
             string name, 
             string description, 
             Node lambda,
+            bool persisted,
             int hours,
             int minutes)
-            : base(name, description, lambda)
+            : base(name, description, lambda, persisted)
         {
             // Sanity checking invocation.
             if (hours < 0 || hours > 23)

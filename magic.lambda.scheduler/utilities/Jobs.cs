@@ -55,10 +55,13 @@ namespace magic.lambda.scheduler.utilities
                 _jobs.Remove(old);
             }
             _jobs.Add(job);
-            if (_isFolderPath)
-                SaveJob(job);
-            else
-                SaveJobs();
+            if (job.Persisted)
+            {
+                if (_isFolderPath)
+                    SaveJob(job);
+                else
+                    SaveJobs();
+            }
         }
 
         /// <summary>
@@ -72,10 +75,13 @@ namespace magic.lambda.scheduler.utilities
         {
             job.Stop();
             _jobs.Remove(job);
-            if (_isFolderPath)
-                File.Delete(_pathToJobs + job.Name + ".hl");
-            else
-                SaveJobs();
+            if (job.Persisted)
+            {
+                if (_isFolderPath)
+                    File.Delete(_pathToJobs + job.Name + ".hl");
+                else
+                    SaveJobs();
+            }
         }
 
         /// <summary>
@@ -161,6 +167,8 @@ namespace magic.lambda.scheduler.utilities
          */
         void SaveJob(Job job)
         {
+            if (!job.Persisted)
+                return;
             var hyper = Generator.GetHyper(new Node[] { job.GetNode() });
             using (var stream = File.CreateText(_pathToJobs + job.Name + ".hl"))
             {
@@ -173,7 +181,7 @@ namespace magic.lambda.scheduler.utilities
          */
         void SaveJobs()
         {
-            var hyper = Generator.GetHyper(_jobs.Select(x => x.GetNode()));
+            var hyper = Generator.GetHyper(_jobs.Where(x => x.Persisted).Select(x => x.GetNode()));
             using (var stream = File.CreateText(_pathToJobs))
             {
                 stream.Write(hyper);
