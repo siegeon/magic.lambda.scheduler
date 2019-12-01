@@ -40,13 +40,6 @@ namespace magic.lambda.scheduler.utilities
         }
 
         /// <summary>
-        /// Returns true if tasks are stored in a folder, instead
-        /// of a commonly shared file - Which depends upon how you
-        /// have configured the scheduler.
-        /// </summary>
-        public bool IsFolderPath => _isFolderPath;
-
-        /// <summary>
         /// Adds a new job to the internal list of jobs, and saves all jobs into the job file.
         /// 
         /// Notice, will remove any jobs it has from before, having the same name as the name
@@ -117,7 +110,12 @@ namespace magic.lambda.scheduler.utilities
 
         #endregion
 
-        #region [ -- Private helper methods -- ]
+        #region [ -- Private and internal helper methods -- ]
+
+        /*
+         * Returns true if jobs are stored as multiple files inside a folder.
+         */
+        internal bool IsFolderPath => _isFolderPath;
 
         /*
          * Loads jobs from disc.

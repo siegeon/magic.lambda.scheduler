@@ -35,8 +35,7 @@ namespace magic.lambda.scheduler
         /// <param name="input">Arguments to slot.</param>
         public void Signal(ISignaler signaler, Node input)
         {
-            var job = Job.CreateJob(input, false, _scheduler.IsFolderPath);
-            _scheduler.Add(job);
+            _scheduler.Create(input);
         }
     }
 }

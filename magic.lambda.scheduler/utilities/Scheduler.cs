@@ -9,6 +9,7 @@ using System.Threading;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using magic.node;
 using magic.signals.contracts;
 using magic.lambda.scheduler.utilities.jobs;
 
@@ -31,7 +32,6 @@ namespace magic.lambda.scheduler.utilities
         readonly IServiceProvider _services;
         readonly ILogger _logger;
         readonly Synchronizer<Jobs> _jobs;
-        bool? _isFolderPath;
         bool _running;
 
         /// <summary>
@@ -69,24 +69,6 @@ namespace magic.lambda.scheduler.utilities
         public bool Running
         {
             get { return _jobs.Read(jobs => { return _running; }); }
-        }
-
-        /// <summary>
-        /// Returns true if jobs are being stored in folders, instead of in
-        /// a commonly shared file.
-        /// </summary>
-        public bool IsFolderPath
-        {
-            get
-            {
-                if (_isFolderPath.HasValue)
-                    return _isFolderPath.Value;
-                _jobs.Write(x =>
-                {
-                    _isFolderPath = x.IsFolderPath;
-                });
-                return _isFolderPath.Value;
-            }
         }
 
         /// <summary>
@@ -128,7 +110,7 @@ namespace magic.lambda.scheduler.utilities
         /// <returns>All jobs registered in the scheduler.</returns>
         public List<Job> List()
         {
-            return _jobs.Read((jobs) => jobs.List().ToList());
+            return _jobs.Read(jobs => jobs.List().ToList());
         }
 
         /// <summary>
@@ -139,21 +121,20 @@ namespace magic.lambda.scheduler.utilities
         public Job Get(string jobName)
         {
             // Getting job with specified name.
-            return _jobs.Read((jobs) => jobs.Get(jobName));
+            return _jobs.Read(jobs => jobs.Get(jobName));
         }
 
         /// <summary>
-        /// Adds a new job to the scheduler.
+        /// Creates a new job, and adds it to the schweduler's list of jobs.
         ///
-        /// Notice, any previously added jobs with the same name will be deleted.
-        /// The jobs added through this method will also be serialized to disc,
-        /// to the specified jobs file.
+        /// If scheduler is running, job will be automatically started.
         /// </summary>
-        /// <param name="job">Job to add.</param>
-        public void Add(Job job)
+        /// <param name="node">Declaration of your job.</param>
+        public void Create(Node node)
         {
-            _jobs.Write((jobs) =>
+            _jobs.Write(jobs =>
             {
+                var job = Job.CreateJob(node, false, jobs.IsFolderPath);
                 jobs.Add(job);
                 if (_running)
                     job.Schedule(async (x) => await Execute(x));
@@ -166,7 +147,7 @@ namespace magic.lambda.scheduler.utilities
         /// <param name="jobName">Name of job to delete.</param>
         public void Delete(string jobName)
         {
-            _jobs.Write((jobs) =>
+            _jobs.Write(jobs =>
             {
                 var job = jobs.Get(jobName);
                 if (job != null)
@@ -216,18 +197,18 @@ namespace magic.lambda.scheduler.utilities
             }
             finally
             {
-                _jobs.Write((jobs) =>
+                if (job is RepeatJob)
                 {
-                    if (!(job is RepeatJob))
+                    job.Schedule(async (x) => await Execute(x));
+                }
+                else
+                {
+                    _jobs.Write(jobs =>
                     {
                         job.Stop();
                         jobs.Delete(job);
-                    }
-                    else if (_running)
-                    {
-                        job.Schedule(async (x) => await Execute(x));
-                    }
-                });
+                    });
+                }
                 _sempahore.Release();
             }
         }
