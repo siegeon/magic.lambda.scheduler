@@ -33,6 +33,8 @@ namespace magic.lambda.scheduler.utilities.jobs
             string description, 
             Node lambda)
         {
+            if (!IsLegalName(name))
+                throw new ArgumentException($"'{name}' is not a legal name for task, use only [a-z0-1], '_' and '-' as your job's name");
             Name = name;
             Description = description;
             Lambda = lambda.Clone();
@@ -68,11 +70,10 @@ namespace magic.lambda.scheduler.utilities.jobs
         public static Job CreateJob(Node jobNode, bool fromPersistentStorage = false)
         {
             // Figuring out what type of job caller requests.
-            var repetitionPattern = jobNode.Children.Where(x => x.Name == "repeat" || x.Name == "when");
+            var repetitionPattern = jobNode.Children.Where(x => x.Name == "repeat" || x.Name == "when" || x.Name == "immediate");
             if (repetitionPattern.Count() != 1)
-                throw new ArgumentException("A job must have exactly one [repeat] or [when] argument.");
+                throw new ArgumentException("A job must have exactly one [repeat], [when] or [immediate] argument.");
 
-            // Finding common arguments for job.
             var name = fromPersistentStorage ? 
                 jobNode.Name : 
                 jobNode.GetEx<string>() ?? 
@@ -86,34 +87,35 @@ namespace magic.lambda.scheduler.utilities.jobs
                 throw new ArgumentException($"No [.lambda] given to job named '{name}'");
 
             // Creating actual job instance.
-            Job result;
             switch (repetitionPattern.First().Name)
             {
                 case "repeat":
 
-                    result = RepeatJob.CreateJob(
+                    return RepeatJob.CreateJob(
                         name,
                         description,
                         lambda,
                         repetitionPattern.First().GetEx<string>(),
                         jobNode);
-                    break;
 
                 case "when":
 
-                    result = new WhenJob(
+                    return new WhenJob(
                         name,
                         description,
                         lambda,
                         repetitionPattern.First().GetEx<DateTime>());
-                    break;
+
+                case "immediate":
+                    return new WhenJob(
+                        name,
+                        description,
+                        lambda,
+                        DateTime.Now);
 
                 default:
                     throw new ApplicationException("You have reached a place in your code which should have been impossible to reach!");
             }
-
-            // Notice, we do not actually start a job, before it's added to a scheduler of some sort.
-            return result;
         }
 
         /// <summary>
@@ -205,6 +207,19 @@ namespace magic.lambda.scheduler.utilities.jobs
         {
             _timer?.Dispose();
             _timer = null;
+        }
+
+        /*
+         * Returns true if name of job is legal.
+         */
+        bool IsLegalName(string name)
+        {
+            foreach (var idx in name)
+            {
+                if ("abcdefghijklmnopqrstuvwxyz_-1234567890".IndexOf(idx) == -1)
+                    return false;
+            }
+            return true;
         }
 
         #endregion

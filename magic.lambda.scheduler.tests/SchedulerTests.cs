@@ -60,6 +60,29 @@ scheduler.stop",
         }
 
         [Fact]
+        public void CreateWhen_05_IllegalName_Throws()
+        {
+            Assert.Throws<ArgumentException>(() => Common.Evaluate(@"
+scheduler.tasks.create:task-01-X
+   when:""2022-12-24T23:55""
+   .lambda
+      .foo"));
+        }
+
+        [Fact]
+        public void CreateImmediate_01()
+        {
+            Common.Evaluate(@"
+scheduler.tasks.create:task-05
+   immediate
+   .lambda
+      foo.task.scheduler-05");
+            Assert.False(SchedulerSlot05._invoked);
+            SchedulerSlot05._handle.WaitOne(500);
+            Assert.True(SchedulerSlot05._invoked);
+        }
+
+        [Fact]
         public void Create_01_NoWhenRepeat_Throws()
         {
             Assert.Throws<ArgumentException>(() => Common.Evaluate(@"
