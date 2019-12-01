@@ -33,8 +33,8 @@ namespace magic.lambda.scheduler.utilities.jobs
             : base(name, description, lambda)
         {
             // Making sure we never create a job that should have been executed in the past.
-            if (when.AddMilliseconds(250) < DateTime.Now)
-                when = DateTime.Now.AddMilliseconds(250);
+            if (when.AddMilliseconds(25) < DateTime.Now)
+                when = DateTime.Now.AddMilliseconds(25);
             Due = when;
         }
 
