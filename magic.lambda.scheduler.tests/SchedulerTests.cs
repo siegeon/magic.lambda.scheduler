@@ -97,6 +97,21 @@ scheduler.stop");
         }
 
         [Fact]
+        public void CreateImmediate_03()
+        {
+            for (int idx = 0; idx < 100; idx++)
+            {
+                Common.Evaluate(string.Format(@"
+scheduler.tasks.create:task-immediate-loop-{0}
+   immediate
+   .lambda
+      foo.task.scheduler-07", idx));
+            }
+            SchedulerSlot07._handle.WaitOne(5000);
+            Assert.Equal(SchedulerSlot07._invocations, 100);
+        }
+
+        [Fact]
         public void Create_01_NoWhenRepeat_Throws()
         {
             Assert.Throws<ArgumentException>(() => Common.Evaluate(@"
