@@ -66,7 +66,27 @@ scheduler.stop",
 scheduler.tasks.create:task-01-X
    when:""2022-12-24T23:55""
    .lambda
-      .foo"));
+      .foo", true, true));
+        }
+
+        [Fact]
+        public void CreateWhen_06_FolderPath()
+        {
+            Common.Evaluate(@"
+scheduler.tasks.create:task-01
+   when:""2022-12-24T23:55""
+   .lambda
+      .foo", true, true);
+        }
+
+        [Fact]
+        public void CreateWhen_07_IllegalName_NoThrow()
+        {
+            Common.Evaluate(@"
+scheduler.tasks.create:task-01-X
+   when:""2022-12-24T23:55""
+   .lambda
+      .foo", true, false);
         }
 
         [Fact]
@@ -108,7 +128,7 @@ scheduler.tasks.create:task-immediate-loop-{0}
       foo.task.scheduler-07", idx));
             }
             SchedulerSlot07._handle.WaitOne(5000);
-            Assert.Equal(SchedulerSlot07._invocations, 100);
+            Assert.Equal(100, SchedulerSlot07._invocations);
         }
 
         [Fact]

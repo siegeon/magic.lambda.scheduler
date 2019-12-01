@@ -7,6 +7,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Collections.Generic;
+using magic.node;
 using magic.node.extensions.hyperlambda;
 using magic.lambda.scheduler.utilities.jobs;
 
@@ -20,18 +21,30 @@ namespace magic.lambda.scheduler.utilities
     public sealed class Jobs : IDisposable
     {
         readonly List<Job> _jobs = new List<Job>();
-        readonly string _jobFile;
+        readonly string _pathToJobs;
+        readonly bool _isFolderPath;
 
         /// <summary>
         /// Creates a new list of jobs, by loading serialized jobs from the
-        /// given job file.
+        /// given file or folder.
         /// </summary>
-        /// <param name="jobFile"></param>
-        public Jobs(string jobFile)
+        /// <param name="pathToJobs">Path to a single file, or a folder,
+        /// containing all serialized jobs.</param>
+        public Jobs(string pathToJobs)
         {
-            _jobFile = jobFile ?? throw new ArgumentNullException(nameof(jobFile));
+            _pathToJobs = pathToJobs ?? throw new ArgumentNullException(nameof(pathToJobs));
+            _isFolderPath = !_pathToJobs.EndsWith(".hl", StringComparison.InvariantCulture);
+            if (_isFolderPath)
+                _pathToJobs = _pathToJobs.Replace("\\", "/").TrimEnd('/') + "/";
             LoadJobs();
         }
+
+        /// <summary>
+        /// Returns true if tasks are stored in a folder, instead
+        /// of a commonly shared file - Which depends upon how you
+        /// have configured the scheduler.
+        /// </summary>
+        public bool IsFolderPath => _isFolderPath;
 
         /// <summary>
         /// Adds a new job to the internal list of jobs, and saves all jobs into the job file.
@@ -49,7 +62,10 @@ namespace magic.lambda.scheduler.utilities
                 _jobs.Remove(old);
             }
             _jobs.Add(job);
-            SaveJobs();
+            if (_isFolderPath)
+                SaveJob(job);
+            else
+                SaveJobs();
         }
 
         /// <summary>
@@ -63,7 +79,10 @@ namespace magic.lambda.scheduler.utilities
         {
             job.Stop();
             _jobs.Remove(job);
-            SaveJobs();
+            if (_isFolderPath)
+                File.Delete(_pathToJobs + job.Name + ".hl");
+            else
+                SaveJobs();
         }
 
         /// <summary>
@@ -105,9 +124,30 @@ namespace magic.lambda.scheduler.utilities
          */
         void LoadJobs()
         {
-            if (File.Exists(_jobFile))
+            if (_isFolderPath)
             {
-                using (var stream = File.OpenRead(_jobFile))
+                if (Directory.Exists(_pathToJobs))
+                {
+                    foreach (var idxFile in Directory.GetFiles(_pathToJobs, "*.hl"))
+                    {
+                        using (var stream = File.OpenRead(idxFile))
+                        {
+                            var lambda = new Parser(stream).Lambda();
+                            foreach (var idx in lambda.Children)
+                            {
+                                _jobs.Add(Job.CreateJob(idx, true));
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    Directory.CreateDirectory(_pathToJobs);
+                }
+            }
+            else if (File.Exists(_pathToJobs))
+            {
+                using (var stream = File.OpenRead(_pathToJobs))
                 {
                     var lambda = new Parser(stream).Lambda();
                     foreach (var idx in lambda.Children)
@@ -119,12 +159,24 @@ namespace magic.lambda.scheduler.utilities
         }
 
         /*
+         * Saves single job to disc.
+         */
+        void SaveJob(Job job)
+        {
+            var hyper = Generator.GetHyper(new Node[] { job.GetNode() });
+            using (var stream = File.CreateText(_pathToJobs + job.Name + ".hl"))
+            {
+                stream.Write(hyper);
+            }
+        }
+
+        /*
          * Saves jobs to disc.
          */
         void SaveJobs()
         {
             var hyper = Generator.GetHyper(_jobs.Select(x => x.GetNode()));
-            using (var stream = File.CreateText(_jobFile))
+            using (var stream = File.CreateText(_pathToJobs))
             {
                 stream.Write(hyper);
             }

@@ -31,6 +31,7 @@ namespace magic.lambda.scheduler.utilities
         readonly IServiceProvider _services;
         readonly ILogger _logger;
         readonly Synchronizer<Jobs> _jobs;
+        bool? _isFolderPath;
         bool _running;
 
         /// <summary>
@@ -40,7 +41,7 @@ namespace magic.lambda.scheduler.utilities
         /// <param name="services">Service provider to resolve ISignaler.</param>
         /// <param name="logger">Logging provider necessary to be able to log jobs that are
         /// not executed successfully.</param>
-        /// <param name="jobFile">The path to your job file,
+        /// <param name="jobsPath">The path to your job file,
         /// declaring what jobs your application has scheduled for future
         /// execution. Jobs will be serialized into this file, such that if the
         /// process for some reasons is taken down, the jobs will be reloaded the next
@@ -50,14 +51,14 @@ namespace magic.lambda.scheduler.utilities
         public Scheduler(
             IServiceProvider services,
             ILogger logger,
-            string jobFile,
+            string jobsPath,
             bool autoStart,
             int maxThreads)
         {
             _services = services ?? throw new ArgumentNullException(nameof(services));
             _logger = logger;
             _sempahore = new SemaphoreSlim(maxThreads);
-            _jobs = new Synchronizer<Jobs>(new Jobs(jobFile));
+            _jobs = new Synchronizer<Jobs>(new Jobs(jobsPath));
             if (autoStart)
                 Start();
         }
@@ -68,6 +69,24 @@ namespace magic.lambda.scheduler.utilities
         public bool Running
         {
             get { return _jobs.Read(jobs => { return _running; }); }
+        }
+
+        /// <summary>
+        /// Returns true if jobs are being stored in folders, instead of in
+        /// a commonly shared file.
+        /// </summary>
+        public bool IsFolderPath
+        {
+            get
+            {
+                if (_isFolderPath.HasValue)
+                    return _isFolderPath.Value;
+                _jobs.Write(x =>
+                {
+                    _isFolderPath = x.IsFolderPath;
+                });
+                return _isFolderPath.Value;
+            }
         }
 
         /// <summary>

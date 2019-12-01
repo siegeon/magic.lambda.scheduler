@@ -33,8 +33,6 @@ namespace magic.lambda.scheduler.utilities.jobs
             string description, 
             Node lambda)
         {
-            if (!IsLegalName(name))
-                throw new ArgumentException($"'{name}' is not a legal name for task, use only [a-z0-1], '_' and '-' as your job's name");
             Name = name;
             Description = description;
             Lambda = lambda.Clone();
@@ -67,7 +65,10 @@ namespace magic.lambda.scheduler.utilities.jobs
         /// <param name="fromPersistentStorage">If true, will fetch the name of the job from the
         /// name of the node instead of from its value.</param>
         /// <returns>Newly created job.</returns>
-        public static Job CreateJob(Node jobNode, bool fromPersistentStorage = false)
+        public static Job CreateJob(
+            Node jobNode,
+            bool fromPersistentStorage = false,
+            bool sanityCheckName = false)
         {
             // Figuring out what type of job caller requests.
             var repetitionPattern = jobNode.Children.Where(x => x.Name == "repeat" || x.Name == "when" || x.Name == "immediate");
@@ -78,6 +79,8 @@ namespace magic.lambda.scheduler.utilities.jobs
                 jobNode.Name : 
                 jobNode.GetEx<string>() ?? 
                 throw new ArgumentException("No name give to job");
+            if (sanityCheckName && !IsLegalName(name))
+                throw new ArgumentException($"'{name}' is not a legal name for a task, only [0-9a-z], '-' and '_' can be used for your task's name");
 
             var description = jobNode.Children
                 .FirstOrDefault(x => x.Name == "description")?.GetEx<string>();
@@ -212,7 +215,7 @@ namespace magic.lambda.scheduler.utilities.jobs
         /*
          * Returns true if name of job is legal.
          */
-        bool IsLegalName(string name)
+        static bool IsLegalName(string name)
         {
             foreach (var idx in name)
             {

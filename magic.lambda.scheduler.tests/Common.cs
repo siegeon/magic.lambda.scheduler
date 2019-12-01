@@ -36,9 +36,9 @@ namespace magic.lambda.scheduler.tests
             }
         }
 
-        static public Node Evaluate(string hl, bool deleteJobFile = true)
+        static public Node Evaluate(string hl, bool deleteExistingJobs = true, bool isFolder = false)
         {
-            var services = Initialize(deleteJobFile);
+            var services = Initialize(deleteExistingJobs, isFolder);
             var lambda = new Parser(hl).Lambda();
             var signaler = services.GetService(typeof(ISignaler)) as ISignaler;
             signaler.Signal("eval", lambda);
@@ -47,17 +47,20 @@ namespace magic.lambda.scheduler.tests
 
         #region [ -- Private helper methods -- ]
 
-        static IServiceProvider Initialize(bool deleteJobFile)
+        static IServiceProvider Initialize(bool deleteJobFile, bool isFolder)
         {
             var services = new ServiceCollection();
             services.AddTransient<ISignaler, Signaler>();
             var types = new SignalsProvider(InstantiateAllTypes<ISlot>(services));
             services.AddTransient<ISignalsProvider>((svc) => types);
             services.AddTransient<ILogger, Logger>();
-            var jobFile = AppDomain.CurrentDomain.BaseDirectory + "tasks.hl";
-            if (deleteJobFile && File.Exists(jobFile))
-                File.Delete(jobFile);
-            services.AddSingleton((svc) => new Scheduler(svc, null, jobFile, true, 4));
+            var jobPath = AppDomain.CurrentDomain.BaseDirectory +
+                (isFolder ? "tasks/" : "tasks.hl");
+            if (deleteJobFile && File.Exists(jobPath))
+                File.Delete(jobPath);
+            else if (deleteJobFile && Directory.Exists(jobPath))
+                Directory.Delete(jobPath, true);
+            services.AddSingleton((svc) => new Scheduler(svc, null, jobPath, true, 4));
             var provider = services.BuildServiceProvider();
 
             // Ensuring BackgroundService is created and started.
