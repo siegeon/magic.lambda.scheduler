@@ -83,6 +83,20 @@ scheduler.tasks.create:task-05
         }
 
         [Fact]
+        public void CreateImmediate_02()
+        {
+            Common.Evaluate(@"
+scheduler.tasks.create:task-06
+   immediate
+   .lambda
+      foo.task.scheduler-06
+scheduler.stop");
+            Assert.False(SchedulerSlot06._invoked);
+            SchedulerSlot06._handle.WaitOne(500);
+            Assert.False(SchedulerSlot06._invoked); // Scheduler should not be running
+        }
+
+        [Fact]
         public void Create_01_NoWhenRepeat_Throws()
         {
             Assert.Throws<ArgumentException>(() => Common.Evaluate(@"
