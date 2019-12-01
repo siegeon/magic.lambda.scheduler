@@ -13,7 +13,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "misc", "misc", "{0080EF1F-A
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "magic.lambda.scheduler", "magic.lambda.scheduler\magic.lambda.scheduler.csproj", "{D1409DA9-3541-4250-94EE-224D9DF457C4}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "magic.lambda.scheduler.tests", "magic.lambda.scheduler.tests\magic.lambda.scheduler.tests.csproj", "{72CAF160-1350-4DD8-905A-9D1B291A042F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "magic.lambda.scheduler.tests", "magic.lambda.scheduler.tests\magic.lambda.scheduler.tests.csproj", "{72CAF160-1350-4DD8-905A-9D1B291A042F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
