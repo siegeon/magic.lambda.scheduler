@@ -31,6 +31,7 @@ namespace magic.lambda.scheduler.utilities
         readonly IServiceProvider _services;
         readonly ILogger _logger;
         readonly Synchronizer<Jobs> _jobs;
+        bool _running;
 
         /// <summary>
         /// Creates a new scheduler, responsible for scheduling and
@@ -64,7 +65,10 @@ namespace magic.lambda.scheduler.utilities
         /// <summary>
         /// Returns true if scheduler is running.
         /// </summary>
-        public bool Running { get; private set; }
+        public bool Running
+        {
+            get { return _jobs.Read(jobs => { return _running; }); }
+        }
 
         /// <summary>
         /// Starts your scheduler. You must invoke this method in order to
@@ -75,7 +79,7 @@ namespace magic.lambda.scheduler.utilities
         {
             _jobs.Write(jobs =>
             {
-                Running = true;
+                _running = true;
                 foreach (var idx in jobs.List())
                 {
                     idx.Schedule(async (x) => await Execute(x));
@@ -91,29 +95,11 @@ namespace magic.lambda.scheduler.utilities
         {
             _jobs.Write(jobs =>
             {
-                Running = false;
+                _running = false;
                 foreach (var idx in jobs.List())
                 {
                     idx.Stop();
                 }
-            });
-        }
-
-        /// <summary>
-        /// Adds a new job to the scheduler.
-        ///
-        /// Notice, any previously added jobs with the same name will be deleted.
-        /// The jobs added through this method will also be serialized to disc,
-        /// to the specified jobs file.
-        /// </summary>
-        /// <param name="job">Job to add.</param>
-        public void Add(Job job)
-        {
-            _jobs.Write((jobs) =>
-            {
-                jobs.Add(job);
-                if (Running)
-                    job.Schedule(async (x) => await Execute(x));
             });
         }
 
@@ -138,6 +124,24 @@ namespace magic.lambda.scheduler.utilities
         }
 
         /// <summary>
+        /// Adds a new job to the scheduler.
+        ///
+        /// Notice, any previously added jobs with the same name will be deleted.
+        /// The jobs added through this method will also be serialized to disc,
+        /// to the specified jobs file.
+        /// </summary>
+        /// <param name="job">Job to add.</param>
+        public void Add(Job job)
+        {
+            _jobs.Write((jobs) =>
+            {
+                jobs.Add(job);
+                if (_running)
+                    job.Schedule(async (x) => await Execute(x));
+            });
+        }
+
+        /// <summary>
         /// Deletes an existing job from your scheduler.
         /// </summary>
         /// <param name="jobName">Name of job to delete.</param>
@@ -146,8 +150,8 @@ namespace magic.lambda.scheduler.utilities
             _jobs.Write((jobs) =>
             {
                 var job = jobs.Get(jobName);
-                job.Stop();
-                jobs.Delete(job);
+                if (job != null)
+                    jobs.Delete(job);
             });
         }
 
@@ -200,7 +204,7 @@ namespace magic.lambda.scheduler.utilities
                         job.Stop();
                         jobs.Delete(job);
                     }
-                    else if (Running)
+                    else if (_running)
                     {
                         job.Schedule(async (x) => await Execute(x));
                     }

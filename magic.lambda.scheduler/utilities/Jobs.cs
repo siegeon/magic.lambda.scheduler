@@ -7,7 +7,6 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Collections.Generic;
-using magic.node.extensions;
 using magic.node.extensions.hyperlambda;
 using magic.lambda.scheduler.utilities.jobs;
 
@@ -43,7 +42,12 @@ namespace magic.lambda.scheduler.utilities
         /// <param name="job">Job you wish to add to this instance.</param>
         public void Add(Job job)
         {
-            _jobs.RemoveAll(x => x.Name == job.Name);
+            var old = _jobs.FirstOrDefault(x => x.Name == job.Name);
+            if (old != null)
+            {
+                old.Stop();
+                _jobs.Remove(old);
+            }
             _jobs.Add(job);
             SaveJobs();
         }
@@ -57,6 +61,7 @@ namespace magic.lambda.scheduler.utilities
         /// <param name="job">Job to delete.</param>
         public void Delete(Job job)
         {
+            job.Stop();
             _jobs.Remove(job);
             SaveJobs();
         }
