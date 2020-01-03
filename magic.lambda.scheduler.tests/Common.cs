@@ -32,7 +32,7 @@ namespace magic.lambda.scheduler.tests
 
             public void LogInfo(string description)
             {
-                // No reasons to do anything here ...
+                Console.WriteLine(description);
             }
         }
 
