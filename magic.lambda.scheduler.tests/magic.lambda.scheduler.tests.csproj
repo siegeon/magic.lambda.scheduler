@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="magic.lambda.hyperlambda" Version="4.0.3" />
+    <PackageReference Include="magic.lambda.hyperlambda" Version="4.0.4" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="3.0.1" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.4.0" />
     <PackageReference Include="xunit" Version="2.4.1" />
@@ -15,8 +15,8 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="magic.lambda" Version="4.0.3" />
-    <PackageReference Include="magic.signals" Version="4.0.3" />
+    <PackageReference Include="magic.lambda" Version="4.0.4" />
+    <PackageReference Include="magic.signals" Version="4.0.4" />
   </ItemGroup>
 
   <ItemGroup>
