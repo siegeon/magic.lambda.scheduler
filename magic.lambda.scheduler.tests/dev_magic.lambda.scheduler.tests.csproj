@@ -9,6 +9,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="3.0.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.4.0" />
+    <PackageReference Include="Moq" Version="4.11.0" />
     <PackageReference Include="xunit" Version="2.4.1" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.4.1">
       <PrivateAssets>all</PrivateAssets>
@@ -18,6 +19,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\magic.lambda.hyperlambda\magic.lambda.hyperlambda\dev_magic.lambda.hyperlambda.csproj" />
+    <ProjectReference Include="..\..\magic.lambda.math\magic.lambda.math\dev_magic.lambda.math.csproj" />
+    <ProjectReference Include="..\..\magic.lambda.strings\magic.lambda.strings\dev_magic.lambda.strings.csproj" />
     <ProjectReference Include="..\..\magic.lambda\magic.lambda\dev_magic.lambda.csproj" />
     <ProjectReference Include="..\..\magic.signals\magic.signals.services\dev_magic.signals.services.csproj" />
     <ProjectReference Include="..\magic.lambda.scheduler\dev_magic.lambda.scheduler.csproj" />

@@ -119,15 +119,22 @@ scheduler.stop");
         [Fact]
         public void CreateImmediate_03()
         {
-            for (int idx = 0; idx < 100; idx++)
-            {
-                Common.Evaluate(string.Format(@"
-scheduler.tasks.create:task-immediate-loop-{0}
-   immediate
+            Common.Evaluate(string.Format(@"
+.no:int:0
+while
+   lt
+      get-value:x:@.no
+      .:int:100
    .lambda
-      foo.task.scheduler-07", idx));
-            }
-            SchedulerSlot07._handle.WaitOne(5000);
+      strings.concat
+         .:task-immediate-loop
+         get-value:x:@.no
+      scheduler.tasks.create:x:-
+         immediate
+         .lambda
+            foo.task.scheduler-07
+      math.increment:x:@.no"));
+            SchedulerSlot07._handle.WaitOne(10000);
             Assert.Equal(100, SchedulerSlot07._invocations);
         }
 

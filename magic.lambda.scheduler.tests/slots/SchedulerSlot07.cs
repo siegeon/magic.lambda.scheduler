@@ -17,7 +17,7 @@ namespace magic.lambda.scheduler.tests
 
         public void Signal(ISignaler signaler, Node input)
         {
-            if (++_invocations == 100)
+            if (Interlocked.Increment(ref _invocations) == 100)
                 _handle.Set();
         }
     }

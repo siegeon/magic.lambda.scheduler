@@ -31,7 +31,7 @@ namespace magic.lambda.scheduler.utilities
         readonly SemaphoreSlim _sempahore;
         readonly IServiceProvider _services;
         readonly ILogger _logger;
-        readonly Synchronizer<Jobs> _jobs;
+        readonly Synchronizer<Jobs> _jobSynchroniser;
         bool _running;
 
         /// <summary>
@@ -58,7 +58,7 @@ namespace magic.lambda.scheduler.utilities
             _services = services ?? throw new ArgumentNullException(nameof(services));
             _logger = logger;
             _sempahore = new SemaphoreSlim(maxThreads);
-            _jobs = new Synchronizer<Jobs>(new Jobs(jobsPath));
+            _jobSynchroniser = new Synchronizer<Jobs>(new Jobs(jobsPath));
             if (autoStart)
                 Start();
         }
@@ -68,7 +68,7 @@ namespace magic.lambda.scheduler.utilities
         /// </summary>
         public bool Running
         {
-            get { return _jobs.Read(jobs => { return _running; }); }
+            get { return _jobSynchroniser.Read(jobs => { return _running; }); }
         }
 
         /// <summary>
@@ -78,7 +78,7 @@ namespace magic.lambda.scheduler.utilities
         /// </summary>
         public void Start()
         {
-            _jobs.Write(jobs =>
+            _jobSynchroniser.Write(jobs =>
             {
                 _running = true;
                 foreach (var idx in jobs.List())
@@ -94,7 +94,7 @@ namespace magic.lambda.scheduler.utilities
         /// </summary>
         public void Stop()
         {
-            _jobs.Write(jobs =>
+            _jobSynchroniser.Write(jobs =>
             {
                 _running = false;
                 foreach (var idx in jobs.List())
@@ -110,7 +110,7 @@ namespace magic.lambda.scheduler.utilities
         /// <returns>All jobs registered in the scheduler.</returns>
         public List<Job> List()
         {
-            return _jobs.Read(jobs => jobs.List().ToList());
+            return _jobSynchroniser.Read(jobs => jobs.List().ToList());
         }
 
         /// <summary>
@@ -121,7 +121,7 @@ namespace magic.lambda.scheduler.utilities
         public Job Get(string jobName)
         {
             // Getting job with specified name.
-            return _jobs.Read(jobs => jobs.Get(jobName));
+            return _jobSynchroniser.Read(jobs => jobs.Get(jobName));
         }
 
         /// <summary>
@@ -132,7 +132,7 @@ namespace magic.lambda.scheduler.utilities
         /// <param name="node">Declaration of your job.</param>
         public void Create(Node node)
         {
-            _jobs.Write(jobs =>
+            _jobSynchroniser.Write(jobs =>
             {
                 var job = Job.CreateJob(node, false, jobs.IsFolderPath);
                 jobs.Add(job);
@@ -147,7 +147,7 @@ namespace magic.lambda.scheduler.utilities
         /// <param name="jobName">Name of job to delete.</param>
         public void Delete(string jobName)
         {
-            _jobs.Write(jobs =>
+            _jobSynchroniser.Write(jobs =>
             {
                 var job = jobs.Get(jobName);
                 if (job != null)
@@ -162,7 +162,7 @@ namespace magic.lambda.scheduler.utilities
         /// </summary>
         public void Dispose()
         {
-            _jobs.Dispose();
+            _jobSynchroniser.Dispose();
         }
 
         #endregion
@@ -203,7 +203,7 @@ namespace magic.lambda.scheduler.utilities
                 }
                 else
                 {
-                    _jobs.Write(jobs =>
+                    _jobSynchroniser.Write(jobs =>
                     {
                         job.Stop();
                         jobs.Delete(job);

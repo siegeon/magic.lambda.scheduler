@@ -13,6 +13,8 @@ using magic.signals.services;
 using magic.signals.contracts;
 using magic.lambda.scheduler.utilities;
 using magic.node.extensions.hyperlambda;
+using Microsoft.Extensions.Configuration;
+using Moq;
 
 namespace magic.lambda.scheduler.tests
 {
@@ -61,6 +63,9 @@ namespace magic.lambda.scheduler.tests
             else if (deleteJobFile && Directory.Exists(jobPath))
                 Directory.Delete(jobPath, true);
             services.AddSingleton((svc) => new Scheduler(svc, null, jobPath, true, 4));
+            var mockConfiguration = new Mock<IConfiguration>();
+            mockConfiguration.SetupGet(x => x[It.Is<string>(x => x == "magic:lambda:while:max-iterations")]).Returns("5000");
+            services.AddTransient((svc) => mockConfiguration.Object);
             var provider = services.BuildServiceProvider();
 
             // Ensuring BackgroundService is created and started.
