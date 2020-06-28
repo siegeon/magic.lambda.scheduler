@@ -12,19 +12,26 @@
     <PackageLicenseUrl>https://raw.githubusercontent.com/polterguy/magic.lambda.scheduler/master/LICENSE</PackageLicenseUrl>
     <PackageIconUrl>https://polterguy.github.io/favicon.ico</PackageIconUrl>
     <PackOnBuild>true</PackOnBuild>
-    <PackageVersion>5.0.0</PackageVersion>
+    <PackageVersion>7.0.0</PackageVersion>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/polterguy/magic.lambda.scheduler.git</RepositoryUrl>
     <PackageTags>Slots, Hyperlambda, DSl, scripting, script, scheduler</PackageTags>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All" />
+  </ItemGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <DocumentationFile>bin/Release/netstandard2.0/magic.lambda.scheduler.xml</DocumentationFile>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="magic.node.extensions" Version="5.0.0" />
-    <PackageReference Include="magic.signals.contracts" Version="5.0.0" />
+    <PackageReference Include="magic.node.extensions" Version="7.0.0" />
+    <PackageReference Include="magic.signals.contracts" Version="7.0.0" />
   </ItemGroup>
 </Project>
