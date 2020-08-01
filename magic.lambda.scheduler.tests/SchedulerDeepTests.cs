@@ -13,7 +13,7 @@ using magic.node.extensions;
 
 namespace magic.lambda.scheduler.tests
 {
-    public class SchedulerTests
+    public class SchedulerDeepTests
     {
         [Fact]
         public void CreateWhen_01()
