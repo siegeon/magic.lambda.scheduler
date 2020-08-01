@@ -62,7 +62,7 @@ namespace magic.lambda.scheduler.tests
                 File.Delete(jobPath);
             else if (deleteJobFile && Directory.Exists(jobPath))
                 Directory.Delete(jobPath, true);
-            services.AddSingleton((svc) => new Scheduler(svc, null, jobPath, true, 4));
+            services.AddSingleton((svc) => new Scheduler(svc, null, true));
             var mockConfiguration = new Mock<IConfiguration>();
             mockConfiguration.SetupGet(x => x[It.Is<string>(x => x == "magic:lambda:while:max-iterations")]).Returns("5000");
             services.AddTransient((svc) => mockConfiguration.Object);

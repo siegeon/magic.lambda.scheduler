@@ -7,7 +7,6 @@ using System;
 using magic.node;
 using magic.signals.contracts;
 using magic.lambda.scheduler.utilities;
-using magic.lambda.scheduler.utilities.jobs;
 
 namespace magic.lambda.scheduler
 {

@@ -36,16 +36,7 @@ namespace magic.lambda.scheduler
         public void Signal(ISignaler signaler, Node input)
         {
             var jobs = _scheduler.List();
-            jobs.Sort((lhs, rhs) => lhs.Due.CompareTo(rhs.Due));
-            input.AddRange(jobs.Select(x =>
-            {
-                return new Node("", null, new Node[]
-                {
-                    new Node("name", x.Name),
-                    new Node("due", x.Due),
-                    new Node("description", x.Description)
-                });
-            }));
+            input.AddRange(jobs);
         }
     }
 }
