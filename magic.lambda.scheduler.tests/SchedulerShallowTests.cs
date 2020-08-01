@@ -85,6 +85,42 @@ namespace magic.lambda.scheduler.tests
         }
 
         [Fact]
+        public void InvalidRepetitionPattern_09()
+        {
+            Assert.Throws<ArgumentException>(() =>
+            {
+               var pattern = new RepetitionPattern("01.**.00.00.00.Monday");
+            });
+        }
+
+        [Fact]
+        public void InvalidRepetitionPattern_10()
+        {
+            Assert.Throws<ArgumentException>(() =>
+            {
+               var pattern = new RepetitionPattern("01.01.**.00.00.**");
+            });
+        }
+
+        [Fact]
+        public void InvalidRepetitionPattern_11()
+        {
+            Assert.Throws<ArgumentException>(() =>
+            {
+               var pattern = new RepetitionPattern("01.01.00.**.00.**");
+            });
+        }
+
+        [Fact]
+        public void InvalidRepetitionPattern_12()
+        {
+            Assert.Throws<ArgumentException>(() =>
+            {
+               var pattern = new RepetitionPattern("01.01.00.00.**.**");
+            });
+        }
+
+        [Fact]
         public void EveryMondayAtMidnight()
         {
             var pattern = new RepetitionPattern("**.**.00.00.00.Monday");
@@ -103,6 +139,18 @@ namespace magic.lambda.scheduler.tests
             var next = pattern.Next();
             Assert.True(next >= DateTime.Now);
             Assert.True(next.DayOfWeek == DayOfWeek.Saturday || next.DayOfWeek == DayOfWeek.Sunday);
+            Assert.Equal(23, next.Hour);
+            Assert.Equal(57, next.Minute);
+            Assert.Equal(1, next.Second);
+        }
+
+        [Fact]
+        public void Every5thOfMonth()
+        {
+            var pattern = new RepetitionPattern("**.05.23.57.01.**");
+            var next = pattern.Next();
+            Assert.True(next >= DateTime.Now);
+            Assert.Equal(5, next.Day);
             Assert.Equal(23, next.Hour);
             Assert.Equal(57, next.Minute);
             Assert.Equal(1, next.Second);
