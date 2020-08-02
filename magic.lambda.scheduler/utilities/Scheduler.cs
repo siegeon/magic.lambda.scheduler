@@ -66,8 +66,10 @@ namespace magic.lambda.scheduler.utilities
                     _logger?.LogInfo("Task scheduler already started");
                     return;
                 }
-                ResetTimer();
-                _logger?.LogInfo("Task scheduler was started");
+                if (ResetTimer())
+                    _logger?.LogInfo("Task scheduler was started");
+                else
+                    _logger?.LogInfo("Task scheduler was not started since there are no due tasks");
             }
         }
 
@@ -82,6 +84,7 @@ namespace magic.lambda.scheduler.utilities
                     return;
                 }
                 _timer?.Dispose();
+                _timer = null;
                 _logger?.LogInfo("Task scheduler was stopped");
             }
         }
@@ -217,6 +220,8 @@ namespace magic.lambda.scheduler.utilities
                 if (whenNode == null)
                     throw new ArgumentException("No [when] or [pattern] supplied to create task");
                 due = whenNode.GetEx<DateTime>();
+                if (due < DateTime.Now)
+                    throw new ArgumentException("You cannot create a task with a due date that's in the past");
             }
 
             // Creating lambda.
@@ -238,7 +243,7 @@ namespace magic.lambda.scheduler.utilities
             ResetTimer();
         }
 
-        Tuple<DateTime, string, string> GetNextTask()
+        Tuple<DateTime, string, string, string> GetNextTask()
         {
             // Creating lambda necessary to find upcoming task's due date.
             var selectLambda = new Node($"{DatabaseType}.connect", DatabaseName);
@@ -246,7 +251,6 @@ namespace magic.lambda.scheduler.utilities
             readNode.Add(new Node("table", "task_due"));
             readNode.Add(new Node("order", "due"));
             readNode.Add(new Node("limit", 1));
-            readNode.Add(new Node("columns", null, new Node[] { new Node("due") }));
             selectLambda.Add(readNode);
 
             // Evaluating lambda.
@@ -260,15 +264,20 @@ namespace magic.lambda.scheduler.utilities
             return Tuple.Create(
                 selectLambda.Children.First().Children.First().Children.First(x => x.Name == "due").Get<DateTime>(),
                 selectLambda.Children.First().Children.First().Children.First(x => x.Name == "id").Get<string>(),
-                selectLambda.Children.First().Children.First().Children.First(x => x.Name == "pattern").Get<string>());
+                selectLambda.Children.First().Children.First().Children.First(x => x.Name == "pattern").Get<string>(),
+                selectLambda.Children.First().Children.First().Children.First(x => x.Name == "task").Get<string>());
         }
 
-        void ResetTimer()
+        bool ResetTimer()
         {
             // Getting upcoming task's due date.
             var date = GetNextTask();
             if (date != null)
+            {
                 CreateTimerImplementation(date.Item1);
+                return true;
+            }
+            return false;
         }
 
         void CreateTimerImplementation(DateTime when)
@@ -287,7 +296,7 @@ namespace magic.lambda.scheduler.utilities
             _timer = new Timer(
                 async (state) =>
                 {
-                    if (when.AddMilliseconds(-250) > DateTime.Now)
+                    if (when.AddMilliseconds(250) < DateTime.Now)
                         await ExecuteNext(); // Task is due.
                     else
                         CreateTimerImplementation(when); // Re-creating timer since date was too far into future to create Timer.
@@ -304,7 +313,7 @@ namespace magic.lambda.scheduler.utilities
             if (taskDue == null)
                 return; // No more due tasks.
 
-            if (taskDue.Item1.AddMilliseconds(-250) > DateTime.Now)
+            if (taskDue.Item1.AddMilliseconds(250) >= DateTime.Now)
             {
                 // It is not yet time to execute this task.
                 // Notice, if upcoming task was deleted before timer kicks in, this might be true.
@@ -318,7 +327,7 @@ namespace magic.lambda.scheduler.utilities
             readNode.Add(new Node("table", "tasks"));
             var whereNode = new Node("where");
             var andNode = new Node("and");
-            andNode.Add(new Node("id", taskDue.Item2));
+            andNode.Add(new Node("id", taskDue.Item4));
             whereNode.Add(andNode);
             readNode.Add(whereNode);
             selectLambda.Add(readNode);
@@ -335,10 +344,9 @@ namespace magic.lambda.scheduler.utilities
             if (taskDue.Item3 == null)
             {
                 // Task does not repeat, hence deleting its due date.
-                var id = selectLambda.Children.First().Children.First().Children.First(x => x.Name == "id").Get<long>();
                 var deleteLambda = new Node($"{DatabaseType}.connect", DatabaseName);
                 var deleteNode = new Node($"{DatabaseType}.delete");
-                deleteNode.Add(new Node("table", "tasks"));
+                deleteNode.Add(new Node("table", "task_due"));
                 whereNode = new Node("where");
                 andNode = new Node("and");
                 andNode.Add(new Node("id", taskDue.Item2));
@@ -352,6 +360,21 @@ namespace magic.lambda.scheduler.utilities
             else
             {
                 // Task repeats, hence updating its due date.
+                var updateLambda = new Node($"{DatabaseType}.connect", DatabaseName);
+                var updateNode = new Node($"{DatabaseType}.update");
+                updateNode.Add(new Node("table", "task_due"));
+                whereNode = new Node("where");
+                andNode = new Node("and");
+                andNode.Add(new Node("id", taskDue.Item2));
+                whereNode.Add(andNode);
+                var valuesNode = new Node("values");
+                valuesNode.Add(new Node("due", new RepetitionPattern(taskDue.Item3).Next()));
+                updateNode.Add(valuesNode);
+                updateNode.Add(whereNode);
+                updateLambda.Add(updateNode);
+
+                // Updating task's due date record.
+                Signaler.Signal("eval", new Node("", null, new Node[] { updateLambda }));
             }
 
             // Reset timer.
