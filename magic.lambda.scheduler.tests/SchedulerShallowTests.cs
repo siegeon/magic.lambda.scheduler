@@ -155,5 +155,23 @@ namespace magic.lambda.scheduler.tests
             Assert.Equal(57, next.Minute);
             Assert.Equal(1, next.Second);
         }
+
+        [Fact]
+        public void Every5Seconds()
+        {
+            var pattern = new RepetitionPattern("5.seconds");
+            var next = pattern.Next();
+            Assert.True(next >= DateTime.Now);
+            Assert.True((next - DateTime.Now).TotalSeconds >= 4 && (next - DateTime.Now).TotalSeconds < 6);
+        }
+
+        [Fact]
+        public void Every5Days()
+        {
+            var pattern = new RepetitionPattern("5.days");
+            var next = pattern.Next();
+            Assert.True(next >= DateTime.Now);
+            Assert.True((next - DateTime.Now).TotalDays >= 4 && (next - DateTime.Now).TotalDays < 6);
+        }
     }
 }

@@ -62,10 +62,11 @@ namespace magic.lambda.scheduler.tests
                 File.Delete(jobPath);
             else if (deleteJobFile && Directory.Exists(jobPath))
                 Directory.Delete(jobPath, true);
-            services.AddSingleton((svc) => new Scheduler(svc, null, true));
             var mockConfiguration = new Mock<IConfiguration>();
             mockConfiguration.SetupGet(x => x[It.Is<string>(x => x == "magic:lambda:while:max-iterations")]).Returns("5000");
+            mockConfiguration.SetupGet(x => x[It.Is<string>(x => x == "magic:database:default")]).Returns("mysql");
             services.AddTransient((svc) => mockConfiguration.Object);
+            services.AddSingleton((svc) => new Scheduler(svc, null, mockConfiguration.Object, true));
             var provider = services.BuildServiceProvider();
 
             // Ensuring BackgroundService is created and started.
