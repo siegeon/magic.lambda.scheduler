@@ -17,7 +17,7 @@ namespace magic.lambda.scheduler.tests
         {
             Assert.Throws<ArgumentException>(() =>
             {
-               var pattern = new RepetitionPattern("**.**.**.**.**");
+               new RepetitionPattern("**.**.**.**.**");
             });
         }
 
@@ -26,7 +26,7 @@ namespace magic.lambda.scheduler.tests
         {
             Assert.Throws<FormatException>(() =>
             {
-               var pattern = new RepetitionPattern("MM.dd.HH.mm.ss.ww");
+               new RepetitionPattern("MM.dd.HH.mm.ss.ww");
             });
         }
 
@@ -35,7 +35,7 @@ namespace magic.lambda.scheduler.tests
         {
             Assert.Throws<FormatException>(() =>
             {
-               var pattern = new RepetitionPattern("**.**.**.**.ss.**");
+               new RepetitionPattern("**.**.**.**.ss.**");
             });
         }
 
@@ -44,7 +44,7 @@ namespace magic.lambda.scheduler.tests
         {
             Assert.Throws<ArgumentException>(() =>
             {
-               var pattern = new RepetitionPattern("**.**.**.**.**.Monday|Wrongday");
+               new RepetitionPattern("**.**.**.**.**.Monday|Wrongday");
             });
         }
 
@@ -53,7 +53,7 @@ namespace magic.lambda.scheduler.tests
         {
             Assert.Throws<ArgumentException>(() =>
             {
-               var pattern = new RepetitionPattern("01.**.**.**.**.Monday");
+               new RepetitionPattern("01.**.**.**.**.Monday");
             });
         }
 
@@ -62,7 +62,7 @@ namespace magic.lambda.scheduler.tests
         {
             Assert.Throws<ArgumentException>(() =>
             {
-               var pattern = new RepetitionPattern("**.01.**.**.**.Monday");
+               new RepetitionPattern("**.01.**.**.**.Monday");
             });
         }
 
@@ -71,7 +71,7 @@ namespace magic.lambda.scheduler.tests
         {
             Assert.Throws<ArgumentException>(() =>
             {
-               var pattern = new RepetitionPattern("**.**.**.**.**.Monday");
+               new RepetitionPattern("**.**.**.**.**.Monday");
             });
         }
 
@@ -80,7 +80,7 @@ namespace magic.lambda.scheduler.tests
         {
             Assert.Throws<ArgumentException>(() =>
             {
-               var pattern = new RepetitionPattern("**.01.00.00.00.Monday");
+               new RepetitionPattern("**.01.00.00.00.Monday");
             });
         }
 
@@ -89,7 +89,7 @@ namespace magic.lambda.scheduler.tests
         {
             Assert.Throws<ArgumentException>(() =>
             {
-               var pattern = new RepetitionPattern("01.**.00.00.00.Monday");
+               new RepetitionPattern("01.**.00.00.00.Monday");
             });
         }
 
@@ -98,7 +98,7 @@ namespace magic.lambda.scheduler.tests
         {
             Assert.Throws<ArgumentException>(() =>
             {
-               var pattern = new RepetitionPattern("01.01.**.00.00.**");
+               new RepetitionPattern("01.01.**.00.00.**");
             });
         }
 
@@ -107,7 +107,7 @@ namespace magic.lambda.scheduler.tests
         {
             Assert.Throws<ArgumentException>(() =>
             {
-               var pattern = new RepetitionPattern("01.01.00.**.00.**");
+               new RepetitionPattern("01.01.00.**.00.**");
             });
         }
 
@@ -116,7 +116,7 @@ namespace magic.lambda.scheduler.tests
         {
             Assert.Throws<ArgumentException>(() =>
             {
-               var pattern = new RepetitionPattern("01.01.00.00.**.**");
+               new RepetitionPattern("01.01.00.00.**.**");
             });
         }
 
@@ -154,6 +154,36 @@ namespace magic.lambda.scheduler.tests
             Assert.Equal(23, next.Hour);
             Assert.Equal(57, next.Minute);
             Assert.Equal(1, next.Second);
+        }
+
+        [Fact]
+        public void Every5thAnd15thOfMonth()
+        {
+            var pattern = new RepetitionPattern("**.05|15.23.59.59.**");
+            var next = pattern.Next();
+            Assert.True(next >= DateTime.Now);
+            if (DateTime.Now.Day >= 5 && DateTime.Now.Day <= 16)
+                Assert.Equal(15, next.Day);
+            else
+                Assert.Equal(5, next.Day);
+            Assert.Equal(23, next.Hour);
+            Assert.Equal(59, next.Minute);
+            Assert.Equal(59, next.Second);
+        }
+
+        [Fact]
+        public void EveryJanuaryAndJuly()
+        {
+            var pattern = new RepetitionPattern("01|07.01.00.00.00.**");
+            var next = pattern.Next();
+            Assert.True(next >= DateTime.Now);
+            if (DateTime.Now.Month >= 1 && DateTime.Now.Month <= 7)
+                Assert.Equal(7, next.Month);
+            else
+                Assert.Equal(1, next.Month);
+            Assert.Equal(00, next.Hour);
+            Assert.Equal(00, next.Minute);
+            Assert.Equal(00, next.Second);
         }
 
         [Fact]

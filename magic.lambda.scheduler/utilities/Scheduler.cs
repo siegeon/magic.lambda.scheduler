@@ -40,15 +40,28 @@ namespace magic.lambda.scheduler.utilities
             get => _timer != null;
         }
 
+        public string DatabaseType
+        {
+            get => _configuration.GetSection("magic:databases:default").Value;
+        }
+
+        public string DatabaseName
+        {
+            get => _configuration.GetSection("magic:scheduler:tasks-database").Value;
+        }
+
         public void Start()
         {
             lock (_locker)
             {
                 _logger?.LogInfo("Attempting to start task scheduler");
                 if (_timer != null)
-                    return; // Already started
-                _logger?.LogInfo("Task scheduler started");
-                StartFirstJob();
+                {
+                    _logger?.LogInfo("Task scheduler already started");
+                    return;
+                }
+                ResetTimer();
+                _logger?.LogInfo("Task scheduler was started");
             }
         }
 
@@ -58,9 +71,28 @@ namespace magic.lambda.scheduler.utilities
             {
                 _logger?.LogInfo("Attempting to stop task scheduler");
                 if (_timer == null)
-                    return; // Already stopped
+                {
+                    _logger?.LogInfo("Task scheduler already stopped");
+                    return;
+                }
                 _timer?.Dispose();
-                _logger?.LogInfo("Task scheduler stopped");
+                _logger?.LogInfo("Task scheduler was stopped");
+            }
+        }
+
+        public void Create(Node node)
+        {
+            lock (_locker)
+            {
+                CreateImplementation(node);
+            }
+        }
+
+        public void Delete(Node node)
+        {
+            lock (_locker)
+            {
+                DeleteImplementation(GetTitle(node));
             }
         }
 
@@ -72,7 +104,7 @@ namespace magic.lambda.scheduler.utilities
             }
         }
 
-        public Node Get(string jobName)
+        public Node Get(Node node)
         {
             lock (_locker)
             {
@@ -80,65 +112,11 @@ namespace magic.lambda.scheduler.utilities
             }
         }
 
-        public void Create(Node node)
-        {
-            // Retrieving arguments and sanity checking invocation.
-            var title = node.Children.FirstOrDefault(x => x.Name == "title")?.GetEx<string>() ?? 
-                throw new ArgumentNullException("No [title] supplied to create task");
-            var description = node.Children.FirstOrDefault(x => x.Name == "description")?.GetEx<string>() ?? 
-                throw new ArgumentNullException("No [description] supplied to create task");
-            var lambdaNode = node.Children.FirstOrDefault(x => x.Name == ".lambda")?.Clone() ?? 
-                throw new ArgumentNullException("No [.lambda] supplied to create task");
-
-            // Creating our signaler, and converting lambda to Hyperlambda.
-            var signaler = _services.GetService(typeof(ISignaler)) as ISignaler;
-            signaler.Signal("lambda2hyper", lambdaNode);
-            var hyperlambda = lambdaNode.Get<string>();
-
-            // Figuring out which database adapter we're using.
-            var databaseType = _configuration.GetSection("magic:databases:default").Value;
-            var databaseName = _configuration.GetSection("magic:scheduler:tasks-database").Value;
-
-            // Sanity checking title.
-            if (title.Any(x => "abcdefghijklmnopqrstuvwxyz0123456789.-_".IndexOf(x) == -1))
-                throw new ArgumentException("[title] of task can only contain [a-z], [0-9] and '.', '-' or '_' characters");
-
-            // Synchronizing access to database and timer.
-            lock (_locker)
-            {
-                // Deleting previously created tasks with same name.
-                DeleteImplementation(title);
-
-                // Inserting task.
-                var insertLambda = new Node($"{databaseType}.connect", databaseName);
-                var insertNode = new Node($"{databaseType}.create");
-                insertNode.Add(new Node("table", "tasks"));
-                var valuesNode = new Node("values");
-                valuesNode.Add(new Node("id", title));
-                valuesNode.Add(new Node("description", description));
-                valuesNode.Add(new Node("hyperlambda", hyperlambda));
-                insertNode.Add(valuesNode);
-                insertLambda.Add(insertNode);
-                signaler.Signal("eval", new Node("", null, new Node[] { insertLambda }));
-
-                // Inserting task_due item.
-                if (node.Children.Any(x => x.Name == "when" || x.Name == "pattern"))
-                    InsertDueDate(node, title);
-            }
-        }
-
-        public void Delete(string taskName)
-        {
-            lock (_locker)
-            {
-                DeleteImplementation(taskName);
-            }
-        }
-
         #region [ -- Interface implementations -- ]
 
         public void Dispose()
         {
+            // This will make sure we wait for any currently executing tasks to finish before disposing.
             lock (_locker)
             {
                 _timer?.Dispose();
@@ -149,21 +127,30 @@ namespace magic.lambda.scheduler.utilities
 
         #region [ -- Private helper methods -- ]
 
-        void StartFirstJob()
+        string GetTitle(Node node)
         {
-            // Making sure we stop any previously initialized jobs.
-            _timer?.Dispose();
+            var title = node.Children.FirstOrDefault(x => x.Name == "title")?.GetEx<string>() ??
+                node.GetEx<string>() ??
+                throw new ArgumentNullException("No [title] supplied to create task");
+            if (title.Any(x => "abcdefghijklmnopqrstuvwxyz0123456789.-_".IndexOf(x) == -1))
+                throw new ArgumentException("[title] of task can only contain [a-z], [0-9] and '.', '-' or '_' characters");
+            return title;
+        }
+
+        void CreateImplementation(Node node)
+        {
+            var title = GetTitle(node);
+            DeleteImplementation(title);
+            CreateTaskImplementation(node, title);
+            if (node.Children.Any(x => x.Name == "when" || x.Name == "pattern"))
+                CreateDueDate(node, title);
         }
 
         void DeleteImplementation(string taskName)
         {
-            // Getting database type and database.
-            var databaseType = _configuration.GetSection("magic:databases:default").Value;
-            var databaseName = _configuration.GetSection("magic:scheduler:tasks-database").Value;
-
             // Creating lambda for deletion.
-            var insertLambda = new Node($"{databaseType}.connect", databaseName);
-            var deleteNode = new Node($"{databaseType}.delete");
+            var insertLambda = new Node($"{DatabaseType}.connect", DatabaseName);
+            var deleteNode = new Node($"{DatabaseType}.delete");
             deleteNode.Add(new Node("table", "tasks"));
             var whereNode = new Node("where");
             var andNode = new Node("and");
@@ -177,12 +164,34 @@ namespace magic.lambda.scheduler.utilities
             signaler.Signal("eval", new Node("", null, new Node[] { insertLambda }));
         }
 
-        void InsertDueDate(Node node, string title)
+        void CreateTaskImplementation(Node node, string title)
         {
-            // Figuring out which database adapter we're using.
-            var databaseType = _configuration.GetSection("magic:databases:default").Value;
-            var databaseName = _configuration.GetSection("magic:scheduler:tasks-database").Value;
+            // Retrieving arguments and sanity checking invocation.
+            var description = node.Children.FirstOrDefault(x => x.Name == "description")?.GetEx<string>() ?? 
+                throw new ArgumentNullException("No [description] supplied to create task");
+            var lambdaNode = node.Children.FirstOrDefault(x => x.Name == ".lambda")?.Clone() ?? 
+                throw new ArgumentNullException("No [.lambda] supplied to create task");
 
+            // Creating our signaler, and converting lambda to Hyperlambda.
+            var signaler = _services.GetService(typeof(ISignaler)) as ISignaler;
+            signaler.Signal("lambda2hyper", lambdaNode);
+            var hyperlambda = lambdaNode.Get<string>();
+
+            // Inserting task.
+            var insertLambda = new Node($"{DatabaseType}.connect", DatabaseName);
+            var insertNode = new Node($"{DatabaseType}.create");
+            insertNode.Add(new Node("table", "tasks"));
+            var valuesNode = new Node("values");
+            valuesNode.Add(new Node("id", title));
+            valuesNode.Add(new Node("description", description));
+            valuesNode.Add(new Node("hyperlambda", hyperlambda));
+            insertNode.Add(valuesNode);
+            insertLambda.Add(insertNode);
+            signaler.Signal("eval", new Node("", null, new Node[] { insertLambda }));
+        }
+
+        void CreateDueDate(Node node, string title)
+        {
             // Creating [mysql.create] invocation.
             string repetition = null;
             DateTime due;
@@ -205,8 +214,8 @@ namespace magic.lambda.scheduler.utilities
             }
 
             // Creating lambda.
-            var insertLambda = new Node($"{databaseType}.connect", databaseName);
-            var createNode = new Node($"{databaseType}.create");
+            var insertLambda = new Node($"{DatabaseType}.connect", DatabaseName);
+            var createNode = new Node($"{DatabaseType}.create");
             createNode.Add(new Node("table", "task_due"));
             var insertDueValues = new Node("values");
             insertDueValues.Add(new Node("task", title));
@@ -224,18 +233,11 @@ namespace magic.lambda.scheduler.utilities
             ResetTimer();
         }
 
-        void ResetTimer()
+        Tuple<DateTime, string> GetNextDueDate()
         {
-            // Disposing old timer if it's not null.
-            _timer?.Dispose();
-
-            // Figuring out which database adapter we're using.
-            var databaseType = _configuration.GetSection("magic:databases:default").Value;
-            var databaseName = _configuration.GetSection("magic:scheduler:tasks-database").Value;
-
-            // Creating lambda.
-            var selectLambda = new Node($"{databaseType}.connect", databaseName);
-            var readNode = new Node($"{databaseType}.read");
+            // Creating lambda necessary to find upcoming task's due date.
+            var selectLambda = new Node($"{DatabaseType}.connect", DatabaseName);
+            var readNode = new Node($"{DatabaseType}.read");
             readNode.Add(new Node("table", "task_due"));
             readNode.Add(new Node("order", "due"));
             readNode.Add(new Node("limit", 1));
@@ -247,58 +249,68 @@ namespace magic.lambda.scheduler.utilities
             signaler.Signal("eval", new Node("", null, new Node[] { selectLambda }));
 
             // Figuring out next date.
-            var date = selectLambda.Children.First().Children.First().Children.First().Get<DateTime>();
+            return Tuple.Create<DateTime, string>(
+                selectLambda.Children.First().Children.First().Children.First().Get<DateTime>(),
+                selectLambda.Children.First().Children.First().Children.First().Get<string>());
+        }
+
+        void ResetTimer()
+        {
+            // Getting upcoming task's due date.
+            var date = GetNextDueDate();
+            CreateTimerImplementation(date.Item1);
+        }
+
+        void CreateTimerImplementation(DateTime when)
+        {
+            // Disposing old timer if it's not null.
+            _timer?.Dispose();
+
+            // Figuring out upcoming due date.
+            var nextDue = (long)Math.Max(
+                250L,
+                Math.Min(
+                    (when - DateTime.Now).TotalMilliseconds,
+                    new TimeSpan(45, 0, 0, 0).TotalMilliseconds)); // 45 days is maximum resolution of Timer class.
+
+            // Creating timer.
             _timer = new Timer(
-                (state) => ExecuteNext(),
+                (state) =>
+                {
+                    if (when.AddMilliseconds(-250) > DateTime.Now)
+                        ExecuteNext(); // Task is due.
+                    else
+                        CreateTimerImplementation(when); // Re-creating timer since date was too far into future to create Timer.
+                },
                 null,
-                (int)Math.Min(
-                    (date - DateTime.Now).TotalMilliseconds,
-                    TimeSpan.FromMilliseconds(4294000000).TotalMilliseconds),
+                nextDue,
                 Timeout.Infinite);
         }
 
         void ExecuteNext()
         {
-            // Figuring out which database adapter we're using.
-            var databaseType = _configuration.GetSection("magic:databases:default").Value;
-            var databaseName = _configuration.GetSection("magic:scheduler:tasks-database").Value;
-
-            // Creating lambda.
-            var selectLambda = new Node($"{databaseType}.connect", databaseName);
-            var readNode = new Node($"{databaseType}.read");
-            readNode.Add(new Node("table", "task_due"));
-            readNode.Add(new Node("order", "due"));
-            readNode.Add(new Node("limit", 1));
-            selectLambda.Add(readNode);
-
-            // Evaluating lambda.
-            var signaler = _services.GetService(typeof(ISignaler)) as ISignaler;
-            signaler.Signal("eval", new Node("", null, new Node[] { selectLambda }));
-
-            // Retrieving due date, and making sure we're due for executing task.
-            var due = selectLambda.Children.First().Children.First().Children.First(x => x.Name == "due").Get<DateTime>();
-            if (due > DateTime.Now)
+            // Getting upcoming task's due date.
+            var due = GetNextDueDate();
+            if (due.Item1 > DateTime.Now)
             {
                 // It is not yet time to execute this task.
                 ResetTimer();
                 return;
             }
 
-            // Retrieving Hyperlambda and executing it.
-            var task = selectLambda.Children.First().Children.First().Children.First(x => x.Name == "task").Get<string>();
-
-            // Creating lambda.
-            selectLambda = new Node($"{databaseType}.connect", databaseName);
-            readNode = new Node($"{databaseType}.read");
+            // Creating lambda necessary to retrieve next task.
+            var selectLambda = new Node($"{DatabaseType}.connect", DatabaseName);
+            var readNode = new Node($"{DatabaseType}.read");
             readNode.Add(new Node("table", "tasks"));
             var whereNode = new Node("where");
             var andNode = new Node("and");
-            andNode.Add(new Node("id", task));
+            andNode.Add(new Node("id", due.Item2));
             whereNode.Add(andNode);
             readNode.Add(whereNode);
             selectLambda.Add(readNode);
 
             // Retrieving task.
+            var signaler = _services.GetService(typeof(ISignaler)) as ISignaler;
             signaler.Signal("eval", new Node("", null, new Node[] { selectLambda }));
             var hyperlambda = selectLambda.Children.First().Children.First().Children.First(x => x.Name == "hyperlambda").Get<string>();
             var exeNode = new Node("", hyperlambda);
@@ -312,12 +324,12 @@ namespace magic.lambda.scheduler.utilities
             {
                 // Task does not repeat, hence deleting its due date.
                 var id = selectLambda.Children.First().Children.First().Children.First(x => x.Name == "id").Get<long>();
-                var deleteLambda = new Node($"{databaseType}.connect", databaseName);
-                var deleteNode = new Node($"{databaseType}.delete");
+                var deleteLambda = new Node($"{DatabaseType}.connect", DatabaseName);
+                var deleteNode = new Node($"{DatabaseType}.delete");
                 deleteNode.Add(new Node("table", "tasks"));
                 whereNode = new Node("where");
                 andNode = new Node("and");
-                andNode.Add(new Node("id", task));
+                andNode.Add(new Node("id", due.Item2));
                 whereNode.Add(andNode);
                 deleteNode.Add(whereNode);
                 deleteLambda.Add(deleteNode);
