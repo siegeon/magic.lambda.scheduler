@@ -8,6 +8,7 @@ using System.Linq;
 using magic.node;
 using magic.signals.contracts;
 using magic.lambda.scheduler.utilities;
+using magic.node.extensions;
 
 namespace magic.lambda.scheduler
 {
@@ -22,7 +23,7 @@ namespace magic.lambda.scheduler
         /// <summary>
         /// Creates a new instance of your slot.
         /// </summary>
-        /// <param name="scheduler">Which background service to use.</param>
+        /// <param name="scheduler">Scheduler service to use.</param>
         public ListTasks(Scheduler scheduler)
         {
             _scheduler = scheduler ?? throw new ArgumentNullException(nameof(scheduler));
@@ -35,7 +36,9 @@ namespace magic.lambda.scheduler
         /// <param name="input">Arguments to slot.</param>
         public void Signal(ISignaler signaler, Node input)
         {
-            var jobs = _scheduler.List();
+            var jobs = _scheduler.List(
+                input.Children.FirstOrDefault(x => x.Name == "offset")?.GetEx<long>() ?? 0,
+                input.Children.FirstOrDefault(x => x.Name == "limit")?.GetEx<long>() ?? 10);
             input.AddRange(jobs);
         }
     }

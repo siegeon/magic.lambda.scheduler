@@ -105,11 +105,34 @@ namespace magic.lambda.scheduler.utilities
             }
         }
 
-        public List<Node> List()
+        public IEnumerable<Node> List(long offset, long limit, string id = null)
         {
             lock (_locker)
             {
-                return null;
+                // Creating lambda for deletion.
+                var readLambda = new Node($"{DatabaseType}.connect", DatabaseName);
+                var readNode = new Node($"{DatabaseType}.read");
+                readNode.Add(new Node("table", "tasks"));
+                readNode.Add(new Node("offset", offset));
+                readNode.Add(new Node("limit", limit));
+                if (id != null)
+                {
+                    // Retrieving specific task.
+                    var whereNode = new Node("where");
+                    var andNode = new Node("and");
+                    andNode.Add(new Node("id", id));
+                    whereNode.Add(andNode);
+                    readNode.Add(whereNode);
+                }
+                readLambda.Add(readNode);
+
+                // Evaluating lambda.
+                Signaler.Signal("eval", new Node("", null, new Node[] { readLambda }));
+                return readLambda.Children.First().Children.Select(x =>
+                {
+                    x.UnTie();
+                    return x;
+                });
             }
         }
 
@@ -117,7 +140,7 @@ namespace magic.lambda.scheduler.utilities
         {
             lock (_locker)
             {
-                return null;
+                return List(0, 1, node.GetEx<string>()).FirstOrDefault();
             }
         }
 
