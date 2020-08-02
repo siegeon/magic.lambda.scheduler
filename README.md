@@ -17,7 +17,7 @@ When creating a task, you can create a task that only executes once. This is don
 
 ```
 scheduler.tasks.create
-   title:foo-bar-task
+   id:foo-bar-task
    description:Some foo bar task
    when:date:"2020-12-24T17:00"
    .lambda
@@ -39,7 +39,8 @@ To have a task periodically being evaluated, you can choose between a whole rang
 to have a task scheduled for evaluation every Sunday at 22:00:00, you could create a task such as the following.
 
 ```
-scheduler.tasks.create:task-name
+scheduler.tasks.create
+   id:task-id
    pattern:**.**.22.00.00.sunday
    .lambda
 
@@ -63,7 +64,8 @@ To evaluate a task every saturday and sunday for instance, you can use `saturday
 Evaluating your task every second/minute/hour can be done by using something such as the following.
 
 ```
-scheduler.tasks.create:task-name
+scheduler.tasks.create
+   id:task-id
    pattern:50.seconds
    .lambda
 
@@ -75,7 +77,8 @@ The above will evaluate your task every 50 second. The above _"seconds"_ can be 
 are repeating _very seldom_, such as e.g. the following illustrates.
 
 ```
-scheduler.tasks.create:task-name
+scheduler.tasks.create
+   id:task-id
    pattern:3650.days
    .lambda
 
@@ -88,7 +91,8 @@ not a meaningful repetition pattern for you for the record. To create a task tha
 the month, at 5PM, you can use the following repetition pattern.
 
 ```
-scheduler.tasks.create:task-name
+scheduler.tasks.create
+   id:task-id
    pattern:**.01.05.00.00.**
    .lambda
       /* Your tasks lambda object goes here /*
@@ -121,5 +125,5 @@ create your tasks.
 into your database, but never executed unless you explicitly choose to execute it. If you wish to do this, you can
 completely ommit the **[when]** and the **[pattern]** argument(s).
 
-**Notice** - The task **[title]** can also be supplied as the value of the **[scheduler.tasks.create]** invocation
-instead of explicitly supplying a **[title]** argument.
+**Notice** - The task **[id]** can also be supplied as the value of the **[scheduler.tasks.create]** invocation
+instead of explicitly supplying a **[id]** argument.

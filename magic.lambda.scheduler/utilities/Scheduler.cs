@@ -11,6 +11,7 @@ using Microsoft.Extensions.Configuration;
 using magic.node;
 using magic.node.extensions;
 using magic.signals.contracts;
+using System.Threading.Tasks;
 
 namespace magic.lambda.scheduler.utilities
 {
@@ -48,6 +49,11 @@ namespace magic.lambda.scheduler.utilities
         public string DatabaseName
         {
             get => _configuration.GetSection("magic:scheduler:tasks-database").Value;
+        }
+
+        public ISignaler Signaler
+        {
+            get => _services.GetService(typeof(ISignaler)) as ISignaler;
         }
 
         public void Start()
@@ -92,7 +98,7 @@ namespace magic.lambda.scheduler.utilities
         {
             lock (_locker)
             {
-                DeleteImplementation(GetTitle(node));
+                DeleteImplementation(GetID(node));
             }
         }
 
@@ -127,26 +133,28 @@ namespace magic.lambda.scheduler.utilities
 
         #region [ -- Private helper methods -- ]
 
-        string GetTitle(Node node)
+        string GetID(Node node)
         {
-            var title = node.Children.FirstOrDefault(x => x.Name == "title")?.GetEx<string>() ??
+            var id = node.Children.FirstOrDefault(x => x.Name == "id")?.GetEx<string>() ??
                 node.GetEx<string>() ??
-                throw new ArgumentNullException("No [title] supplied to create task");
-            if (title.Any(x => "abcdefghijklmnopqrstuvwxyz0123456789.-_".IndexOf(x) == -1))
-                throw new ArgumentException("[title] of task can only contain [a-z], [0-9] and '.', '-' or '_' characters");
-            return title;
+                throw new ArgumentNullException("No [id] or value provided to create task");
+            if (id.Any(x => "abcdefghijklmnopqrstuvwxyz0123456789.-_".IndexOf(x) == -1))
+                throw new ArgumentException("[id] of task can only contain [a-z], [0-9] and '.', '-' or '_' characters");
+            return id;
         }
 
         void CreateImplementation(Node node)
         {
-            var title = GetTitle(node);
-            DeleteImplementation(title);
-            CreateTaskImplementation(node, title);
+            var id = GetID(node);
+            DeleteImplementation(id);
+            CreateTaskImplementation(node, id);
+
+            // Making sure task has a [when], and/or [pattern], before we create a task_due record.
             if (node.Children.Any(x => x.Name == "when" || x.Name == "pattern"))
-                CreateDueDate(node, title);
+                CreateDueDate(node, id);
         }
 
-        void DeleteImplementation(string taskName)
+        void DeleteImplementation(string id)
         {
             // Creating lambda for deletion.
             var insertLambda = new Node($"{DatabaseType}.connect", DatabaseName);
@@ -154,27 +162,24 @@ namespace magic.lambda.scheduler.utilities
             deleteNode.Add(new Node("table", "tasks"));
             var whereNode = new Node("where");
             var andNode = new Node("and");
-            andNode.Add(new Node("id", taskName));
+            andNode.Add(new Node("id", id));
             whereNode.Add(andNode);
             deleteNode.Add(whereNode);
             insertLambda.Add(deleteNode);
 
             // Evaluating lambda.
-            var signaler = _services.GetService(typeof(ISignaler)) as ISignaler;
-            signaler.Signal("eval", new Node("", null, new Node[] { insertLambda }));
+            Signaler.Signal("eval", new Node("", null, new Node[] { insertLambda }));
         }
 
-        void CreateTaskImplementation(Node node, string title)
+        void CreateTaskImplementation(Node node, string id)
         {
             // Retrieving arguments and sanity checking invocation.
-            var description = node.Children.FirstOrDefault(x => x.Name == "description")?.GetEx<string>() ?? 
-                throw new ArgumentNullException("No [description] supplied to create task");
+            var description = node.Children.FirstOrDefault(x => x.Name == "description")?.GetEx<string>();
             var lambdaNode = node.Children.FirstOrDefault(x => x.Name == ".lambda")?.Clone() ?? 
                 throw new ArgumentNullException("No [.lambda] supplied to create task");
 
-            // Creating our signaler, and converting lambda to Hyperlambda.
-            var signaler = _services.GetService(typeof(ISignaler)) as ISignaler;
-            signaler.Signal("lambda2hyper", lambdaNode);
+            // Converting lambda to Hyperlambda.
+            Signaler.Signal("lambda2hyper", lambdaNode);
             var hyperlambda = lambdaNode.Get<string>();
 
             // Inserting task.
@@ -182,25 +187,26 @@ namespace magic.lambda.scheduler.utilities
             var insertNode = new Node($"{DatabaseType}.create");
             insertNode.Add(new Node("table", "tasks"));
             var valuesNode = new Node("values");
-            valuesNode.Add(new Node("id", title));
-            valuesNode.Add(new Node("description", description));
+            valuesNode.Add(new Node("id", id));
+            if (!string.IsNullOrEmpty(description))
+                valuesNode.Add(new Node("description", description));
             valuesNode.Add(new Node("hyperlambda", hyperlambda));
             insertNode.Add(valuesNode);
             insertLambda.Add(insertNode);
-            signaler.Signal("eval", new Node("", null, new Node[] { insertLambda }));
+            Signaler.Signal("eval", new Node("", null, new Node[] { insertLambda }));
         }
 
         void CreateDueDate(Node node, string title)
         {
             // Creating [mysql.create] invocation.
-            string repetition = null;
+            string pattern = null;
             DateTime due;
             var repNode = node.Children.FirstOrDefault(x => x.Name == "pattern");
             if (repNode != null)
             {
                 // Repetition pattern.
                 var rep = new RepetitionPattern(repNode.GetEx<string>());
-                repetition = rep.Pattern;
+                pattern = rep.Pattern;
 
                 // Finding next due date from [pattern].
                 due = rep.Next();
@@ -220,20 +226,19 @@ namespace magic.lambda.scheduler.utilities
             var insertDueValues = new Node("values");
             insertDueValues.Add(new Node("task", title));
             insertDueValues.Add(new Node("due", due));
-            if (repetition != null)
-                insertDueValues.Add(new Node("repetition", repetition));
+            if (pattern != null)
+                insertDueValues.Add(new Node("pattern", pattern));
             createNode.Add(insertDueValues);
             insertLambda.Add(createNode);
 
             // Evaluating lambda.
-            var signaler = _services.GetService(typeof(ISignaler)) as ISignaler;
-            signaler.Signal("eval", new Node("", null, new Node[] { insertLambda }));
+            Signaler.Signal("eval", new Node("", null, new Node[] { insertLambda }));
 
             // Resetting timer.
             ResetTimer();
         }
 
-        Tuple<DateTime, string> GetNextDueDate()
+        Tuple<DateTime, string, string> GetNextTask()
         {
             // Creating lambda necessary to find upcoming task's due date.
             var selectLambda = new Node($"{DatabaseType}.connect", DatabaseName);
@@ -245,20 +250,25 @@ namespace magic.lambda.scheduler.utilities
             selectLambda.Add(readNode);
 
             // Evaluating lambda.
-            var signaler = _services.GetService(typeof(ISignaler)) as ISignaler;
-            signaler.Signal("eval", new Node("", null, new Node[] { selectLambda }));
+            Signaler.Signal("eval", new Node("", null, new Node[] { selectLambda }));
+
+            // Verifying we have a scheduled task.
+            if (!selectLambda.Children.First().Children.Any())
+                return null;
 
             // Figuring out next date.
-            return Tuple.Create<DateTime, string>(
-                selectLambda.Children.First().Children.First().Children.First().Get<DateTime>(),
-                selectLambda.Children.First().Children.First().Children.First().Get<string>());
+            return Tuple.Create(
+                selectLambda.Children.First().Children.First().Children.First(x => x.Name == "due").Get<DateTime>(),
+                selectLambda.Children.First().Children.First().Children.First(x => x.Name == "id").Get<string>(),
+                selectLambda.Children.First().Children.First().Children.First(x => x.Name == "pattern").Get<string>());
         }
 
         void ResetTimer()
         {
             // Getting upcoming task's due date.
-            var date = GetNextDueDate();
-            CreateTimerImplementation(date.Item1);
+            var date = GetNextTask();
+            if (date != null)
+                CreateTimerImplementation(date.Item1);
         }
 
         void CreateTimerImplementation(DateTime when)
@@ -275,10 +285,10 @@ namespace magic.lambda.scheduler.utilities
 
             // Creating timer.
             _timer = new Timer(
-                (state) =>
+                async (state) =>
                 {
                     if (when.AddMilliseconds(-250) > DateTime.Now)
-                        ExecuteNext(); // Task is due.
+                        await ExecuteNext(); // Task is due.
                     else
                         CreateTimerImplementation(when); // Re-creating timer since date was too far into future to create Timer.
                 },
@@ -287,40 +297,42 @@ namespace magic.lambda.scheduler.utilities
                 Timeout.Infinite);
         }
 
-        void ExecuteNext()
+        async Task ExecuteNext()
         {
             // Getting upcoming task's due date.
-            var due = GetNextDueDate();
-            if (due.Item1 > DateTime.Now)
+            var taskDue = GetNextTask();
+            if (taskDue == null)
+                return; // No more due tasks.
+
+            if (taskDue.Item1.AddMilliseconds(-250) > DateTime.Now)
             {
                 // It is not yet time to execute this task.
+                // Notice, if upcoming task was deleted before timer kicks in, this might be true.
                 ResetTimer();
                 return;
             }
 
-            // Creating lambda necessary to retrieve next task.
+            // Retrieving task's Hyperlambda.
             var selectLambda = new Node($"{DatabaseType}.connect", DatabaseName);
             var readNode = new Node($"{DatabaseType}.read");
             readNode.Add(new Node("table", "tasks"));
             var whereNode = new Node("where");
             var andNode = new Node("and");
-            andNode.Add(new Node("id", due.Item2));
+            andNode.Add(new Node("id", taskDue.Item2));
             whereNode.Add(andNode);
             readNode.Add(whereNode);
             selectLambda.Add(readNode);
-
-            // Retrieving task.
-            var signaler = _services.GetService(typeof(ISignaler)) as ISignaler;
-            signaler.Signal("eval", new Node("", null, new Node[] { selectLambda }));
+            Signaler.Signal("eval", new Node("", null, new Node[] { selectLambda }));
             var hyperlambda = selectLambda.Children.First().Children.First().Children.First(x => x.Name == "hyperlambda").Get<string>();
+
+            // Executing task.
             var exeNode = new Node("", hyperlambda);
-            signaler.Signal("hyper2lambda", exeNode);
+            Signaler.Signal("hyper2lambda", exeNode);
             exeNode.Value = null;
-            signaler.Signal("eval", exeNode);
+            await Signaler.SignalAsync("wait.eval", exeNode);
 
             // Checking if task repeats, and if so, we update its due date.
-            var pattern = selectLambda.Children.First().Children.First().Children.First(x => x.Name == "pattern").Get<string>();
-            if (pattern == null)
+            if (taskDue.Item3 == null)
             {
                 // Task does not repeat, hence deleting its due date.
                 var id = selectLambda.Children.First().Children.First().Children.First(x => x.Name == "id").Get<long>();
@@ -329,13 +341,13 @@ namespace magic.lambda.scheduler.utilities
                 deleteNode.Add(new Node("table", "tasks"));
                 whereNode = new Node("where");
                 andNode = new Node("and");
-                andNode.Add(new Node("id", due.Item2));
+                andNode.Add(new Node("id", taskDue.Item2));
                 whereNode.Add(andNode);
                 deleteNode.Add(whereNode);
                 deleteLambda.Add(deleteNode);
 
                 // Deleting task's due date record.
-                signaler.Signal("eval", new Node("", null, new Node[] { deleteLambda }));
+                Signaler.Signal("eval", new Node("", null, new Node[] { deleteLambda }));
             }
             else
             {
