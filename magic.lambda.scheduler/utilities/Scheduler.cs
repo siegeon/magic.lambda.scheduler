@@ -6,15 +6,16 @@
 using System;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Collections.Generic;
 using Microsoft.Extensions.Configuration;
 using magic.node;
 using magic.node.extensions;
 using magic.signals.contracts;
-using System.Threading.Tasks;
 
 namespace magic.lambda.scheduler.utilities
 {
+    /// <inheritdoc />
     public sealed class Scheduler : IScheduler
     {
         class NextTaskHelper
@@ -34,6 +35,14 @@ namespace magic.lambda.scheduler.utilities
         Timer _timer;
         readonly SemaphoreSlim _locker = new SemaphoreSlim(1);
 
+        /// <summary>
+        /// Creates a new instance of the task scheduler, allowing you to create, edit, and delete scheduled
+        /// and hibernated tasks in your system.
+        /// </summary>
+        /// <param name="services">Service provider to resolve services.</param>
+        /// <param name="logger">Logger to use.</param>
+        /// <param name="configuration">Configuration to use.</param>
+        /// <param name="autoStart">If true, automatically starts the task scheduler.</param>
         public Scheduler(
             IServiceProvider services,
             ILogger logger,
@@ -49,11 +58,13 @@ namespace magic.lambda.scheduler.utilities
 
         #region [ -- Interface implementations -- ]
 
+        /// <inheritdoc />
         public bool Running
         {
             get => _timer != null;
         }
 
+        /// <inheritdoc />
         public async Task StartScheduler()
         {
             await _locker.WaitAsync();
@@ -76,6 +87,7 @@ namespace magic.lambda.scheduler.utilities
             }
         }
 
+        /// <inheritdoc />
         public async Task StopScheduler()
         {
             await _locker.WaitAsync();
@@ -97,11 +109,13 @@ namespace magic.lambda.scheduler.utilities
             }
         }
 
+        /// <inheritdoc />
         public async Task<DateTime?> NextTask()
         {
             return _timer == null ? null : (await GetNextTask())?.Due;
         }
 
+        /// <inheritdoc />
         public async Task CreateTask(Node node)
         {
             await _locker.WaitAsync();
@@ -128,6 +142,7 @@ namespace magic.lambda.scheduler.utilities
             }
         }
 
+        /// <inheritdoc />
         public async Task DeleteTask(Node node)
         {
             await _locker.WaitAsync();
@@ -145,6 +160,7 @@ namespace magic.lambda.scheduler.utilities
             }
         }
 
+        /// <inheritdoc />
         public async Task<IEnumerable<Node>> ListTasks(long offset, long limit)
         {
             // Returning tasks to caller.
@@ -154,6 +170,7 @@ namespace magic.lambda.scheduler.utilities
             return lambda.Children.First().Children.ToList();
         }
 
+        /// <inheritdoc />
         public async Task<Node> GetTask(string taskId)
         {
             // Returning task to caller, but sanity checking invocation first.
@@ -185,6 +202,7 @@ namespace magic.lambda.scheduler.utilities
             return result;
         }
 
+        /// <inheritdoc />
         public async Task ExecuteTask(string id)
         {
             await _locker.WaitAsync();
@@ -203,6 +221,7 @@ namespace magic.lambda.scheduler.utilities
             }
         }
 
+        /// <inheritdoc />
         public void Dispose()
         {
             // This will make sure we wait for any currently executing tasks to finish before disposing.
