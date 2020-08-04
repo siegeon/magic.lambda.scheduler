@@ -17,6 +17,18 @@ namespace magic.lambda.scheduler.utilities
 {
     public sealed class Scheduler : IScheduler
     {
+        // Internal helper class.
+        private class NextTask
+        {
+            public DateTime Due { get; set; }
+
+            public string TaskDueId { get; set; }
+
+            public string Pattern { get; set; }
+
+            public string TaskId { get; set; }
+        }
+
         readonly IServiceProvider _services;
         readonly ILogger _logger;
         readonly IConfiguration _configuration;
@@ -82,11 +94,15 @@ namespace magic.lambda.scheduler.utilities
             {
                 var id = GetID(node);
                 var lambda = CreateConnectionLambda();
-                lambda.Add(CreateDeleteLambda(id));
+                lambda.Add(CreateDeleteLambda(id)); // In case task with specified ID already exists.
                 lambda.Add(CreateInsertTaskLambda(node, id));
-                if (node.Children.Any(x => x.Name == "when" || x.Name == "pattern"))
+                var hasDueDate = node.Children.Any(x => x.Name == "when" || x.Name == "pattern");
+                if (hasDueDate)
                     lambda.Add(CreateInsertDueDateLambda(node, id));
                 Signaler.Signal("eval", new Node("", null, new Node[] { lambda }));
+
+                if (hasDueDate)
+                    ResetTimer(); // In case tasks is next upcoming task.
             }
         }
 
@@ -98,6 +114,7 @@ namespace magic.lambda.scheduler.utilities
                 var lambda = CreateConnectionLambda();
                 lambda.Add(CreateDeleteLambda(id));
                 Signaler.Signal("eval", new Node("", null, new Node[] { lambda }));
+                ResetTimer(); // In case task was the next upcoming task.
             }
         }
 
@@ -106,10 +123,10 @@ namespace magic.lambda.scheduler.utilities
             lock (_locker)
             {
                 // Returning tasks to caller.
-                var readLambda = CreateConnectionLambda();
-                readLambda.Add(CreateReadLambda(offset, limit, id));
-                Signaler.Signal("eval", new Node("", null, new Node[] { readLambda }));
-                return readLambda.Children.First().Children.Select(x =>
+                var lambda = CreateConnectionLambda();
+                lambda.Add(CreateReadLambda(offset, limit, id));
+                Signaler.Signal("eval", new Node("", null, new Node[] { lambda }));
+                return lambda.Children.First().Children.Select(x =>
                 {
                     x.UnTie();
                     return x;
@@ -121,7 +138,10 @@ namespace magic.lambda.scheduler.utilities
         {
             lock (_locker)
             {
-                return ListTasks(0, 1, node.GetEx<string>()).FirstOrDefault();
+                var id = node.GetEx<string>();
+                if (string.IsNullOrEmpty(id))
+                    throw new ArgumentNullException("No [id] specified to get task");
+                return ListTasks(0, 1, id).FirstOrDefault();
             }
         }
 
@@ -159,19 +179,19 @@ namespace magic.lambda.scheduler.utilities
             return new Node($"{DatabaseType}.connect", DatabaseName);
         }
 
-        Node CreateDeleteLambda(string id)
+        Node CreateDeleteLambda(string taskId)
         {
             var result = new Node($"{DatabaseType}.delete");
             result.Add(new Node("table", "tasks"));
             var whereNode = new Node("where");
             var andNode = new Node("and");
-            andNode.Add(new Node("id", id));
+            andNode.Add(new Node("id", taskId));
             whereNode.Add(andNode);
             result.Add(whereNode);
             return result;
         }
 
-        Node CreateInsertTaskLambda(Node node, string id)
+        Node CreateInsertTaskLambda(Node node, string taskId)
         {
             // Retrieving arguments and sanity checking invocation.
             var description = node.Children.FirstOrDefault(x => x.Name == "description")?.GetEx<string>();
@@ -188,7 +208,7 @@ namespace magic.lambda.scheduler.utilities
             var result = new Node($"{DatabaseType}.create");
             result.Add(new Node("table", "tasks"));
             var valuesNode = new Node("values");
-            valuesNode.Add(new Node("id", id));
+            valuesNode.Add(new Node("id", taskId));
             if (!string.IsNullOrEmpty(description))
                 valuesNode.Add(new Node("description", description));
             valuesNode.Add(new Node("hyperlambda", hyperlambda));
@@ -196,7 +216,7 @@ namespace magic.lambda.scheduler.utilities
             return result;
         }
 
-        Node CreateInsertDueDateLambda(Node node, string id)
+        Node CreateInsertDueDateLambda(Node node, string taskId)
         {
             // Finding pattern and due date.
             string pattern = null;
@@ -214,8 +234,6 @@ namespace magic.lambda.scheduler.utilities
             else
             {
                 var whenNode = node.Children.FirstOrDefault(x => x.Name == "when");
-                if (whenNode == null)
-                    throw new ArgumentException("No [when] or [pattern] supplied to create task");
                 due = whenNode.GetEx<DateTime>();
                 if (due < DateTime.Now)
                     throw new ArgumentException("You cannot create a task with a due date that's in the past");
@@ -225,7 +243,7 @@ namespace magic.lambda.scheduler.utilities
             var result = new Node($"{DatabaseType}.create");
             result.Add(new Node("table", "task_due"));
             var insertDueValues = new Node("values");
-            insertDueValues.Add(new Node("task", id));
+            insertDueValues.Add(new Node("task", taskId));
             insertDueValues.Add(new Node("due", due));
             if (pattern != null)
                 insertDueValues.Add(new Node("pattern", pattern));
@@ -233,13 +251,13 @@ namespace magic.lambda.scheduler.utilities
             return result;
         }
 
-        Node CreateUpdateDueDateLambda(string id, string pattern)
+        Node CreateUpdateDueDateLambda(string taskDueId, string pattern)
         {
             var updateNode = new Node($"{DatabaseType}.update");
             updateNode.Add(new Node("table", "task_due"));
             var whereNode = new Node("where");
             var andNode = new Node("and");
-            andNode.Add(new Node("id", id));
+            andNode.Add(new Node("id", taskDueId));
             whereNode.Add(andNode);
             var valuesNode = new Node("values");
             valuesNode.Add(new Node("due", new RepetitionPattern(pattern).Next()));
@@ -248,22 +266,31 @@ namespace magic.lambda.scheduler.utilities
             return updateNode;
         }
 
-        Node CreateReadLambda(long offset, long limit, string id)
+        Node CreateReadLambda(long offset, long limit, string taskId)
         {
             var result = new Node($"{DatabaseType}.read");
             result.Add(new Node("table", "tasks"));
             result.Add(new Node("offset", offset));
             result.Add(new Node("limit", limit));
-            if (id != null)
+            if (taskId != null)
             {
                 // Retrieving specific task.
                 var whereNode = new Node("where");
                 var andNode = new Node("and");
-                andNode.Add(new Node("id", id));
+                andNode.Add(new Node("id", taskId));
                 whereNode.Add(andNode);
                 result.Add(whereNode);
             }
             return result;
+        }
+
+        Node CreateReadNextDueDateLambda()
+        {
+            var readNode = new Node($"{DatabaseType}.read");
+            readNode.Add(new Node("table", "task_due"));
+            readNode.Add(new Node("order", "due"));
+            readNode.Add(new Node("limit", 1));
+            return readNode;
         }
 
         string GetTaskHyperlambda(string id)
@@ -291,41 +318,35 @@ namespace magic.lambda.scheduler.utilities
             return id;
         }
 
-        Tuple<DateTime, string, string, string> GetNextTask()
+        NextTask GetNextTask()
         {
-            // Creating lambda necessary to find upcoming task's due date.
-            var selectLambda = new Node($"{DatabaseType}.connect", DatabaseName);
-            var readNode = new Node($"{DatabaseType}.read");
-            readNode.Add(new Node("table", "task_due"));
-            readNode.Add(new Node("order", "due"));
-            readNode.Add(new Node("limit", 1));
-            selectLambda.Add(readNode);
-
-            // Evaluating lambda.
-            Signaler.Signal("eval", new Node("", null, new Node[] { selectLambda }));
+            // Retrieving next upcoming task.
+            var lambda = CreateConnectionLambda();
+            lambda.Add(CreateReadNextDueDateLambda());
+            Signaler.Signal("eval", new Node("", null, new Node[] { lambda }));
 
             // Verifying we have a scheduled task.
-            if (!selectLambda.Children.First().Children.Any())
+            if (!lambda.Children.First().Children.Any())
                 return null;
 
             // Figuring out next date.
-            return Tuple.Create(
-                selectLambda.Children.First().Children.First().Children.First(x => x.Name == "due").Get<DateTime>(),
-                selectLambda.Children.First().Children.First().Children.First(x => x.Name == "id").Get<string>(),
-                selectLambda.Children.First().Children.First().Children.First(x => x.Name == "pattern").Get<string>(),
-                selectLambda.Children.First().Children.First().Children.First(x => x.Name == "task").Get<string>());
+            return new NextTask
+            {
+                Due = lambda.Children.First().Children.First().Children.First(x => x.Name == "due").Get<DateTime>(),
+                TaskDueId = lambda.Children.First().Children.First().Children.First(x => x.Name == "id").Get<string>(),
+                Pattern = lambda.Children.First().Children.First().Children.First(x => x.Name == "pattern").Get<string>(),
+                TaskId = lambda.Children.First().Children.First().Children.First(x => x.Name == "task").Get<string>()
+            };
         }
 
         bool ResetTimer()
         {
             // Getting upcoming task's due date.
             var date = GetNextTask();
-            if (date != null)
-            {
-                CreateTimerImplementation(date.Item1);
-                return true;
-            }
-            return false;
+            if (date == null)
+                return false;
+            CreateTimerImplementation(date.Due);
+            return true;
         }
 
         void CreateTimerImplementation(DateTime when)
@@ -361,7 +382,7 @@ namespace magic.lambda.scheduler.utilities
             if (taskDue == null)
                 return; // No more due tasks.
 
-            if (taskDue.Item1.AddMilliseconds(250) >= DateTime.Now)
+            if (taskDue.Due.AddMilliseconds(250) >= DateTime.Now)
             {
                 // It is not yet time to execute this task.
                 // Notice, if upcoming task was deleted before timer kicks in, this might be true.
@@ -370,7 +391,7 @@ namespace magic.lambda.scheduler.utilities
             }
 
             // Retrieving task's Hyperlambda.
-            var hyperlambda = GetTaskHyperlambda(taskDue.Item4);
+            var hyperlambda = GetTaskHyperlambda(taskDue.TaskId);
 
             // Converting Hyperlambda to lambda and executing task.
             var exeNode = new Node("", hyperlambda);
@@ -379,18 +400,18 @@ namespace magic.lambda.scheduler.utilities
             await Signaler.SignalAsync("wait.eval", exeNode);
 
             // Checking if task repeats, and if so, we update its due date.
-            if (taskDue.Item3 == null)
+            if (taskDue.Pattern == null)
             {
                 // Task does not repeat, hence deleting its due date.
                 var deleteLambda = CreateConnectionLambda();
-                deleteLambda.Add(CreateDeleteLambda(taskDue.Item2));
+                deleteLambda.Add(CreateDeleteLambda(taskDue.TaskId));
                 Signaler.Signal("eval", new Node("", null, new Node[] { deleteLambda }));
             }
             else
             {
                 // Task repeats, hence updating its due date.
                 var updateLambda = CreateConnectionLambda();
-                updateLambda.Add(CreateUpdateDueDateLambda(taskDue.Item2, taskDue.Item3));
+                updateLambda.Add(CreateUpdateDueDateLambda(taskDue.TaskDueId, taskDue.Pattern));
                 Signaler.Signal("eval", new Node("", null, new Node[] { updateLambda }));
             }
 
