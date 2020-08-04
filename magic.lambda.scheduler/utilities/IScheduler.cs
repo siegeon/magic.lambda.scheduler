@@ -25,6 +25,8 @@ namespace magic.lambda.scheduler.utilities
 
         IEnumerable<Node> ListTasks(long offset, long limit, string id = null);
 
-        Node GetTask(Node node);
+        Node GetTask(string id);
+
+        void ExecuteTask(string id);
     }
 }

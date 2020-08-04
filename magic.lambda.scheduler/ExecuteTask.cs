@@ -12,10 +12,10 @@ using magic.lambda.scheduler.utilities;
 namespace magic.lambda.scheduler
 {
     /// <summary>
-    /// [tasks.delete] slot that will delete a named task.
+    /// [task.execute] slot that will return the date for the next upcoming task.
     /// </summary>
-    [Slot(Name = "tasks.delete")]
-    public class DeleteTask : ISlot
+    [Slot(Name = "task.execute")]
+    public class ExecuteTask : ISlot
     {
         readonly IScheduler _scheduler;
 
@@ -23,7 +23,7 @@ namespace magic.lambda.scheduler
         /// Creates a new instance of your slot.
         /// </summary>
         /// <param name="scheduler">Which background service to use.</param>
-        public DeleteTask(IScheduler scheduler)
+        public ExecuteTask(IScheduler scheduler)
         {
             _scheduler = scheduler ?? throw new ArgumentNullException(nameof(scheduler));
         }
@@ -35,7 +35,7 @@ namespace magic.lambda.scheduler
         /// <param name="input">Arguments to slot.</param>
         public void Signal(ISignaler signaler, Node input)
         {
-            _scheduler.DeleteTask(input);
+            _scheduler.ExecuteTask(input.GetEx<string>());
         }
     }
 }

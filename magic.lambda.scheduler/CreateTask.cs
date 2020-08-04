@@ -11,9 +11,9 @@ using magic.lambda.scheduler.utilities;
 namespace magic.lambda.scheduler
 {
     /// <summary>
-    /// [scheduler.tasks.create] slot that will create a new scheduled task.
+    /// [tasks.create] slot that will create a new scheduled task.
     /// </summary>
-    [Slot(Name = "scheduler.tasks.create")]
+    [Slot(Name = "tasks.create")]
     public class CreateTask : ISlot
     {
         readonly IScheduler _scheduler;

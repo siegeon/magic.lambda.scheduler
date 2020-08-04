@@ -12,10 +12,10 @@ using magic.lambda.scheduler.utilities;
 namespace magic.lambda.scheduler
 {
     /// <summary>
-    /// [scheduler.tasks.get] slot that will return an existing task with the specified name,
+    /// [tasks.get] slot that will return an existing task with the specified name,
     /// including its next due date.
     /// </summary>
-    [Slot(Name = "scheduler.tasks.get")]
+    [Slot(Name = "tasks.get")]
     public class GetTask : ISlot
     {
         readonly IScheduler _scheduler;
@@ -36,7 +36,7 @@ namespace magic.lambda.scheduler
         /// <param name="input">Arguments to slot.</param>
         public void Signal(ISignaler signaler, Node input)
         {
-            input.Add(_scheduler.GetTask(input));
+            input.Add(_scheduler.GetTask(input.GetEx<string>()));
         }
     }
 }

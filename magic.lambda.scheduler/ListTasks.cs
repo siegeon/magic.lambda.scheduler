@@ -13,9 +13,9 @@ using magic.node.extensions;
 namespace magic.lambda.scheduler
 {
     /// <summary>
-    /// [scheduler.tasks.list] slot that will return the names of all tasks in the system.
+    /// [tasks.list] slot that will return the names of all tasks in the system.
     /// </summary>
-    [Slot(Name = "scheduler.tasks.list")]
+    [Slot(Name = "tasks.list")]
     public class ListTasks : ISlot
     {
         readonly IScheduler _scheduler;
