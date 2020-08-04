@@ -24,7 +24,7 @@ namespace magic.lambda.scheduler.utilities
 
         Task DeleteTask(Node node);
 
-        Task<IEnumerable<Node>> ListTasks(long offset, long limit, string taskId = null);
+        Task<IEnumerable<Node>> ListTasks(long offset, long limit);
 
         Task<Node> GetTask(string taskId);
 

@@ -145,38 +145,44 @@ namespace magic.lambda.scheduler.utilities
             }
         }
 
-        public async Task<IEnumerable<Node>> ListTasks(long offset, long limit, string taskId = null)
+        public async Task<IEnumerable<Node>> ListTasks(long offset, long limit)
         {
             // Returning tasks to caller.
             var lambda = CreateConnectionLambda();
-            lambda.Add(CreateReadTaskLambda(offset, limit, taskId));
-            if (!string.IsNullOrEmpty(taskId))
-                lambda.Add(CreateReadTaskDueDateLambda(taskId));
+            lambda.Add(CreateReadTaskLambda(offset, limit, null));
             await Signaler.SignalAsync("wait.eval", new Node("", null, new Node[] { lambda }));
-            if (!string.IsNullOrEmpty(taskId) && lambda.Children.Skip(1).First().Children.Any())
-            {
-                var singleResult = lambda.Children.First().Children.First();
-                var dueNode = new Node("due");
-                foreach (var idx in lambda.Children.Skip(1).First().Children.ToList())
-                {
-                    var tmp = idx.Clone();
-                    tmp.Children
-                        .Where(x => x.Name == "task" || x.Name == "id" || (x.Name == "repeats" && x.Value == null))
-                        .ToList()
-                        .ForEach(x => x.UnTie());
-                    dueNode.Add(tmp);
-                }
-                singleResult.Add(dueNode);
-                return new Node[] { singleResult };
-            }
-            return lambda.Children.First().Children.Select(x => x.Clone());
+            return lambda.Children.First().Children.ToList();
         }
 
-        public async Task<Node> GetTask(string id)
+        public async Task<Node> GetTask(string taskId)
         {
-            if (string.IsNullOrEmpty(id))
-                throw new ArgumentNullException("No [id] specified to get task");
-            return (await ListTasks(0, 1, id)).FirstOrDefault();
+            // Returning task to caller, but sanity checking invocation first.
+            if (string.IsNullOrEmpty(taskId))
+                throw new ArgumentNullException("No task ID supplied to get task");
+            var lambda = CreateConnectionLambda();
+            lambda.Add(CreateReadTaskLambda(0, 1, taskId));
+            lambda.Add(CreateReadTaskDueDateLambda(taskId));
+            await Signaler.SignalAsync("wait.eval", new Node("", null, new Node[] { lambda }));
+            var result = lambda.Children.First().Children.First();
+            if (lambda.Children.Skip(1).First().Children.Any())
+                result.Add(
+                    new Node(
+                        "due",
+                        null,
+                        new Node[]
+                        {
+                            new Node(
+                                ".",
+                                null,
+                                lambda.Children
+                                    .Skip(1)
+                                    .First()
+                                    .Children
+                                    .SelectMany(x => x.Children)
+                                    .Where(x => x.Name == "due" || 
+                                        (x.Name == "repeats" && x.Value != null)))
+                        }));
+            return result;
         }
 
         public async Task ExecuteTask(string id)
