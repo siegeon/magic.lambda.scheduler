@@ -99,7 +99,7 @@ namespace magic.lambda.scheduler.utilities
 
         public async Task<DateTime?> NextTask()
         {
-            return (await GetNextTask())?.Due;
+            return _timer == null ? null : (await GetNextTask())?.Due;
         }
 
         public async Task CreateTask(Node node)
