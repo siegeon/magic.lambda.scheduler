@@ -17,7 +17,6 @@ namespace magic.lambda.scheduler.utilities
 {
     public sealed class Scheduler : IScheduler
     {
-        // Internal helper class.
         class NextTaskHelper
         {
             public DateTime Due { get; set; }
@@ -382,7 +381,7 @@ namespace magic.lambda.scheduler.utilities
                 async (state) =>
                 {
                     if (due.AddMilliseconds(250) < DateTime.Now)
-                        await ExecuteNext(); // Task is due.
+                        await ExecuteNextScheduledTask(); // Task is due.
                     else
                         CreateTimerImplementation(due); // Re-creating timer since date was too far into future to create Timer.
                 },
@@ -391,7 +390,7 @@ namespace magic.lambda.scheduler.utilities
                 Timeout.Infinite);
         }
 
-        async Task ExecuteNext()
+        async Task ExecuteNextScheduledTask()
         {
             // Getting upcoming task's due date.
             var taskDue = GetNextTask();
@@ -413,7 +412,14 @@ namespace magic.lambda.scheduler.utilities
             var exeNode = new Node("", hyperlambda);
             Signaler.Signal("hyper2lambda", exeNode);
             exeNode.Value = null;
-            await Signaler.SignalAsync("wait.eval", exeNode);
+            try
+            {
+                await Signaler.SignalAsync("wait.eval", exeNode);
+            }
+            catch (Exception error)
+            {
+                _logger?.LogError($"Something went wrong while executing scheduled task with id of '{taskDue.TaskId}'", error);
+            }
 
             // Checking if task repeats, and if so, we update its due date.
             if (taskDue.Repeats == null)
