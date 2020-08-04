@@ -4,6 +4,7 @@
  */
 
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using magic.node;
 using magic.node.extensions;
@@ -37,7 +38,8 @@ namespace magic.lambda.scheduler
         /// <param name="input">Arguments to slot.</param>
         public async Task SignalAsync(ISignaler signaler, Node input)
         {
-            input.Add(await _scheduler.GetTask(input.GetEx<string>()));
+            var list = await _scheduler.GetTask(input.GetEx<string>());
+            input.AddRange(list.Children.ToList());
         }
     }
 }

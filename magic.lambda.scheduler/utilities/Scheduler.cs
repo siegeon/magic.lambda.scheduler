@@ -153,14 +153,23 @@ namespace magic.lambda.scheduler.utilities
             if (!string.IsNullOrEmpty(taskId))
                 lambda.Add(CreateReadTaskDueDateLambda(taskId));
             await Signaler.SignalAsync("wait.eval", new Node("", null, new Node[] { lambda }));
-            var result = lambda.Children.First().Children.Select(x =>
+            if (!string.IsNullOrEmpty(taskId) && lambda.Children.Skip(1).First().Children.Any())
             {
-                x.UnTie();
-                return x;
-            });
-            if (!string.IsNullOrEmpty(taskId))
-                result.First().Add(new Node("due", null, lambda.Children.First().Children.ToList()));
-            return result;
+                var singleResult = lambda.Children.First().Children.First();
+                var dueNode = new Node("due");
+                foreach (var idx in lambda.Children.Skip(1).First().Children.ToList())
+                {
+                    var tmp = idx.Clone();
+                    tmp.Children
+                        .Where(x => x.Name == "task" || x.Name == "id" || (x.Name == "repeats" && x.Value == null))
+                        .ToList()
+                        .ForEach(x => x.UnTie());
+                    dueNode.Add(tmp);
+                }
+                singleResult.Add(dueNode);
+                return new Node[] { singleResult };
+            }
+            return lambda.Children.First().Children.Select(x => x.Clone());
         }
 
         public async Task<Node> GetTask(string id)
