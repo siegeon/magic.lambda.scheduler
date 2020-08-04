@@ -17,6 +17,8 @@ namespace magic.lambda.scheduler.utilities
 
         void StopScheduler();
 
+        DateTime? NextTask();
+
         void CreateTask(Node node);
 
         void DeleteTask(Node node);

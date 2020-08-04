@@ -18,7 +18,7 @@ namespace magic.lambda.scheduler.utilities
     public sealed class Scheduler : IScheduler
     {
         // Internal helper class.
-        private class NextTask
+        private class NextTaskHelper
         {
             public DateTime Due { get; set; }
 
@@ -143,6 +143,11 @@ namespace magic.lambda.scheduler.utilities
                     throw new ArgumentNullException("No [id] specified to get task");
                 return ListTasks(0, 1, id).FirstOrDefault();
             }
+        }
+
+        public DateTime? NextTask()
+        {
+            return GetNextTask()?.Due;
         }
 
         public void Dispose()
@@ -318,7 +323,7 @@ namespace magic.lambda.scheduler.utilities
             return id;
         }
 
-        NextTask GetNextTask()
+        NextTaskHelper GetNextTask()
         {
             // Retrieving next upcoming task.
             var lambda = CreateConnectionLambda();
@@ -330,7 +335,7 @@ namespace magic.lambda.scheduler.utilities
                 return null;
 
             // Figuring out next date.
-            return new NextTask
+            return new NextTaskHelper
             {
                 Due = lambda.Children.First().Children.First().Children.First(x => x.Name == "due").Get<DateTime>(),
                 TaskDueId = lambda.Children.First().Children.First().Children.First(x => x.Name == "id").Get<string>(),
