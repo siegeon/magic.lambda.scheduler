@@ -18,13 +18,13 @@ namespace magic.lambda.scheduler
     [Slot(Name = "scheduler.tasks.get")]
     public class GetTask : ISlot
     {
-        readonly Scheduler _scheduler;
+        readonly IScheduler _scheduler;
 
         /// <summary>
         /// Creates a new instance of your slot.
         /// </summary>
         /// <param name="scheduler">Which background service to use.</param>
-        public GetTask(Scheduler scheduler)
+        public GetTask(IScheduler scheduler)
         {
             _scheduler = scheduler ?? throw new ArgumentNullException(nameof(scheduler));
         }
@@ -36,7 +36,7 @@ namespace magic.lambda.scheduler
         /// <param name="input">Arguments to slot.</param>
         public void Signal(ISignaler signaler, Node input)
         {
-            input.Add(_scheduler.Get(input));
+            input.Add(_scheduler.GetTask(input));
         }
     }
 }

@@ -16,13 +16,13 @@ namespace magic.lambda.scheduler
     [Slot(Name = "scheduler.start")]
     public class StartScheduler : ISlot
     {
-        readonly Scheduler _scheduler;
+        readonly IScheduler _scheduler;
 
         /// <summary>
         /// Creates a new instance of your slot.
         /// </summary>
         /// <param name="scheduler">Which background service to use.</param>
-        public StartScheduler(Scheduler scheduler)
+        public StartScheduler(IScheduler scheduler)
         {
             _scheduler = scheduler ?? throw new ArgumentNullException(nameof(scheduler));
         }
@@ -34,7 +34,7 @@ namespace magic.lambda.scheduler
         /// <param name="input">Arguments to slot.</param>
         public void Signal(ISignaler signaler, Node input)
         {
-            _scheduler.Start();
+            _scheduler.StartScheduler();
         }
     }
 }

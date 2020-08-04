@@ -18,13 +18,13 @@ namespace magic.lambda.scheduler
     [Slot(Name = "scheduler.tasks.list")]
     public class ListTasks : ISlot
     {
-        readonly Scheduler _scheduler;
+        readonly IScheduler _scheduler;
 
         /// <summary>
         /// Creates a new instance of your slot.
         /// </summary>
         /// <param name="scheduler">Scheduler service to use.</param>
-        public ListTasks(Scheduler scheduler)
+        public ListTasks(IScheduler scheduler)
         {
             _scheduler = scheduler ?? throw new ArgumentNullException(nameof(scheduler));
         }
@@ -36,7 +36,7 @@ namespace magic.lambda.scheduler
         /// <param name="input">Arguments to slot.</param>
         public void Signal(ISignaler signaler, Node input)
         {
-            var jobs = _scheduler.List(
+            var jobs = _scheduler.ListTasks(
                 input.Children.FirstOrDefault(x => x.Name == "offset")?.GetEx<long>() ?? 0,
                 input.Children.FirstOrDefault(x => x.Name == "limit")?.GetEx<long>() ?? 10);
             input.AddRange(jobs);

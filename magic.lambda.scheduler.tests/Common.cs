@@ -71,7 +71,7 @@ namespace magic.lambda.scheduler.tests
 
             // Ensuring BackgroundService is created and started.
             var backgroundServices = provider.GetService<Scheduler>();
-            backgroundServices.Start();
+            backgroundServices.StartScheduler();
             return provider;
         }
 
