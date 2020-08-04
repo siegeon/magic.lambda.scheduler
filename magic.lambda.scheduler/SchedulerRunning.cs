@@ -11,7 +11,7 @@ using magic.lambda.scheduler.utilities;
 namespace magic.lambda.scheduler
 {
     /// <summary>
-    /// [scheduler.running] slot that will return boolean true if scheduler
+    /// [wait.scheduler.running] slot that will return boolean true if scheduler
     /// is running.
     /// </summary>
     [Slot(Name = "scheduler.running")]

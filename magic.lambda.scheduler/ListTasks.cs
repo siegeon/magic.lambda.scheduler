@@ -5,6 +5,7 @@
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using magic.node;
 using magic.signals.contracts;
 using magic.lambda.scheduler.utilities;
@@ -13,10 +14,10 @@ using magic.node.extensions;
 namespace magic.lambda.scheduler
 {
     /// <summary>
-    /// [tasks.list] slot that will return the names of all tasks in the system.
+    /// [wait.tasks.list] slot that will return the names of all tasks in the system.
     /// </summary>
-    [Slot(Name = "tasks.list")]
-    public class ListTasks : ISlot
+    [Slot(Name = "wait.tasks.list")]
+    public class ListTasks : ISlotAsync
     {
         readonly IScheduler _scheduler;
 
@@ -34,9 +35,9 @@ namespace magic.lambda.scheduler
         /// </summary>
         /// <param name="signaler">Signaler that raised signal.</param>
         /// <param name="input">Arguments to slot.</param>
-        public void Signal(ISignaler signaler, Node input)
+        public async Task SignalAsync(ISignaler signaler, Node input)
         {
-            var jobs = _scheduler.ListTasks(
+            var jobs = await _scheduler.ListTasks(
                 input.Children.FirstOrDefault(x => x.Name == "offset")?.GetEx<long>() ?? 0,
                 input.Children.FirstOrDefault(x => x.Name == "limit")?.GetEx<long>() ?? 10);
             input.AddRange(jobs);

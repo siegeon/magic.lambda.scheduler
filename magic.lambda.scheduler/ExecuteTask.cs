@@ -4,6 +4,7 @@
  */
 
 using System;
+using System.Threading.Tasks;
 using magic.node;
 using magic.node.extensions;
 using magic.signals.contracts;
@@ -12,10 +13,10 @@ using magic.lambda.scheduler.utilities;
 namespace magic.lambda.scheduler
 {
     /// <summary>
-    /// [task.execute] slot that will return the date for the next upcoming task.
+    /// [wait.task.execute] slot that will return the date for the next upcoming task.
     /// </summary>
-    [Slot(Name = "task.execute")]
-    public class ExecuteTask : ISlot
+    [Slot(Name = "wait.task.execute")]
+    public class ExecuteTask : ISlotAsync
     {
         readonly IScheduler _scheduler;
 
@@ -33,9 +34,9 @@ namespace magic.lambda.scheduler
         /// </summary>
         /// <param name="signaler">Signaler that raised signal.</param>
         /// <param name="input">Arguments to slot.</param>
-        public void Signal(ISignaler signaler, Node input)
+        public async Task SignalAsync(ISignaler signaler, Node input)
         {
-            _scheduler.ExecuteTask(input.GetEx<string>());
+            await _scheduler.ExecuteTask(input.GetEx<string>());
         }
     }
 }

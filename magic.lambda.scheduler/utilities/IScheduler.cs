@@ -4,6 +4,7 @@
  */
 
 using System;
+using System.Threading.Tasks;
 using System.Collections.Generic;
 using magic.node;
 
@@ -13,20 +14,20 @@ namespace magic.lambda.scheduler.utilities
     {
         bool Running { get; }
 
-        void StartScheduler();
+        Task StartScheduler();
 
-        void StopScheduler();
+        Task StopScheduler();
 
-        DateTime? NextTask();
+        Task<DateTime?> NextTask();
 
-        void CreateTask(Node node);
+        Task CreateTask(Node node);
 
-        void DeleteTask(Node node);
+        Task DeleteTask(Node node);
 
-        IEnumerable<Node> ListTasks(long offset, long limit, string id = null);
+        Task<IEnumerable<Node>> ListTasks(long offset, long limit, string taskId = null);
 
-        Node GetTask(string id);
+        Task<Node> GetTask(string taskId);
 
-        void ExecuteTask(string id);
+        Task ExecuteTask(string taskId);
     }
 }

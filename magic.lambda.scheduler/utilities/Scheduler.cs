@@ -32,7 +32,7 @@ namespace magic.lambda.scheduler.utilities
         readonly ILogger _logger;
         readonly IConfiguration _configuration;
         Timer _timer;
-        readonly object _locker = new object();
+        readonly SemaphoreSlim _locker = new SemaphoreSlim(1);
 
         public Scheduler(
             IServiceProvider services,
@@ -44,7 +44,7 @@ namespace magic.lambda.scheduler.utilities
             _logger = logger;
             _configuration = configuration;
             if (autoStart)
-                StartScheduler();
+                StartScheduler().GetAwaiter().GetResult();
         }
 
         #region [ -- Interface implementations -- ]
@@ -54,9 +54,10 @@ namespace magic.lambda.scheduler.utilities
             get => _timer != null;
         }
 
-        public void StartScheduler()
+        public async Task StartScheduler()
         {
-            lock (_locker)
+            await _locker.WaitAsync();
+            try
             {
                 _logger?.LogInfo("Attempting to start task scheduler");
                 if (_timer != null)
@@ -64,16 +65,21 @@ namespace magic.lambda.scheduler.utilities
                     _logger?.LogInfo("Task scheduler already started");
                     return;
                 }
-                if (ResetTimer())
+                if (await ResetTimer())
                     _logger?.LogInfo("Task scheduler was successfully started");
                 else
                     _logger?.LogInfo("Task scheduler was not started since there were no due tasks");
             }
+            finally
+            {
+                _locker.Release();
+            }
         }
 
-        public void StopScheduler()
+        public async Task StopScheduler()
         {
-            lock (_locker)
+            await _locker.WaitAsync();
+            try
             {
                 _logger?.LogInfo("Attempting to stop task scheduler");
                 if (_timer == null)
@@ -85,16 +91,21 @@ namespace magic.lambda.scheduler.utilities
                 _timer = null;
                 _logger?.LogInfo("Task scheduler was successfully stopped");
             }
+            finally
+            {
+                _locker.Release();
+            }
         }
 
-        public DateTime? NextTask()
+        public async Task<DateTime?> NextTask()
         {
-            return GetNextTask()?.Due;
+            return (await GetNextTask())?.Due;
         }
 
-        public void CreateTask(Node node)
+        public async Task CreateTask(Node node)
         {
-            lock (_locker)
+            await _locker.WaitAsync();
+            try
             {
                 var id = GetID(node);
                 var lambda = CreateConnectionLambda();
@@ -105,54 +116,76 @@ namespace magic.lambda.scheduler.utilities
                 var hasDueDate = node.Children.Any(x => x.Name == "due" || x.Name == "repeats");
                 if (hasDueDate)
                     lambda.Add(CreateInsertDueDateLambda(node, id));
-                Signaler.Signal("eval", new Node("", null, new Node[] { lambda }));
+                await Signaler.SignalAsync("wait.eval", new Node("", null, new Node[] { lambda }));
 
                 if (hasDueDate &&
                     (node.Children.FirstOrDefault(x => x.Name == "auto-start")?.GetEx<bool>() ?? true))
-                    ResetTimer(); // In case tasks is next upcoming task.
+                    await ResetTimer(); // In case tasks is next upcoming task.
+            }
+            finally
+            {
+                _locker.Release();
             }
         }
 
-        public void DeleteTask(Node node)
+        public async Task DeleteTask(Node node)
         {
-            lock (_locker)
+            await _locker.WaitAsync();
+            try
             {
                 var id = GetID(node);
                 var lambda = CreateConnectionLambda();
                 lambda.Add(CreateDeleteLambda(id));
-                Signaler.Signal("eval", new Node("", null, new Node[] { lambda }));
-                ResetTimer(); // In case task was the next upcoming task.
+                await Signaler.SignalAsync("wait.eval", new Node("", null, new Node[] { lambda }));
+                await ResetTimer(); // In case task was the next upcoming task.
+            }
+            finally
+            {
+                _locker.Release();
             }
         }
 
-        public IEnumerable<Node> ListTasks(long offset, long limit, string id = null)
+        public async Task<IEnumerable<Node>> ListTasks(long offset, long limit, string taskId = null)
         {
             // Returning tasks to caller.
             var lambda = CreateConnectionLambda();
-            lambda.Add(CreateReadLambda(offset, limit, id));
-            Signaler.Signal("eval", new Node("", null, new Node[] { lambda }));
-            return lambda.Children.First().Children.Select(x =>
+            lambda.Add(CreateReadTaskLambda(offset, limit, taskId));
+            if (!string.IsNullOrEmpty(taskId))
+                lambda.Add(CreateReadTaskDueDateLambda(taskId));
+            await Signaler.SignalAsync("wait.eval", new Node("", null, new Node[] { lambda }));
+            var result = lambda.Children.First().Children.Select(x =>
             {
                 x.UnTie();
                 return x;
             });
+            if (!string.IsNullOrEmpty(taskId))
+                result.First().Add(new Node("due", null, lambda.Children.First().Children.ToList()));
+            return result;
         }
 
-        public Node GetTask(string id)
+        public async Task<Node> GetTask(string id)
         {
             if (string.IsNullOrEmpty(id))
                 throw new ArgumentNullException("No [id] specified to get task");
-            return ListTasks(0, 1, id).FirstOrDefault();
+            return (await ListTasks(0, 1, id)).FirstOrDefault();
         }
 
-        public void ExecuteTask(string id)
+        public async Task ExecuteTask(string id)
         {
-            var task = GetTask(id);
-            var hyperlambda = task.Children.First(x => x.Name == "hyperlambda").Get<string>();
-            var lambda = new Node("", hyperlambda);
-            Signaler.Signal("hyper2lambda", lambda);
-            lambda.Value = null;
-            Signaler.Signal("eval", lambda);
+            await _locker.WaitAsync();
+            try
+            {
+                var task = await GetTask(id);
+                var hyperlambda = task.Children.First(x => x.Name == "hyperlambda").Get<string>();
+                var lambda = new Node("", hyperlambda);
+                Signaler.Signal("hyper2lambda", lambda);
+                lambda.Value = null;
+                await Signaler.SignalAsync("wait.eval", lambda);
+            }
+            finally
+            {
+                _locker.Release();
+            }
         }
 
         public void Dispose()
@@ -277,7 +310,7 @@ namespace magic.lambda.scheduler.utilities
             return updateNode;
         }
 
-        Node CreateReadLambda(long offset, long limit, string taskId)
+        Node CreateReadTaskLambda(long offset, long limit, string taskId)
         {
             var result = new Node($"{DatabaseType}.read");
             result.Add(new Node("table", "tasks"));
@@ -292,6 +325,18 @@ namespace magic.lambda.scheduler.utilities
                 whereNode.Add(andNode);
                 result.Add(whereNode);
             }
+            return result;
+        }
+
+        Node CreateReadTaskDueDateLambda(string taskId)
+        {
+            var result = new Node($"{DatabaseType}.read");
+            result.Add(new Node("table", "task_due"));
+            var whereNode = new Node("where");
+            var andNode = new Node("and");
+            andNode.Add(new Node("task", taskId));
+            whereNode.Add(andNode);
+            result.Add(whereNode);
             return result;
         }
 
@@ -329,12 +374,12 @@ namespace magic.lambda.scheduler.utilities
             return id;
         }
 
-        NextTaskHelper GetNextTask()
+        async Task<NextTaskHelper> GetNextTask()
         {
             // Retrieving next upcoming task.
             var lambda = CreateConnectionLambda();
             lambda.Add(CreateReadNextDueDateLambda());
-            Signaler.Signal("eval", new Node("", null, new Node[] { lambda }));
+            await Signaler.SignalAsync("wait.eval", new Node("", null, new Node[] { lambda }));
 
             // Verifying we have a scheduled task.
             if (!lambda.Children.First().Children.Any())
@@ -350,10 +395,10 @@ namespace magic.lambda.scheduler.utilities
             };
         }
 
-        bool ResetTimer()
+        async Task<bool> ResetTimer()
         {
             // Getting upcoming task's due date.
-            var date = GetNextTask();
+            var date = await GetNextTask();
             if (date == null)
             {
                 _timer?.Dispose();
@@ -393,7 +438,7 @@ namespace magic.lambda.scheduler.utilities
         async Task ExecuteNextScheduledTask()
         {
             // Getting upcoming task's due date.
-            var taskDue = GetNextTask();
+            var taskDue = await GetNextTask();
             if (taskDue == null)
                 return; // No more due tasks.
 
@@ -401,7 +446,7 @@ namespace magic.lambda.scheduler.utilities
             {
                 // It is not yet time to execute this task.
                 // Notice, if upcoming task was deleted before timer kicks in, this might be true.
-                ResetTimer();
+                await ResetTimer();
                 return;
             }
 
@@ -427,18 +472,18 @@ namespace magic.lambda.scheduler.utilities
                 // Task does not repeat, hence deleting its due date.
                 var deleteLambda = CreateConnectionLambda();
                 deleteLambda.Add(CreateDeleteLambda(taskDue.TaskId));
-                Signaler.Signal("eval", new Node("", null, new Node[] { deleteLambda }));
+                await Signaler.SignalAsync("wait.eval", new Node("", null, new Node[] { deleteLambda }));
             }
             else
             {
                 // Task repeats, hence updating its due date.
                 var updateLambda = CreateConnectionLambda();
                 updateLambda.Add(CreateUpdateDueDateLambda(taskDue.TaskDueId, taskDue.Repeats));
-                Signaler.Signal("eval", new Node("", null, new Node[] { updateLambda }));
+                await Signaler.SignalAsync("wait.eval", new Node("", null, new Node[] { updateLambda }));
             }
 
             // Reset timer.
-            ResetTimer();
+            await ResetTimer();
         }
 
         #endregion

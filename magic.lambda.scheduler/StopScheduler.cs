@@ -4,6 +4,7 @@
  */
 
 using System;
+using System.Threading.Tasks;
 using magic.node;
 using magic.signals.contracts;
 using magic.lambda.scheduler.utilities;
@@ -11,10 +12,10 @@ using magic.lambda.scheduler.utilities;
 namespace magic.lambda.scheduler
 {
     /// <summary>
-    /// [scheduler.stop] slot that will stop the task scheduler.
+    /// [wait.scheduler.stop] slot that will stop the task scheduler.
     /// </summary>
-    [Slot(Name = "scheduler.stop")]
-    public class StopScheduler : ISlot
+    [Slot(Name = "wait.scheduler.stop")]
+    public class StopScheduler : ISlotAsync
     {
         readonly IScheduler _scheduler;
 
@@ -32,9 +33,9 @@ namespace magic.lambda.scheduler
         /// </summary>
         /// <param name="signaler">Signaler that raised signal.</param>
         /// <param name="input">Arguments to slot.</param>
-        public void Signal(ISignaler signaler, Node input)
+        public async Task SignalAsync(ISignaler signaler, Node input)
         {
-            _scheduler.StopScheduler();
+            await _scheduler.StopScheduler();
         }
     }
 }

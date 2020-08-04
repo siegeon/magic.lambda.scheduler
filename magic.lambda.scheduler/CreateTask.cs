@@ -4,6 +4,7 @@
  */
 
 using System;
+using System.Threading.Tasks;
 using magic.node;
 using magic.signals.contracts;
 using magic.lambda.scheduler.utilities;
@@ -11,10 +12,10 @@ using magic.lambda.scheduler.utilities;
 namespace magic.lambda.scheduler
 {
     /// <summary>
-    /// [tasks.create] slot that will create a new scheduled task.
+    /// [wait.tasks.create] slot that will create a new scheduled task.
     /// </summary>
-    [Slot(Name = "tasks.create")]
-    public class CreateTask : ISlot
+    [Slot(Name = "wait.tasks.create")]
+    public class CreateTask : ISlotAsync
     {
         readonly IScheduler _scheduler;
 
@@ -32,9 +33,9 @@ namespace magic.lambda.scheduler
         /// </summary>
         /// <param name="signaler">Signaler that raised signal.</param>
         /// <param name="input">Arguments to slot.</param>
-        public void Signal(ISignaler signaler, Node input)
+        public async Task SignalAsync(ISignaler signaler, Node input)
         {
-            _scheduler.CreateTask(input);
+            await _scheduler.CreateTask(input);
         }
     }
 }

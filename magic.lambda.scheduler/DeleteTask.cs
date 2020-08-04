@@ -4,18 +4,18 @@
  */
 
 using System;
+using System.Threading.Tasks;
 using magic.node;
-using magic.node.extensions;
 using magic.signals.contracts;
 using magic.lambda.scheduler.utilities;
 
 namespace magic.lambda.scheduler
 {
     /// <summary>
-    /// [tasks.delete] slot that will delete a named task.
+    /// [wait.tasks.delete] slot that will delete a named task.
     /// </summary>
-    [Slot(Name = "tasks.delete")]
-    public class DeleteTask : ISlot
+    [Slot(Name = "wait.tasks.delete")]
+    public class DeleteTask : ISlotAsync
     {
         readonly IScheduler _scheduler;
 
@@ -33,9 +33,9 @@ namespace magic.lambda.scheduler
         /// </summary>
         /// <param name="signaler">Signaler that raised signal.</param>
         /// <param name="input">Arguments to slot.</param>
-        public void Signal(ISignaler signaler, Node input)
+        public async Task SignalAsync(ISignaler signaler, Node input)
         {
-            _scheduler.DeleteTask(input);
+            await _scheduler.DeleteTask(input);
         }
     }
 }
