@@ -344,7 +344,11 @@ namespace magic.lambda.scheduler.utilities
             // Getting upcoming task's due date.
             var date = GetNextTask();
             if (date == null)
+            {
+                _timer?.Dispose();
+                _timer = null;
                 return false;
+            }
             CreateTimerImplementation(date.Due);
             return true;
         }
