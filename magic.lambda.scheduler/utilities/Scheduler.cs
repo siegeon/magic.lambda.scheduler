@@ -134,7 +134,7 @@ namespace magic.lambda.scheduler.utilities
 
                 if (hasDueDate &&
                     (node.Children.FirstOrDefault(x => x.Name == "auto-start")?.GetEx<bool>() ?? true))
-                    await ResetTimer(); // In case tasks is next upcoming task.
+                    await ResetTimer(); // In case task is next upcoming for execution.
             }
             finally
             {
@@ -152,7 +152,7 @@ namespace magic.lambda.scheduler.utilities
                 var lambda = CreateConnectionLambda();
                 lambda.Add(CreateInsertDueDateLambda(node, id));
                 await Signaler.SignalAsync("wait.eval", new Node("", null, new Node[] { lambda }));
-                await ResetTimer(); // In case tasks is next upcoming task.
+                await ResetTimer(); // In case schedule is next upcoming execution.
             }
             finally
             {
