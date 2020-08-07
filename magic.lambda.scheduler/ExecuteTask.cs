@@ -15,7 +15,7 @@ namespace magic.lambda.scheduler
     /// <summary>
     /// [wait.task.execute] slot that will return the date for the next upcoming task.
     /// </summary>
-    [Slot(Name = "wait.task.execute")]
+    [Slot(Name = "wait.tasks.execute")]
     public class ExecuteTask : ISlotAsync
     {
         readonly IScheduler _scheduler;
