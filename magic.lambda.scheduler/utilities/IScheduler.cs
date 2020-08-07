@@ -48,6 +48,13 @@ namespace magic.lambda.scheduler.utilities
         Task CreateTask(Node node);
 
         /// <summary>
+        /// Schedules an existing task.
+        /// </summary>
+        /// <param name="node">Node declaration of task.</param>
+        /// <returns>Awaitable task.</returns>
+        Task ScheduleTask(Node node);
+
+        /// <summary>
         /// Deletes the task with the specified ID
         /// </summary>
         /// <param name="node">Node containing ID of task to delete.</param>

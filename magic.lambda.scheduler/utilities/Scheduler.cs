@@ -143,6 +143,24 @@ namespace magic.lambda.scheduler.utilities
         }
 
         /// <inheritdoc />
+        public async Task ScheduleTask(Node node)
+        {
+            await _locker.WaitAsync();
+            try
+            {
+                var id = GetID(node);
+                var lambda = CreateConnectionLambda();
+                lambda.Add(CreateInsertDueDateLambda(node, id));
+                await Signaler.SignalAsync("wait.eval", new Node("", null, new Node[] { lambda }));
+                await ResetTimer(); // In case tasks is next upcoming task.
+            }
+            finally
+            {
+                _locker.Release();
+            }
+        }
+
+        /// <inheritdoc />
         public async Task DeleteTask(Node node)
         {
             await _locker.WaitAsync();
@@ -181,24 +199,24 @@ namespace magic.lambda.scheduler.utilities
             lambda.Add(CreateReadTaskDueDateLambda(taskId));
             await Signaler.SignalAsync("wait.eval", new Node("", null, new Node[] { lambda }));
             var result = lambda.Children.First().Children.First();
+            result.Children.First(x => x.Name == "id").UnTie();
+            var desc = result.Children.First(x => x.Name == "description");
+            if (desc.Value == null)
+                desc.UnTie();
             if (lambda.Children.Skip(1).First().Children.Any())
-                result.Add(
-                    new Node(
-                        "due",
-                        null,
-                        new Node[]
-                        {
-                            new Node(
-                                ".",
-                                null,
-                                lambda.Children
-                                    .Skip(1)
-                                    .First()
-                                    .Children
-                                    .SelectMany(x => x.Children)
-                                    .Where(x => x.Name == "due" || 
-                                        (x.Name == "repeats" && x.Value != null)))
-                        }));
+            {
+                var schedule = new Node("schedule");
+                foreach (var idx in lambda.Children.Skip(1).First().Children)
+                {
+                    var tmp = new Node(".");
+                    if (idx.Children.First(x => x.Name == "repeats")?.Value != null)
+                        tmp.Add(new Node("repeats", idx.Children.First(x => x.Name == "repeats")?.Value));
+                    tmp.Add(new Node("due", idx.Children.First(x => x.Name == "due").Value));
+                    schedule.Add(tmp);
+                }
+                if (schedule.Children.Any())
+                    result.Add(schedule);
+            }
             return result;
         }
 
@@ -277,7 +295,7 @@ namespace magic.lambda.scheduler.utilities
 
             // Converting lambda from task to Hyperlambda.
             Signaler.Signal("lambda2hyper", lambdaNode);
-            var hyperlambda = lambdaNode.Get<string>();
+            var hyperlambda = lambdaNode.Get<string>()?.Trim();
             if (string.IsNullOrEmpty(hyperlambda?.Trim()))
                 throw new ArgumentException("No Hyperlambda given to create task");
 

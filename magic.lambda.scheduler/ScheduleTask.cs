@@ -4,21 +4,19 @@
  */
 
 using System;
-using System.Linq;
 using System.Threading.Tasks;
 using magic.node;
-using magic.node.extensions;
 using magic.signals.contracts;
 using magic.lambda.scheduler.utilities;
 
 namespace magic.lambda.scheduler
 {
     /// <summary>
-    /// [wait.tasks.get] slot that will return an existing task with the specified name,
-    /// including its next due date.
+    /// [wait.tasks.schedule] slot that will schedule an existing task for being executed, either
+    /// according to some [repeats], or at a specific [due] date in the future.
     /// </summary>
-    [Slot(Name = "wait.tasks.get")]
-    public class GetTask : ISlotAsync
+    [Slot(Name = "wait.tasks.schedule")]
+    public class ScheduleTask : ISlotAsync
     {
         readonly IScheduler _scheduler;
 
@@ -26,7 +24,7 @@ namespace magic.lambda.scheduler
         /// Creates a new instance of your slot.
         /// </summary>
         /// <param name="scheduler">Which background service to use.</param>
-        public GetTask(IScheduler scheduler)
+        public ScheduleTask(IScheduler scheduler)
         {
             _scheduler = scheduler ?? throw new ArgumentNullException(nameof(scheduler));
         }
@@ -38,10 +36,7 @@ namespace magic.lambda.scheduler
         /// <param name="input">Arguments to slot.</param>
         public async Task SignalAsync(ISignaler signaler, Node input)
         {
-            input.AddRange(
-                (await _scheduler.GetTask(input.GetEx<string>()))
-                .Children
-                .ToList());
+            await _scheduler.ScheduleTask(input);
         }
     }
 }

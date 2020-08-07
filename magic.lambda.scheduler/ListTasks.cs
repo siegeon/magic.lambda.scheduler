@@ -41,6 +41,13 @@ namespace magic.lambda.scheduler
                 input.Children.FirstOrDefault(x => x.Name == "offset")?.GetEx<long>() ?? 0,
                 input.Children.FirstOrDefault(x => x.Name == "limit")?.GetEx<long>() ?? 10);
             input.AddRange(jobs);
+            foreach (var idx in input.Children)
+            {
+                var desc = idx.Children.First(x => x.Name == "description");
+                if (desc.Value == null)
+                    desc.UnTie();
+                idx.Children.First(x => x.Name == "hyperlambda").UnTie();
+            }
         }
     }
 }
