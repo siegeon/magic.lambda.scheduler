@@ -160,6 +160,30 @@ namespace magic.lambda.scheduler.utilities
             }
         }
 
+        public async Task ScheduleDelete(Node node)
+        {
+            await _locker.WaitAsync();
+            try
+            {
+                var id = node.GetEx<long>();
+                var lambda = CreateConnectionLambda();
+                var deleteNode = new Node($"{DatabaseType}.delete");
+                deleteNode.Add(new Node("table", "task_due"));
+                var whereNode = new Node("where");
+                var andNode = new Node("and");
+                andNode.Add(new Node("id", id));
+                whereNode.Add(andNode);
+                deleteNode.Add(whereNode);
+                lambda.Add(deleteNode);
+                await Signaler.SignalAsync("wait.eval", new Node("", null, new Node[] { lambda }));
+                await ResetTimer(); // In case schedule is next upcoming execution.
+            }
+            finally
+            {
+                _locker.Release();
+            }
+        }
+
         /// <inheritdoc />
         public async Task DeleteTask(Node node)
         {
@@ -209,6 +233,7 @@ namespace magic.lambda.scheduler.utilities
                 foreach (var idx in lambda.Children.Skip(1).First().Children)
                 {
                     var tmp = new Node(".");
+                    tmp.Add(new Node("id", idx.Children.First(x => x.Name == "id").Value));
                     if (idx.Children.First(x => x.Name == "repeats")?.Value != null)
                         tmp.Add(new Node("repeats", idx.Children.First(x => x.Name == "repeats")?.Value));
                     tmp.Add(new Node("due", idx.Children.First(x => x.Name == "due").Value));
