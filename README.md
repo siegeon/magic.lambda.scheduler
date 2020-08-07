@@ -16,6 +16,8 @@ for [Magic](https://github.com/polterguy.magic). More specifically it provides t
 * __[wait.scheduler.next]__ - Returns the date and time of the next scheduled task, if any.
 * __[wait.scheduler.running]__ - Returns true if the scheduler is running.
 
+Notice, all of these slots are `async`, and can only be executed from an async context.
+
 ## Creating a task
 
 To create a task without an execution date and no repetition pattern, you can use something such as the following.
