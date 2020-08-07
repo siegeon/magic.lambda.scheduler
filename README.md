@@ -230,3 +230,13 @@ All tasks are persisted into your selected database type of choice, either MySQL
 Which implies that even if the server is stopped, all scheduled tasks and normal tasks will automatically
 load up again, and be available to the scheduler as the server is restarted. This _might_ imply that
 all tasks in the past are immediately executed, which is important for you to understand.
+
+## License
+
+Although most of Magic's source code is publicly available, Magic is _not_ Open Source or Free Software.
+You have to obtain a valid license key to install it in production, and I normally charge a fee for such a
+key. You can [obtain a license key here](https://servergardens.com/buy/).
+Notice, 7 days after you put Magic into production, it will stop functioning, unless you have a valid
+license for it.
+
+* [Get licensed](https://servergardens.com/buy/)
