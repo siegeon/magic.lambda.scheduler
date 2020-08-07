@@ -14,9 +14,10 @@ for [Magic](https://github.com/polterguy.magic). More specifically it provides t
 * __[wait.scheduler.stop]__ - Stops the scheduler, implying no tasks will be executed at the scheduled time.
 * __[wait.scheduler.start]__ - Starts the scheduler.
 * __[wait.scheduler.next]__ - Returns the date and time of the next scheduled task, if any.
-* __[wait.scheduler.running]__ - Returns true if the scheduler is running.
+* __[scheduler.running]__ - Returns true if the scheduler is running.
 
-Notice, all of these slots are `async`, and can only be executed from an async context.
+Notice, all of these slots that starts with **[wait.]** are `async` in nature, and can only be executed
+from an async context.
 
 ## Creating a task
 
