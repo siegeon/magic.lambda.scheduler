@@ -12,10 +12,10 @@ using magic.lambda.scheduler.utilities;
 namespace magic.lambda.scheduler
 {
     /// <summary>
-    /// [wait.tasks.create] slot that will create a new task.
+    /// [wait.tasks.update] slot that will update an existing task.
     /// </summary>
-    [Slot(Name = "wait.tasks.create")]
-    public class CreateTask : ISlotAsync
+    [Slot(Name = "wait.tasks.update")]
+    public class UpdateTask : ISlotAsync
     {
         readonly IScheduler _scheduler;
 
@@ -23,7 +23,7 @@ namespace magic.lambda.scheduler
         /// Creates a new instance of your slot.
         /// </summary>
         /// <param name="scheduler">Which background service to use.</param>
-        public CreateTask(IScheduler scheduler)
+        public UpdateTask(IScheduler scheduler)
         {
             _scheduler = scheduler ?? throw new ArgumentNullException(nameof(scheduler));
         }
@@ -35,7 +35,7 @@ namespace magic.lambda.scheduler
         /// <param name="input">Arguments to slot.</param>
         public async Task SignalAsync(ISignaler signaler, Node input)
         {
-            await _scheduler.CreateTask(input);
+            await _scheduler.UpdateTask(input);
         }
     }
 }

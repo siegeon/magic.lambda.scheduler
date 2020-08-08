@@ -143,6 +143,23 @@ namespace magic.lambda.scheduler.utilities
         }
 
         /// <inheritdoc />
+        public async Task UpdateTask(Node node)
+        {
+            await _locker.WaitAsync();
+            try
+            {
+                var id = GetID(node);
+                var lambda = CreateConnectionLambda();
+                lambda.Add(CreateUpdateTaskLambda(node, id));
+                await Signaler.SignalAsync("wait.eval", new Node("", null, new Node[] { lambda }));
+            }
+            finally
+            {
+                _locker.Release();
+            }
+        }
+
+        /// <inheritdoc />
         public async Task ScheduleTask(Node node)
         {
             await _locker.WaitAsync();
@@ -332,6 +349,37 @@ namespace magic.lambda.scheduler.utilities
             if (!string.IsNullOrEmpty(description))
                 valuesNode.Add(new Node("description", description));
             valuesNode.Add(new Node("hyperlambda", hyperlambda));
+            result.Add(valuesNode);
+            return result;
+        }
+
+        Node CreateUpdateTaskLambda(Node node, string taskId)
+        {
+            // Retrieving arguments and sanity checking invocation.
+            var description = node.Children.FirstOrDefault(x => x.Name == "description")?.GetEx<string>();
+
+            // Converting lambda from task to Hyperlambda, if there is any lambda.
+            var lambdaNode = node.Children.FirstOrDefault(x => x.Name == ".lambda")?.Clone();
+            string hyperlambda = null;
+            if (lambdaNode != null)
+            {
+                Signaler.Signal("lambda2hyper", lambdaNode);
+                hyperlambda = lambdaNode.Get<string>()?.Trim();
+            }
+
+            // Creating and returning result.
+            var result = new Node($"{DatabaseType}.update");
+            result.Add(new Node("table", "tasks"));
+            var whereNode = new Node("where");
+            var andNode = new Node("and");
+            andNode.Add(new Node("id", taskId));
+            whereNode.Add(andNode);
+            result.Add(whereNode);
+            var valuesNode = new Node("values");
+            if (description != null)
+                valuesNode.Add(new Node("description", description));
+            if (hyperlambda != null)
+                valuesNode.Add(new Node("hyperlambda", hyperlambda));
             result.Add(valuesNode);
             return result;
         }
