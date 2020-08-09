@@ -85,6 +85,13 @@ namespace magic.lambda.scheduler.utilities
         Task<IEnumerable<Node>> ListTasks(string query, long offset, long limit);
 
         /// <summary>
+        /// Counts tasks in system matching the optional query.
+        /// </summary>
+        /// <param name="query">String tasks needs to start with in their ID to be considered a match.</param>
+        /// <returns>Number of tasks in system matching optional query.</returns>
+        Task<long> CountTasks(string query);
+
+        /// <summary>
         /// Returns the specified task, and its associated due date(s).
         /// </summary>
         /// <param name="taskId">ID of task to retrieve.</param>

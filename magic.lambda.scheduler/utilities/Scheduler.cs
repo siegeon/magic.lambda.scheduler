@@ -222,7 +222,6 @@ namespace magic.lambda.scheduler.utilities
         /// <inheritdoc />
         public async Task<IEnumerable<Node>> ListTasks(string query, long offset, long limit)
         {
-            // Returning tasks to caller.
             var lambda = CreateConnectionLambda();
             lambda.Add(CreateReadTaskLambda(query, offset, limit, null));
             await Signaler.SignalAsync("wait.eval", new Node("", null, new Node[] { lambda }));
@@ -230,9 +229,30 @@ namespace magic.lambda.scheduler.utilities
         }
 
         /// <inheritdoc />
+        public async Task<long> CountTasks(string query)
+        {
+            var lambda = CreateConnectionLambda();
+            var readLambda = new Node($"{DatabaseType}.read");
+            readLambda.Add(new Node("table", "tasks"));
+            var columnsLambda = new Node("columns");
+            columnsLambda.Add(new Node("count(*)"));
+            readLambda.Add(columnsLambda);
+            if (!string.IsNullOrEmpty(query))
+            {
+                var whereNode = new Node("where");
+                var andNode = new Node("and");
+                andNode.Add(new Node("id.like", query + "%"));
+                whereNode.Add(andNode);
+                readLambda.Add(whereNode);
+            }
+            lambda.Add(readLambda);
+            await Signaler.SignalAsync("wait.eval", new Node("", null, new Node[] { lambda }));
+            return readLambda.Children.First().Children.First().Get<long>();
+        }
+
+        /// <inheritdoc />
         public async Task<Node> GetTask(string taskId)
         {
-            // Returning task to caller, but sanity checking invocation first.
             if (string.IsNullOrEmpty(taskId))
                 throw new ArgumentNullException("No task ID supplied to get task");
             var lambda = CreateConnectionLambda();
