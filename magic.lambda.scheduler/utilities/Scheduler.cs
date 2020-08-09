@@ -220,11 +220,11 @@ namespace magic.lambda.scheduler.utilities
         }
 
         /// <inheritdoc />
-        public async Task<IEnumerable<Node>> ListTasks(long offset, long limit)
+        public async Task<IEnumerable<Node>> ListTasks(string query, long offset, long limit)
         {
             // Returning tasks to caller.
             var lambda = CreateConnectionLambda();
-            lambda.Add(CreateReadTaskLambda(offset, limit, null));
+            lambda.Add(CreateReadTaskLambda(query, offset, limit, null));
             await Signaler.SignalAsync("wait.eval", new Node("", null, new Node[] { lambda }));
             return lambda.Children.First().Children.ToList();
         }
@@ -236,7 +236,7 @@ namespace magic.lambda.scheduler.utilities
             if (string.IsNullOrEmpty(taskId))
                 throw new ArgumentNullException("No task ID supplied to get task");
             var lambda = CreateConnectionLambda();
-            lambda.Add(CreateReadTaskLambda(0, 1, taskId));
+            lambda.Add(CreateReadTaskLambda(null, 0, 1, taskId));
             lambda.Add(CreateReadTaskDueDateLambda(taskId));
             await Signaler.SignalAsync("wait.eval", new Node("", null, new Node[] { lambda }));
             var result = lambda.Children.First().Children.First();
@@ -435,7 +435,7 @@ namespace magic.lambda.scheduler.utilities
             return updateNode;
         }
 
-        Node CreateReadTaskLambda(long offset, long limit, string taskId)
+        Node CreateReadTaskLambda(string query, long offset, long limit, string taskId)
         {
             var result = new Node($"{DatabaseType}.read");
             result.Add(new Node("table", "tasks"));
@@ -449,6 +449,18 @@ namespace magic.lambda.scheduler.utilities
                 andNode.Add(new Node("id", taskId));
                 whereNode.Add(andNode);
                 result.Add(whereNode);
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(query))
+                {
+                    var whereNode = new Node("where");
+                    var andNode = new Node("and");
+                    andNode.Add(new Node("id.like", taskId + "%"));
+                    whereNode.Add(andNode);
+                    result.Add(whereNode);
+                }
+                result.Add(new Node("order", "created"));
             }
             return result;
         }

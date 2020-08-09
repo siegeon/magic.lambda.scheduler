@@ -78,10 +78,11 @@ namespace magic.lambda.scheduler.utilities
         /// <summary>
         /// Lists all tasks in system paged.
         /// </summary>
+        /// <param name="query">String tasks needs to start with in their ID to be considered a match.</param>
         /// <param name="offset">Offset of where to return tasks from.</param>
         /// <param name="limit">Maximum number of tasks to return.</param>
         /// <returns>List of task declarations.</returns>
-        Task<IEnumerable<Node>> ListTasks(long offset, long limit);
+        Task<IEnumerable<Node>> ListTasks(string query, long offset, long limit);
 
         /// <summary>
         /// Returns the specified task, and its associated due date(s).
