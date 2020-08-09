@@ -456,7 +456,7 @@ namespace magic.lambda.scheduler.utilities
                 {
                     var whereNode = new Node("where");
                     var andNode = new Node("and");
-                    andNode.Add(new Node("id.like", taskId + "%"));
+                    andNode.Add(new Node("id.like", query + "%"));
                     whereNode.Add(andNode);
                     result.Add(whereNode);
                 }
