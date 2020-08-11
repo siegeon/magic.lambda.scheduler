@@ -177,6 +177,7 @@ namespace magic.lambda.scheduler.utilities
             }
         }
 
+        /// <inheritdoc />
         public async Task ScheduleDelete(Node node)
         {
             await _locker.WaitAsync();

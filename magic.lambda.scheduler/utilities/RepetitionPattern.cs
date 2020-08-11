@@ -24,6 +24,10 @@ namespace magic.lambda.scheduler.utilities
         readonly string _entity;
         readonly int _interval;
 
+        /// <summary>
+        /// Creates a new instance of the class.
+        /// </summary>
+        /// <param name="pattern">Repetition pattern to use.</param>
         public RepetitionPattern(string pattern)
         {
             _pattern = pattern ?? throw new ArgumentNullException(nameof(pattern));
@@ -82,8 +86,16 @@ namespace magic.lambda.scheduler.utilities
             }
         }
 
+        /// <summary>
+        /// Returns the repetition pattern this instance is encapsulating.
+        /// </summary>
+        /// <value>Actual pattern.</value>
         public string Pattern { get => _pattern; }
 
+        /// <summary>
+        /// Calculates the next due date according to the repetition pattern specified during creation.
+        /// </summary>
+        /// <returns>Next execution date and time for instance.</returns>
         public DateTime Next()
         {
             // Finding Now, and removing milliseconds from it.
