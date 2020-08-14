@@ -12,6 +12,7 @@ using Microsoft.Extensions.Configuration;
 using magic.node;
 using magic.node.extensions;
 using magic.signals.contracts;
+using magic.lambda.logging.helpers;
 
 namespace magic.lambda.scheduler.utilities
 {
@@ -70,16 +71,16 @@ namespace magic.lambda.scheduler.utilities
             await _locker.WaitAsync();
             try
             {
-                _logger?.LogInfo("Attempting to start task scheduler");
+                _logger?.Info("Attempting to start task scheduler");
                 if (_timer != null)
                 {
-                    _logger?.LogInfo("Task scheduler already started");
+                    _logger?.Info("Task scheduler already started");
                     return;
                 }
                 if (await ResetTimer())
-                    _logger?.LogInfo("Task scheduler was successfully started");
+                    _logger?.Info("Task scheduler was successfully started");
                 else
-                    _logger?.LogInfo("Task scheduler was not started since there were no due tasks");
+                    _logger?.Info("Task scheduler was not started since there were no due tasks");
             }
             finally
             {
@@ -93,15 +94,15 @@ namespace magic.lambda.scheduler.utilities
             await _locker.WaitAsync();
             try
             {
-                _logger?.LogInfo("Attempting to stop task scheduler");
+                _logger?.Info("Attempting to stop task scheduler");
                 if (_timer == null)
                 {
-                    _logger?.LogInfo("Task scheduler already stopped");
+                    _logger?.Info("Task scheduler already stopped");
                     return;
                 }
                 _timer?.Dispose();
                 _timer = null;
-                _logger?.LogInfo("Task scheduler was successfully stopped");
+                _logger?.Info("Task scheduler was successfully stopped");
             }
             finally
             {
@@ -185,7 +186,7 @@ namespace magic.lambda.scheduler.utilities
             {
                 var id = node.GetEx<long>();
                 var lambda = CreateConnectionLambda();
-                var deleteNode = new Node($"{DatabaseType}.delete");
+                var deleteNode = new Node($"wait.{DatabaseType}.delete");
                 deleteNode.Add(new Node("table", "task_due"));
                 var whereNode = new Node("where");
                 var andNode = new Node("and");
@@ -233,7 +234,7 @@ namespace magic.lambda.scheduler.utilities
         public async Task<long> CountTasks(string query)
         {
             var lambda = CreateConnectionLambda();
-            var readLambda = new Node($"{DatabaseType}.read");
+            var readLambda = new Node($"wait.{DatabaseType}.read");
             readLambda.Add(new Node("table", "tasks"));
             var columnsLambda = new Node("columns");
             columnsLambda.Add(new Node("count(*)"));
@@ -295,6 +296,11 @@ namespace magic.lambda.scheduler.utilities
                 Signaler.Signal("hyper2lambda", lambda);
                 lambda.Value = null;
                 await Signaler.SignalAsync("wait.eval", lambda);
+                _logger?.Info($"Task with id of '{id}' was executed successfully");
+            }
+            catch (Exception error)
+            {
+                _logger?.Error($"Task with id of '{id}' failed", error);
             }
             finally
             {
@@ -334,12 +340,12 @@ namespace magic.lambda.scheduler.utilities
         Node CreateConnectionLambda()
         {
             // Creating lambda for deletion.
-            return new Node($"{DatabaseType}.connect", DatabaseName);
+            return new Node($"wait.{DatabaseType}.connect", DatabaseName);
         }
 
         Node CreateDeleteLambda(string taskId)
         {
-            var result = new Node($"{DatabaseType}.delete");
+            var result = new Node($"wait.{DatabaseType}.delete");
             result.Add(new Node("table", "tasks"));
             var whereNode = new Node("where");
             var andNode = new Node("and");
@@ -363,7 +369,7 @@ namespace magic.lambda.scheduler.utilities
                 throw new ArgumentException("No Hyperlambda given to create task");
 
             // Creating and returning result.
-            var result = new Node($"{DatabaseType}.create");
+            var result = new Node($"wait.{DatabaseType}.create");
             result.Add(new Node("table", "tasks"));
             var valuesNode = new Node("values");
             valuesNode.Add(new Node("id", taskId));
@@ -389,7 +395,7 @@ namespace magic.lambda.scheduler.utilities
             }
 
             // Creating and returning result.
-            var result = new Node($"{DatabaseType}.update");
+            var result = new Node($"wait.{DatabaseType}.update");
             result.Add(new Node("table", "tasks"));
             var whereNode = new Node("where");
             var andNode = new Node("and");
@@ -430,7 +436,7 @@ namespace magic.lambda.scheduler.utilities
             }
 
             // Creating lambda.
-            var result = new Node($"{DatabaseType}.create");
+            var result = new Node($"wait.{DatabaseType}.create");
             result.Add(new Node("table", "task_due"));
             var insertDueValues = new Node("values");
             insertDueValues.Add(new Node("task", taskId));
@@ -443,7 +449,7 @@ namespace magic.lambda.scheduler.utilities
 
         Node CreateUpdateDueDateLambda(string taskDueId, string repeats)
         {
-            var updateNode = new Node($"{DatabaseType}.update");
+            var updateNode = new Node($"wait.{DatabaseType}.update");
             updateNode.Add(new Node("table", "task_due"));
             var whereNode = new Node("where");
             var andNode = new Node("and");
@@ -458,7 +464,7 @@ namespace magic.lambda.scheduler.utilities
 
         Node CreateReadTaskLambda(string query, long offset, long limit, string taskId)
         {
-            var result = new Node($"{DatabaseType}.read");
+            var result = new Node($"wait.{DatabaseType}.read");
             result.Add(new Node("table", "tasks"));
             result.Add(new Node("offset", offset));
             result.Add(new Node("limit", limit));
@@ -488,7 +494,7 @@ namespace magic.lambda.scheduler.utilities
 
         Node CreateReadTaskDueDateLambda(string taskId)
         {
-            var result = new Node($"{DatabaseType}.read");
+            var result = new Node($"wait.{DatabaseType}.read");
             result.Add(new Node("table", "task_due"));
             var whereNode = new Node("where");
             var andNode = new Node("and");
@@ -500,17 +506,17 @@ namespace magic.lambda.scheduler.utilities
 
         Node CreateReadNextDueDateLambda()
         {
-            var readNode = new Node($"{DatabaseType}.read");
+            var readNode = new Node($"wait.{DatabaseType}.read");
             readNode.Add(new Node("table", "task_due"));
             readNode.Add(new Node("order", "due"));
             readNode.Add(new Node("limit", 1));
             return readNode;
         }
 
-        string GetTaskHyperlambda(string id)
+        async Task<string> GetTaskHyperlambda(string id)
         {
             var selectLambda = CreateConnectionLambda();
-            var readNode = new Node($"{DatabaseType}.read");
+            var readNode = new Node($"wait.{DatabaseType}.read");
             readNode.Add(new Node("table", "tasks"));
             var whereNode = new Node("where");
             var andNode = new Node("and");
@@ -518,7 +524,7 @@ namespace magic.lambda.scheduler.utilities
             whereNode.Add(andNode);
             readNode.Add(whereNode);
             selectLambda.Add(readNode);
-            Signaler.Signal("eval", new Node("", null, new Node[] { selectLambda }));
+            await Signaler.SignalAsync("wait.eval", new Node("", null, new Node[] { selectLambda }));
             return selectLambda.Children.First().Children.First().Children.First(x => x.Name == "hyperlambda").Get<string>();
         }
 
@@ -609,7 +615,7 @@ namespace magic.lambda.scheduler.utilities
             }
 
             // Retrieving task's Hyperlambda.
-            var hyperlambda = GetTaskHyperlambda(taskDue.TaskId);
+            var hyperlambda = await GetTaskHyperlambda(taskDue.TaskId);
 
             // Converting Hyperlambda to lambda and executing task.
             var exeNode = new Node("", hyperlambda);
@@ -621,7 +627,7 @@ namespace magic.lambda.scheduler.utilities
             }
             catch (Exception error)
             {
-                _logger?.LogError($"Something went wrong while executing scheduled task with id of '{taskDue.TaskId}'", error);
+                _logger?.Error($"Something went wrong while executing scheduled task with id of '{taskDue.TaskId}'", error);
             }
 
             // Checking if task repeats, and if so, we update its due date.

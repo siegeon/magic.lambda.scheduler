@@ -20,24 +20,6 @@ namespace magic.lambda.scheduler.tests
 {
     public static class Common
     {
-        public class Logger : ILogger
-        {
-            public void LogError(string jobName, Exception err)
-            {
-                /*
-                 * Our implementation here in its unit tests simply rethrows
-                 * any exceptions, to make them propagate, and raise an error
-                 * for our unit tests.
-                 */
-                throw err;
-            }
-
-            public void LogInfo(string description)
-            {
-                Console.WriteLine(description);
-            }
-        }
-
         static public Node Evaluate(string hl, bool deleteExistingJobs = true, bool isFolder = false)
         {
             var services = Initialize(deleteExistingJobs, isFolder);
@@ -55,7 +37,6 @@ namespace magic.lambda.scheduler.tests
             services.AddTransient<ISignaler, Signaler>();
             var types = new SignalsProvider(InstantiateAllTypes<ISlot>(services));
             services.AddTransient<ISignalsProvider>((svc) => types);
-            services.AddTransient<ILogger, Logger>();
             var jobPath = AppDomain.CurrentDomain.BaseDirectory +
                 (isFolder ? "tasks/" : "tasks.hl");
             if (deleteJobFile && File.Exists(jobPath))

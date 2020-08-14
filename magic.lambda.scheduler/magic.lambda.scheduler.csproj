@@ -34,5 +34,6 @@
   <ItemGroup>
     <PackageReference Include="magic.node.extensions" Version="8.0.1" />
     <PackageReference Include="magic.signals.contracts" Version="8.0.1" />
+    <PackageReference Include="magic.lambda.logger" Version="8.0.1" />
   </ItemGroup>
 </Project>
