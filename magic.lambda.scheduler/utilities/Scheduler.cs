@@ -329,7 +329,7 @@ namespace magic.lambda.scheduler.utilities
 
         string DatabaseName
         {
-            get => _configuration.GetSection("magic:scheduler:tasks-database").Value;
+            get => _configuration.GetSection("magic:tasks:database").Value;
         }
 
         ISignaler Signaler
