@@ -71,16 +71,15 @@ namespace magic.lambda.scheduler.utilities
             await _locker.WaitAsync();
             try
             {
-                _logger?.Info("Attempting to start task scheduler");
                 if (_timer != null)
                 {
-                    _logger?.Info("Task scheduler already started");
+                    _logger?.Info("Can't start task scheduler since it's already running");
                     return;
                 }
                 if (await ResetTimer())
                     _logger?.Info("Task scheduler was successfully started");
                 else
-                    _logger?.Info("Task scheduler was not started since there were no due tasks");
+                    _logger?.Info("Task scheduler was not started since there are no scheduled tasks");
             }
             finally
             {
@@ -94,10 +93,9 @@ namespace magic.lambda.scheduler.utilities
             await _locker.WaitAsync();
             try
             {
-                _logger?.Info("Attempting to stop task scheduler");
                 if (_timer == null)
                 {
-                    _logger?.Info("Task scheduler already stopped");
+                    _logger?.Info("Can't stop task scheduler since it's not running");
                     return;
                 }
                 _timer?.Dispose();
