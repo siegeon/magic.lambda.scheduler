@@ -1,5 +1,5 @@
 
-# Magic Lambda Task Scheduler
+# Magic Lambda Tasks and Task Scheduler
 
 [![Build status](https://travis-ci.org/polterguy/magic.lambda.scheduler.svg?master)](https://travis-ci.org/polterguy/magic.lambda.scheduler)
 
