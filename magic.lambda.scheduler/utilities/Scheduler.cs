@@ -23,7 +23,7 @@ namespace magic.lambda.scheduler.utilities
         {
             public DateTime Due { get; set; }
 
-            public string TaskDueId { get; set; }
+            public long TaskDueId { get; set; }
 
             public string Repeats { get; set; }
 
@@ -353,6 +353,18 @@ namespace magic.lambda.scheduler.utilities
             return result;
         }
 
+        Node CreateDeleteDueLambda(long taskDueId)
+        {
+            var result = new Node($"wait.{DatabaseType}.delete");
+            result.Add(new Node("table", "task_due"));
+            var whereNode = new Node("where");
+            var andNode = new Node("and");
+            andNode.Add(new Node("id", taskDueId));
+            whereNode.Add(andNode);
+            result.Add(whereNode);
+            return result;
+        }
+
         Node CreateInsertTaskLambda(Node node, string taskId)
         {
             // Retrieving arguments and sanity checking invocation.
@@ -428,8 +440,8 @@ namespace magic.lambda.scheduler.utilities
             else
             {
                 var dueNode = node.Children.FirstOrDefault(x => x.Name == "due");
-                due = dueNode.GetEx<DateTime>();
-                if (due < DateTime.Now)
+                due = dueNode.GetEx<DateTime>().ToUniversalTime();
+                if (due < DateTime.Now.ToUniversalTime())
                     throw new ArgumentException("You cannot create a task with a [due] date that's in the past");
             }
 
@@ -445,7 +457,7 @@ namespace magic.lambda.scheduler.utilities
             return result;
         }
 
-        Node CreateUpdateDueDateLambda(string taskDueId, string repeats)
+        Node CreateUpdateDueDateLambda(long taskDueId, string repeats)
         {
             var updateNode = new Node($"wait.{DatabaseType}.update");
             updateNode.Add(new Node("table", "task_due"));
@@ -551,7 +563,7 @@ namespace magic.lambda.scheduler.utilities
             return new NextTaskHelper
             {
                 Due = lambda.Children.First().Children.First().Children.First(x => x.Name == "due").Get<DateTime>(),
-                TaskDueId = lambda.Children.First().Children.First().Children.First(x => x.Name == "id").Get<string>(),
+                TaskDueId = lambda.Children.First().Children.First().Children.First(x => x.Name == "id").Get<long>(),
                 Repeats = lambda.Children.First().Children.First().Children.First(x => x.Name == "repeats").Get<string>(),
                 TaskId = lambda.Children.First().Children.First().Children.First(x => x.Name == "task").Get<string>()
             };
@@ -580,7 +592,7 @@ namespace magic.lambda.scheduler.utilities
             var nextDue = (long)Math.Max(
                 250L,
                 Math.Min(
-                    (due - DateTime.Now).TotalMilliseconds,
+                    (due - DateTime.Now.ToUniversalTime()).TotalMilliseconds,
                     new TimeSpan(45, 0, 0, 0).TotalMilliseconds)); // 45 days is maximum resolution of Timer class.
 
             // Creating timer.
@@ -633,7 +645,7 @@ namespace magic.lambda.scheduler.utilities
             {
                 // Task does not repeat, hence deleting its due date.
                 var deleteLambda = CreateConnectionLambda();
-                deleteLambda.Add(CreateDeleteLambda(taskDue.TaskId));
+                deleteLambda.Add(CreateDeleteDueLambda(taskDue.TaskDueId));
                 await Signaler.SignalAsync("wait.eval", new Node("", null, new Node[] { deleteLambda }));
             }
             else
