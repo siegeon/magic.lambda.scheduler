@@ -73,13 +73,13 @@ namespace magic.lambda.scheduler.utilities
             {
                 if (_timer != null)
                 {
-                    _logger?.Info("Can't start task scheduler since it's already running");
+                    await _logger?.InfoAsync("Can't start task scheduler since it's already running");
                     return;
                 }
                 if (await ResetTimer())
-                    _logger?.Info("Task scheduler was successfully started");
+                    await _logger?.InfoAsync("Task scheduler was successfully started");
                 else
-                    _logger?.Info("Task scheduler was not started since there are no scheduled tasks");
+                    await _logger?.InfoAsync("Task scheduler was not started since there are no scheduled tasks");
             }
             finally
             {
@@ -95,12 +95,12 @@ namespace magic.lambda.scheduler.utilities
             {
                 if (_timer == null)
                 {
-                    _logger?.Info("Can't stop task scheduler since it's not running");
+                    await _logger?.InfoAsync("Can't stop task scheduler since it's not running");
                     return;
                 }
                 _timer?.Dispose();
                 _timer = null;
-                _logger?.Info("Task scheduler was successfully stopped");
+                await _logger?.InfoAsync("Task scheduler was successfully stopped");
             }
             finally
             {
@@ -133,7 +133,11 @@ namespace magic.lambda.scheduler.utilities
 
                 if (hasDueDate &&
                     (node.Children.FirstOrDefault(x => x.Name == "auto-start")?.GetEx<bool>() ?? true))
+                {
+                    if (!Running)
+                        await _logger?.InfoAsync("Starting task scheduler since task has a due date");
                     await ResetTimer(); // In case task is next upcoming for execution.
+                }
             }
             finally
             {
@@ -168,6 +172,8 @@ namespace magic.lambda.scheduler.utilities
                 var lambda = CreateConnectionLambda();
                 lambda.Add(CreateInsertDueDateLambda(node, id));
                 await Signaler.SignalAsync("wait.eval", new Node("", null, new Node[] { lambda }));
+                if (!Running)
+                    await _logger?.InfoAsync("Starting task scheduler since we now have a due date for a task");
                 await ResetTimer(); // In case schedule is next upcoming execution.
             }
             finally
@@ -294,7 +300,7 @@ namespace magic.lambda.scheduler.utilities
                 Signaler.Signal("hyper2lambda", lambda);
                 lambda.Value = null;
                 await Signaler.SignalAsync("wait.eval", lambda);
-                _logger?.Info($"Task with id of '{id}' was executed successfully");
+                await _logger?.InfoAsync($"Task with id of '{id}' was executed successfully");
             }
             catch (Exception error)
             {
