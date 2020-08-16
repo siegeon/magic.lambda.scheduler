@@ -125,7 +125,7 @@ namespace magic.lambda.scheduler.tests
         {
             var pattern = new RepetitionPattern("**.**.00.00.00.Monday");
             var next = pattern.Next();
-            Assert.True(next >= DateTime.Now);
+            Assert.True(next >= DateTime.UtcNow);
             Assert.Equal(DayOfWeek.Monday, next.DayOfWeek);
             Assert.Equal(0, next.Hour);
             Assert.Equal(0, next.Minute);
@@ -137,7 +137,7 @@ namespace magic.lambda.scheduler.tests
         {
             var pattern = new RepetitionPattern("**.**.23.57.01.Saturday|Sunday");
             var next = pattern.Next();
-            Assert.True(next >= DateTime.Now);
+            Assert.True(next >= DateTime.UtcNow);
             Assert.True(next.DayOfWeek == DayOfWeek.Saturday || next.DayOfWeek == DayOfWeek.Sunday);
             Assert.Equal(23, next.Hour);
             Assert.Equal(57, next.Minute);
@@ -149,7 +149,7 @@ namespace magic.lambda.scheduler.tests
         {
             var pattern = new RepetitionPattern("**.05.23.57.01.**");
             var next = pattern.Next();
-            Assert.True(next >= DateTime.Now);
+            Assert.True(next >= DateTime.UtcNow);
             Assert.Equal(5, next.Day);
             Assert.Equal(23, next.Hour);
             Assert.Equal(57, next.Minute);
@@ -161,8 +161,8 @@ namespace magic.lambda.scheduler.tests
         {
             var pattern = new RepetitionPattern("**.05|15.23.59.59.**");
             var next = pattern.Next();
-            Assert.True(next >= DateTime.Now);
-            if (DateTime.Now.Day >= 5 && DateTime.Now.Day <= 16)
+            Assert.True(next >= DateTime.UtcNow);
+            if (DateTime.UtcNow.Day >= 5 && DateTime.UtcNow.Day <= 16)
                 Assert.Equal(15, next.Day);
             else
                 Assert.Equal(5, next.Day);
@@ -176,8 +176,8 @@ namespace magic.lambda.scheduler.tests
         {
             var pattern = new RepetitionPattern("01|07.01.00.00.00.**");
             var next = pattern.Next();
-            Assert.True(next >= DateTime.Now);
-            if (DateTime.Now.Month >= 1 && DateTime.Now.Month <= 7)
+            Assert.True(next >= DateTime.UtcNow);
+            if (DateTime.UtcNow.Month >= 1 && DateTime.UtcNow.Month <= 7)
                 Assert.Equal(7, next.Month);
             else
                 Assert.Equal(1, next.Month);
@@ -191,8 +191,8 @@ namespace magic.lambda.scheduler.tests
         {
             var pattern = new RepetitionPattern("5.seconds");
             var next = pattern.Next();
-            Assert.True(next >= DateTime.Now);
-            Assert.True((next - DateTime.Now).TotalSeconds >= 4 && (next - DateTime.Now).TotalSeconds < 6);
+            Assert.True(next >= DateTime.UtcNow);
+            Assert.True((next - DateTime.UtcNow).TotalSeconds >= 4 && (next - DateTime.UtcNow).TotalSeconds < 6);
         }
 
         [Fact]
@@ -200,8 +200,8 @@ namespace magic.lambda.scheduler.tests
         {
             var pattern = new RepetitionPattern("5.days");
             var next = pattern.Next();
-            Assert.True(next >= DateTime.Now);
-            Assert.True((next - DateTime.Now).TotalDays >= 4 && (next - DateTime.Now).TotalDays < 6);
+            Assert.True(next >= DateTime.UtcNow);
+            Assert.True((next - DateTime.UtcNow).TotalDays >= 4 && (next - DateTime.UtcNow).TotalDays < 6);
         }
     }
 }

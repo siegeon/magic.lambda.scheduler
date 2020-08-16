@@ -33,7 +33,7 @@ scheduler.tasks.create:task-01
    when:date:""{0}""
    .lambda
       foo.task.scheduler-01",
-                DateTime.Now.AddSeconds(1).ToString("O")));
+                DateTime.UtcNow.AddSeconds(1).ToString("O")));
             Assert.False(SchedulerSlot01._invoked);
             SchedulerSlot01._handle.WaitOne(2000);
             Assert.True(SchedulerSlot01._invoked);
@@ -56,7 +56,7 @@ scheduler.tasks.create:task-04
    .lambda
       foo.task.scheduler-04
 scheduler.stop",
-                DateTime.Now.AddSeconds(1).ToString("O")));
+                DateTime.UtcNow.AddSeconds(1).ToString("O")));
             Assert.False(SchedulerSlot04._invoked);
             SchedulerSlot01._handle.WaitOne(3000);
             Assert.False(SchedulerSlot04._invoked); // Scheduler should not be running
@@ -210,8 +210,8 @@ scheduler.tasks.create:task-02
    .lambda
       .foo
 scheduler.tasks.list",
-                DateTime.Now.AddMinutes(1).ToString("O"),
-                DateTime.Now.AddMinutes(2).ToString("O")));
+                DateTime.UtcNow.AddMinutes(1).ToString("O"),
+                DateTime.UtcNow.AddMinutes(2).ToString("O")));
             Assert.Equal(2, lambda.Children.Skip(2).First().Children.Count());
             Assert.Equal("task-01", lambda.Children.Skip(2).First().Children.First().Children.First(x => x.Name == "name").GetEx<string>());
             Assert.Equal("task-02", lambda.Children.Skip(2).First().Children.Skip(1).First().Children.First(x => x.Name == "name").GetEx<string>());
@@ -230,8 +230,8 @@ scheduler.tasks.create:task-01
    .lambda
       .foo
 scheduler.tasks.list",
-                DateTime.Now.AddMinutes(1).ToString("O"),
-                DateTime.Now.AddMinutes(2).ToString("O")));
+                DateTime.UtcNow.AddMinutes(1).ToString("O"),
+                DateTime.UtcNow.AddMinutes(2).ToString("O")));
             Assert.Equal(2, lambda.Children.Skip(2).First().Children.Count());
             Assert.Equal("task-01", lambda.Children.Skip(2).First().Children.First().Children.First(x => x.Name == "name").GetEx<string>());
             Assert.Equal("task-02", lambda.Children.Skip(2).First().Children.Skip(1).First().Children.First(x => x.Name == "name").GetEx<string>());
@@ -249,8 +249,8 @@ scheduler.tasks.create:task-01
    when:date:""{0}""
    .lambda
       .foo",
-                DateTime.Now.AddHours(1).ToString("O"),
-                DateTime.Now.AddHours(2).ToString("O")));
+                DateTime.UtcNow.AddHours(1).ToString("O"),
+                DateTime.UtcNow.AddHours(2).ToString("O")));
 
             // Notice, this will reload our job file.
             var lambda = Common.Evaluate("scheduler.tasks.list", false);
@@ -268,7 +268,7 @@ scheduler.tasks.create:task-01
    .lambda
       foo.task.scheduler-03
 scheduler.tasks.delete:task-01",
-                DateTime.Now.AddSeconds(1).ToString("O")));
+                DateTime.UtcNow.AddSeconds(1).ToString("O")));
             SchedulerSlot03._handle.WaitOne(2000);
             Assert.False(SchedulerSlot03._invoked);
         }
@@ -282,7 +282,7 @@ scheduler.tasks.create:task-01
    .lambda
       .foo
 scheduler.tasks.get:task-01",
-                DateTime.Now.AddHours(1).ToString("O")));
+                DateTime.UtcNow.AddHours(1).ToString("O")));
             Assert.Single(lambda.Children.Skip(1).First().Children);
             Assert.Equal("task-01", lambda.Children.Skip(1).First().Children.First().Name);
         }
@@ -290,7 +290,7 @@ scheduler.tasks.get:task-01",
         [Fact]
         public void CreateGet_02()
         {
-            var now = DateTime.Now.Date;
+            var now = DateTime.UtcNow.Date;
             var lambda = Common.Evaluate(string.Format(@"
 scheduler.tasks.create:task-01
    repeat:{0}

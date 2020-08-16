@@ -99,7 +99,7 @@ namespace magic.lambda.scheduler.utilities
         public DateTime Next()
         {
             // Finding Now, and removing milliseconds from it.
-            DateTime result = DateTime.Now;
+            DateTime result = DateTime.UtcNow;
             result = new DateTime(result.Year, result.Month, result.Day, result.Hour, result.Minute, result.Second, 0);
             if (_entity == null)
             {
@@ -110,7 +110,7 @@ namespace magic.lambda.scheduler.utilities
                     result = new DateTime(result.Year, result.Month, result.Day, _hour.Value, _minute.Value, _seconds.Value);
                     while(true)
                     {
-                        if (result > DateTime.Now && _weekdays.Any(x => x == result.DayOfWeek))
+                        if (result > DateTime.UtcNow && _weekdays.Any(x => x == result.DayOfWeek))
                             return result;
                         result = result.AddDays(1);
                     }
@@ -121,7 +121,7 @@ namespace magic.lambda.scheduler.utilities
                     result = new DateTime(result.Year, result.Month, result.Day, _hour.Value, _minute.Value, _seconds.Value);
                     while(true)
                     {
-                        if (result > DateTime.Now &&
+                        if (result > DateTime.UtcNow &&
                             (_month == null || _month.Any(x => result.Month == x)) &&
                             _day.Any(x => result.Day == x))
                             return result;

@@ -441,7 +441,7 @@ namespace magic.lambda.scheduler.utilities
             {
                 var dueNode = node.Children.FirstOrDefault(x => x.Name == "due");
                 due = dueNode.GetEx<DateTime>().ToUniversalTime();
-                if (due < DateTime.Now.ToUniversalTime())
+                if (due < DateTime.UtcNow)
                     throw new ArgumentException("You cannot create a task with a [due] date that's in the past");
             }
 
@@ -592,14 +592,14 @@ namespace magic.lambda.scheduler.utilities
             var nextDue = (long)Math.Max(
                 250L,
                 Math.Min(
-                    (due - DateTime.Now.ToUniversalTime()).TotalMilliseconds,
+                    (due - DateTime.UtcNow).TotalMilliseconds,
                     new TimeSpan(45, 0, 0, 0).TotalMilliseconds)); // 45 days is maximum resolution of Timer class.
 
             // Creating timer.
             _timer = new Timer(
                 async (state) =>
                 {
-                    if (due.AddMilliseconds(250) < DateTime.Now)
+                    if (due.AddMilliseconds(250) < DateTime.UtcNow)
                         await ExecuteNextScheduledTask(); // Task is due.
                     else
                         CreateTimerImplementation(due); // Re-creating timer since date was too far into future to create Timer.
@@ -616,7 +616,7 @@ namespace magic.lambda.scheduler.utilities
             if (taskDue == null)
                 return; // No more due tasks.
 
-            if (taskDue.Due.AddMilliseconds(250) >= DateTime.Now)
+            if (taskDue.Due.AddMilliseconds(250) >= DateTime.UtcNow)
             {
                 // It is not yet time to execute this task.
                 // Notice, if upcoming task was deleted before timer kicks in, this might be true.
