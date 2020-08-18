@@ -193,6 +193,10 @@ create your tasks. The frontend however, will convert dates and times as you cre
 * Every January the 5th at midnight `01.05.00.00.00.**`
 * Every January and July the 15th at midnight `01|07.15.00.00.00.**`
 
+In addition, each task can have multiple (infinite) number of schedules, allowing you to create any amount of
+complexity you wish for when to repeat a task. If a task is not successfully executed during its due date, a
+log entry will be created, supplying the exception, and the id of your task.
+
 ## Deleting a task
 
 Use the **[wait.tasks.delete]** signal to delete a task. An example can be found below.
