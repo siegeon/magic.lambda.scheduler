@@ -87,7 +87,7 @@ for evaluation. After the task has been evaluated, it will never execute again, 
 
 ### Repeating tasks
 
-To have a task periodically being executed, you can choose between a whole range of repetition patterns. For instance,
+To have a task repeatedly being executed, you can choose between a whole range of repetition patterns. For instance,
 to have a task scheduled for evaluation every Sunday at 10PM, you could create a task such as the following.
 
 ```
