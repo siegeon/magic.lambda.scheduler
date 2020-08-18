@@ -118,6 +118,8 @@ wait.tasks.create:task-id
       log.info:Executing repeating task
 ```
 
+#### Intervals
+
 Evaluating your task every second/minute/hour can be done by using something such as the following.
 
 ```
@@ -150,7 +152,7 @@ wait.tasks.create:task-id
 When supplying hours and minutes such as the above example illustrates, you must use military hours, implying
 from 00:00 to 23:59.
 
-### Repeat semantics
+#### Repeat semantics
 
 The format of the **[repeats]** argument is as follows `MM.dd.HH.mm.ss.ww`. Where the entities implies the following.
 
@@ -166,6 +168,11 @@ The following entities can supply multiple values, separated by a pipe character
 * MM - months, e.g. `01|02|03` for something that should be done in January, February and March months only.
 * dd - days, e.g. `01|15` for something that should be done on the 1st and 15th day of the month only.
 * ww - weekdays, e.g. `saturday|sunday` for something that should be done on Saturdays and Sundays only.
+
+The MM and dd arguments are optionally, and can be ommitted by using two asterix instead (\*\*) - At which
+point it implies _"whatever"_. MM and dd _cannot_ be combined with weekdays, so if you supply MM and/or dd
+arguments, you _cannot_ supply a weekday. If you supply a weekday pattern besides \*\*, you cannot supply
+neither MM nor dd. These two patterns are mutually exclusive.
 
 The double asterix `**` implies _"any value"_, and means _"undefined"_. If you create a weekday pattern, you must
 also supply hours, minutes and seconds - And you _cannot_ add a month or day value. If you create a month/day pattern,
