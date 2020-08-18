@@ -199,8 +199,8 @@ arguments, you _cannot_ supply a weekday. If you supply a weekday pattern beside
 neither MM nor dd. These two patterns are mutually exclusive. If you supply an MM argument, you must also
 supply a dd argument, but you can supply a dd argument, without supplying an MM argument.
 
-The double asterix `**` implies _"any value"_, and means _"undefined"_. The only mandatory arguments is HH mm and
-ss, and must be supplied regardless of whether or not you create a weekday pattern, or a month/day pattern.
+The double asterix `**` implies _"any value"_, and means _"undefined"_. The only mandatory arguments are HH mm and
+ss, and must be supplied regardless of whether or not you create a weekday pattern, or a month/day-of-month pattern.
 
 **Notice** - All times are interpreted as UTC times, and _not_ necessarily your local time. Have this in mind as you
 create your tasks. The frontend however, will convert dates and times as you create tasks to your local timezone.
@@ -221,6 +221,8 @@ log entry will be created, supplying the exception, and the ID of your task. The
 
 A background thread will be used for executing scheduled tasks, and only _one_ background thread - Which implies
 that no tasks will ever be executing in parallel, to avoid thread starvation, due to logical errors in your schedules.
+All tasks are executed asynchronously, implying the execution thread will be released back to the operating system,
+as the thread is waiting for IO data, from socket connections, etc.
 
 When an interval task has finished executed, the next due date for the task's execution will be calculated using
 its interval pattern - Implying that if you use a 5 second pattern, the schedule for its next execution, will be
