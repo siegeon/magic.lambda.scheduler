@@ -643,7 +643,7 @@ namespace magic.lambda.scheduler.utilities
             }
             catch (Exception error)
             {
-                _logger?.Error($"Something went wrong while executing scheduled task with id of '{taskDue.TaskId}'", error);
+                _logger?.Error($"Unhandled exception while executing scheduled task with id of '{taskDue.TaskId}'", error);
             }
 
             // Checking if task repeats, and if so, we update its due date.
