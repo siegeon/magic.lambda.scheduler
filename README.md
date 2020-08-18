@@ -197,6 +197,9 @@ In addition, each task can have multiple (infinite) number of schedules, allowin
 complexity you wish for when to repeat a task. If a task is not successfully executed during its due date, a
 log entry will be created, supplying the exception, and the id of your task.
 
+A background thread will be used for executing scheduled tasks, and only _one_ background thread - Which implies
+that no tasks will ever be executing in parallel, to avoid thread starvation, due to logical errors in your schedules.
+
 ## Deleting a task
 
 Use the **[wait.tasks.delete]** signal to delete a task. An example can be found below.
