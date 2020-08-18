@@ -139,8 +139,12 @@ wait.tasks.create:task-id
       log.info:Executing seldomly repeating task once every 10 year
 ```
 
-The above task will only be evaluated every 3650 days, which becomes once every 10 years. To create a task that
-is executed on the first day of the month, at 5PM, you can use the following repetition pattern.
+The above task will only be evaluated every 3650 days, which becomes once every 10 years.
+
+#### Periodically scheduled tasks
+
+To create a task that is executed on the first day of the month, at 5PM, you can use the following
+repetition pattern.
 
 ```
 wait.tasks.create:task-id
