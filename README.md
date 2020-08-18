@@ -81,15 +81,27 @@ wait.tasks.create:foo-bar-task-3
       log.info:Executing foo-bar-task-3
 ```
 
-The above **[due]** node is a date and time in the future for when you want your task to be scheduled
-for executed. After the task has been executed, it will never execute again, unless you manually execute it.
+The above **[due]** argument is a date and time in the future for when you want your task to be scheduled
+for executed. After the task has been executed, it will never execute again, unless you manually execute it,
+or assign a new **[repeats]** pattern to it.
+
 **Notice** - You _cannot_ create a task with a due date being in the past, and all dates are assumed to be in
 the UTC timezone.
 
 ### Repeating tasks
 
-To have a task repeatedly being executed, you can choose between a whole range of repetition patterns. For instance,
-to have a task scheduled for execution every Sunday at 10PM UTC, you could create a task such as the following.
+There are two basic **[repeats]** patterns for the Magic Lambda Scheduler, these are as follows.
+
+* `x.units` - Units can be one of _"seconds"_, _"minutes"_, _"hours"_, _"days"_, _"weeks"_ or _"months"_.
+* `MM.dd.HH.mm.ss.ww` - Where the entities are months, day of month, hours, minutes, seconds and weekdays.
+
+Notice, month, day of month, and weekdays can have double asterix as their values, implying _"whatever value"_.
+But either weekdays or day of month at the minimum _must_ be supplied. dd and ww are XOR in semantics. If you
+supply a day of month, you can optionally also supply a month. MM, dd and ww can also have multiple values,
+separated by the pipe character (|), to provide multiple values for these entities.
+
+To have a task scheduled for execution every Sunday at 10PM UTC, you could create a task such as the following.
+
 
 ```
 wait.tasks.create:task-id
@@ -99,7 +111,7 @@ wait.tasks.create:task-id
 ```
 
 You can create any combinations of weekdays, allowing you to supply multiple weekdays in a single
-repetition pattern. These weekdays can be combined with the pipe (|) character. Below is an exhaustive list.
+repetition pattern. Below is an exhaustive list of all possible weekdays.
 
 * Sunday
 * Monday
@@ -130,8 +142,8 @@ wait.tasks.create:task-id
       log.info:Executing repeating task
 ```
 
-The above will evaluate your task every 50 second. The above _"seconds"_ can be exchanged with _"minutes"_, _"hours"_, _"days"_, _"weeks"_ or _"months"_. Notice, this allows you to have very large values, to have tasks that are repeating _very seldom_,
-such as the following illustrates.
+The above will evaluate your task every 50 second. The above _"seconds"_ can be exchanged with _"minutes"_, _"hours"_, _"days"_, _"weeks"_ or _"months"_. Notice, this allows you to have very large values, to have tasks that are
+repeating _very rarely_, such as the following illustrates.
 
 ```
 wait.tasks.create:task-id
@@ -144,7 +156,7 @@ The above task will only be evaluated every 3650 days, which becomes once every 
 
 #### Periodically scheduled tasks
 
-To create a task that is executed on the first day of the month, at 5PM, you can use the following
+To create a task that is executed on the first day of _every_ month, at 5PM, you can use the following
 repetition pattern.
 
 ```
@@ -154,8 +166,7 @@ wait.tasks.create:task-id
       log.info:It is the first of the month, and the time is 5AM at night.
 ```
 
-When supplying hours and minutes such as the above example illustrates, you must use military hours, implying
-from 00:00 to 23:59.
+Hours must be supplied as _"military hours"_, implying from 00:00 to 23:59, where 22 equals 10PM UTC time.
 
 #### Repeat format
 
@@ -174,10 +185,11 @@ The following entities can supply multiple values, separated by a pipe character
 * dd - days, e.g. `01|15` for something that should be done on the 1st and 15th day of the month only.
 * ww - weekdays, e.g. `saturday|sunday` for something that should be done on Saturdays and Sundays only.
 
-The MM and dd arguments are optionally, and can be ommitted by using two asterix instead (\*\*) - At which
+The MM, dd and ww arguments are optionally, and can be ommitted by using two asterix instead (\*\*) - At which
 point it implies _"whatever"_. MM and dd _cannot_ be combined with weekdays, so if you supply MM and/or dd
 arguments, you _cannot_ supply a weekday. If you supply a weekday pattern besides \*\*, you cannot supply
-neither MM nor dd. These two patterns are mutually exclusive.
+neither MM nor dd. These two patterns are mutually exclusive. If you supply an MM argument, you must also
+supply a dd argument, but you can supply a dd argument, without supplying an MM argument.
 
 The double asterix `**` implies _"any value"_, and means _"undefined"_. The only mandatory arguments is HH mm and
 ss, and must be supplied regardless of whether or not you create a weekday pattern, or a month/day pattern.
@@ -195,14 +207,18 @@ create your tasks. The frontend however, will convert dates and times as you cre
 
 In addition, each task can have multiple (infinite) number of schedules, allowing you to create any amount of
 complexity you wish for when to repeat a task. If a task is not successfully executed during its due date, a
-log entry will be created, supplying the exception, and the ID of your task.
+log entry will be created, supplying the exception, and the ID of your task. The log entry will be of type _"error"_.
+
+#### Internals
 
 A background thread will be used for executing scheduled tasks, and only _one_ background thread - Which implies
 that no tasks will ever be executing in parallel, to avoid thread starvation, due to logical errors in your schedules.
+
 When an interval task has finished executed, the next due date for the task's execution will be calculated using
 its interval pattern - Implying that if you use a 5 second pattern, the schedule for its next execution, will be
-calculated from when the task _finished_ executing, which might not necessarily imply that your tasks are executed
-exactly every 5 seconds, depending upon how much CPU time your task requires to execute.
+calculated 5 seconds from when the task _finished_ executing, which might not necessarily imply that your tasks
+are executed exactly every 5 seconds, depending upon how much CPU time your task requires to execute. The interval
+pattern declares how many units to count to before executing the task again, from when the task _finished_ executing.
 
 ## Deleting a task
 
