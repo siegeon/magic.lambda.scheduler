@@ -132,6 +132,13 @@ wait.tasks.create:task-id
       log.info:Executing repeating task
 ```
 
+To understand the above repetition pattern, let's break it down into its separate components.
+
+* Month `MM` - _"whatever"_ value.
+* Day of month `dd` - _"whatever"_ value.
+* Time HH.mm.ss equals 22:00:00
+* Weekdays ww, one of _"saturday"_ or _"sunday"_.
+
 #### Intervals
 
 Evaluating your task every second/minute/hour can be done by using something such as the following.
