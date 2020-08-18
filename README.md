@@ -188,6 +188,7 @@ create your tasks. The frontend however, will convert dates and times as you cre
 #### Example [repeats] patterns
 
 * Every Monday at 10PM UTC `**.**.22.00.00.monday`
+* Every Monday through Friday at 10AM UTC `**.**.10.00.00.monday|tuesday|wednesday|thursday|friday`
 * Every 1st of every month at 5AM UTC `**.01.05.00.00.**`
 * Every January the 5th at midnight `01.05.00.00.00.**`
 * Every January and July the 15th at midnight `01|07.15.00.00.00.**`
