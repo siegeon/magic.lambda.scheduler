@@ -92,7 +92,8 @@ the UTC timezone.
 
 There are two basic **[repeats]** patterns for the Magic Lambda Scheduler, these are as follows.
 
-* `x.units` - Units can be one of _"seconds"_, _"minutes"_, _"hours"_, _"days"_, _"weeks"_ or _"months"_.
+* `x.units` - Units can be one of _"seconds"_, _"minutes"_, _"hours"_, _"days"_, _"weeks"_ or _"months"_ - And
+`x` can be any integer value.
 * `MM.dd.HH.mm.ss.ww` - Where the entities are months, day of month, hours, minutes, seconds and weekdays.
 
 Notice, month, day of month, and weekdays can have double asterix as their values, implying _"whatever value"_.
