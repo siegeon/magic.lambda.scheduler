@@ -195,7 +195,7 @@ create your tasks. The frontend however, will convert dates and times as you cre
 
 In addition, each task can have multiple (infinite) number of schedules, allowing you to create any amount of
 complexity you wish for when to repeat a task. If a task is not successfully executed during its due date, a
-log entry will be created, supplying the exception, and the id of your task.
+log entry will be created, supplying the exception, and the ID of your task.
 
 A background thread will be used for executing scheduled tasks, and only _one_ background thread - Which implies
 that no tasks will ever be executing in parallel, to avoid thread starvation, due to logical errors in your schedules.
