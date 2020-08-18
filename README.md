@@ -261,6 +261,9 @@ Which implies that even if the server is stopped, all scheduled tasks and normal
 load up again, and be available to the scheduler as the server is restarted. This _might_ imply that
 all tasks in the past are immediately executed, which is important for you to understand.
 
+Tasks are by default persisted into your magic.tasks table, and schedules are persisted into your
+magic.task_due table.
+
 ## License
 
 Although most of Magic's source code is publicly available, Magic is _not_ Open Source or Free Software.
