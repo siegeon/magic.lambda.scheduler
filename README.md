@@ -199,6 +199,10 @@ log entry will be created, supplying the exception, and the id of your task.
 
 A background thread will be used for executing scheduled tasks, and only _one_ background thread - Which implies
 that no tasks will ever be executing in parallel, to avoid thread starvation, due to logical errors in your schedules.
+When an interval task has finished executed, the next due date for the task's execution will be calculated using
+its interval pattern - Implying that if you use a 5 second pattern, the schedule for its next execution, will be
+calculated from when the task _finished_ executing, which might not necessarily imply that your tasks are executed
+exactly every 5 seconds, depending upon how much CPU time your task requires to execute.
 
 ## Deleting a task
 
