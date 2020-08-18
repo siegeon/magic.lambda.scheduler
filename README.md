@@ -156,6 +156,8 @@ wait.tasks.create:task-id
 When supplying hours and minutes such as the above example illustrates, you must use military hours, implying
 from 00:00 to 23:59.
 
+#### Repeat format
+
 The format of the **[repeats]** argument is as follows `MM.dd.HH.mm.ss.ww`. Where the entities implies the following.
 
 * MM - month
