@@ -34,9 +34,9 @@ wait.tasks.create:foo-bar-task-1
 ```
 
 The name or ID of your task in the above example becomes _"foo-bar-task-1"_, and the task can be referenced later
-using this name. The name must be unique, otherwise any previously created tasks with the same name will be overwritten.
-A task can also optionally have a **[description]** argument, which is a humanly friendly written description, describing
-what your task does. Below is an example.
+using this name. The name must be unique, otherwise any previously created tasks with the same name will be silently
+overwritten. A task can also optionally have a **[description]** argument, which is a humanly friendly written
+description, describing what your task does. Below is an example.
 
 ```
 wait.tasks.create:foo-bar-task-2
@@ -61,8 +61,8 @@ The above allows you to persist a _"function invocation"_ for later to execute i
 occurs - Effectively giving you the most important features from Microsoft Workflow Foundation, without the
 ridiculous XML and WYSIWYG parts from MWF.
 
-This allows you to create and persist some functionality, for then to later execute it, as some condition occurs,
-giving you workflow capabilities in your projects.
+This allows you to create and persist a function _invocation_, for then to later execute it, as some condition occurs,
+arguably giving you _"workflow capabilities"_ in your projects.
 
 **Notice** - By creating your own `ISlot` implementation, you can easily create your own C# classes that are Magic
 Signals, allowing you to persist an invocation to your method/class - For then to later execute this method as some
@@ -83,12 +83,13 @@ wait.tasks.create:foo-bar-task-3
 
 The above **[due]** node is a date and time in the future for when you want your task to be scheduled
 for executed. After the task has been executed, it will never execute again, unless you manually execute it.
-**Notice** - You _cannot_ create a task with a due date being in the past.
+**Notice** - You _cannot_ create a task with a due date being in the past, and all dates are assumed to be in
+the UTC timezone.
 
 ### Repeating tasks
 
 To have a task repeatedly being executed, you can choose between a whole range of repetition patterns. For instance,
-to have a task scheduled for execution every Sunday at 10PM, you could create a task such as the following.
+to have a task scheduled for execution every Sunday at 10PM UTC, you could create a task such as the following.
 
 ```
 wait.tasks.create:task-id
@@ -97,8 +98,8 @@ wait.tasks.create:task-id
       log.info:Executing repeating task
 ```
 
-You can choose any combinations of weekdays you wish to have your task repeat on a specific weekday.
-These weekdays can be combines with the pipe (|) character. Below is an exhaustive list.
+You can create any combinations of weekdays, allowing you to supply multiple weekdays in a single
+repetition pattern. These weekdays can be combined with the pipe (|) character. Below is an exhaustive list.
 
 * Sunday
 * Monday
