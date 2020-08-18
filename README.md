@@ -82,13 +82,13 @@ wait.tasks.create:foo-bar-task-3
 ```
 
 The above **[due]** node is a date and time in the future for when you want your task to be scheduled
-for evaluation. After the task has been evaluated, it will never execute again, unless you manually execute it.
+for executed. After the task has been executed, it will never execute again, unless you manually execute it.
 **Notice** - You _cannot_ create a task with a due date being in the past.
 
 ### Repeating tasks
 
 To have a task repeatedly being executed, you can choose between a whole range of repetition patterns. For instance,
-to have a task scheduled for evaluation every Sunday at 10PM, you could create a task such as the following.
+to have a task scheduled for execution every Sunday at 10PM, you could create a task such as the following.
 
 ```
 wait.tasks.create:task-id
@@ -174,12 +174,11 @@ point it implies _"whatever"_. MM and dd _cannot_ be combined with weekdays, so 
 arguments, you _cannot_ supply a weekday. If you supply a weekday pattern besides \*\*, you cannot supply
 neither MM nor dd. These two patterns are mutually exclusive.
 
-The double asterix `**` implies _"any value"_, and means _"undefined"_. If you create a weekday pattern, you must
-also supply hours, minutes and seconds - And you _cannot_ add a month or day value. If you create a month/day pattern,
-you must at least supply a day value, in addition to hours, minutes and seconds - And you _cannot_ add a weekday value.
+The double asterix `**` implies _"any value"_, and means _"undefined"_. The only mandatory arguments is HH mm and
+ss, and must be supplied regardless of whether or not you create a weekday pattern, or a month/day pattern.
 
 **Notice** - All times are interpreted as UTC times, and _not_ necessarily your local time. Have this in mind as you
-create your tasks.
+create your tasks. The frontend however, will convert dates and times as you create tasks to your local timezone.
 
 ## Deleting a task
 
