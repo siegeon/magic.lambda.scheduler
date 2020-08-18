@@ -185,6 +185,13 @@ ss, and must be supplied regardless of whether or not you create a weekday patte
 **Notice** - All times are interpreted as UTC times, and _not_ necessarily your local time. Have this in mind as you
 create your tasks. The frontend however, will convert dates and times as you create tasks to your local timezone.
 
+#### Example [repeats] patterns
+
+* Every Monday at 10PM UTC `**.**.22.00.00.monday`
+* Every 1st of every month at 5AM UTC `**.01.05.00.00.**`
+* Every January the 5th at midnight `01.05.00.00.00.**`
+* Every January and July the 15th at midnight `01|07.15.00.00.00.**`
+
 ## Deleting a task
 
 Use the **[wait.tasks.delete]** signal to delete a task. An example can be found below.
