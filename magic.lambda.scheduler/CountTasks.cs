@@ -27,7 +27,7 @@ namespace magic.lambda.scheduler
         /// <param name="scheduler">Scheduler service to use.</param>
         public CountTasks(IScheduler scheduler)
         {
-            _scheduler = scheduler ?? throw new ArgumentNullException(nameof(scheduler));
+            _scheduler = scheduler;
         }
 
         /// <summary>

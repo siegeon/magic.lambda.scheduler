@@ -50,7 +50,7 @@ namespace magic.lambda.scheduler.utilities
             IConfiguration configuration,
             bool autoStart)
         {
-            _services = services ?? throw new ArgumentNullException(nameof(services));
+            _services = services;
             _logger = logger;
             _configuration = configuration;
             if (autoStart)

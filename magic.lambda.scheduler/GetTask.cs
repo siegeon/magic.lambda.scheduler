@@ -28,7 +28,7 @@ namespace magic.lambda.scheduler
         /// <param name="scheduler">Which background service to use.</param>
         public GetTask(IScheduler scheduler)
         {
-            _scheduler = scheduler ?? throw new ArgumentNullException(nameof(scheduler));
+            _scheduler = scheduler;
         }
 
         /// <summary>
