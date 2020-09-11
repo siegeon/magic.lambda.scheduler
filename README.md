@@ -90,23 +90,22 @@ the UTC timezone.
 
 ### Repeating tasks
 
-There are two basic **[repeats]** patterns for the Magic Lambda Scheduler, these are as follows.
+There are 3 basic **[repeats]** patterns for the Magic Lambda Scheduler, these are as follows.
 
 * `x.units` - Units can be one of _"seconds"_, _"minutes"_, _"hours"_, _"days"_, _"weeks"_ or _"months"_ - And
 `x` can be any integer value.
-* `MM.dd.HH.mm.ss.ww` - Where the entities are months, day of month, hours, minutes, seconds and weekdays.
+* `MM.dd.HH.mm.ss` - Where the entities are months, days in month, hours, minutes and seconds.
+* `ww.HH.mm.ss` - Where the entities are weekdays, hours, minutes and seconds.
 
-Notice, month, day of month, and weekdays can have double asterix as their values, implying _"whatever value"_.
-But either weekdays or day of month at the minimum _must_ be supplied. dd and ww are XOR in semantics. If you
-supply a day of month, you can optionally also supply a month. MM, dd and ww can also have multiple values,
-separated by the pipe character (|), to provide multiple values for these entities.
+Notice, month, day of month, and weekdays can have double asterix (\*\*) as their values, implying _"whatever value"_.
+MM, dd and ww can also have multiple values, separated by the pipe character (|), to provide multiple values for these entities.
 
 To have a task scheduled for execution every Sunday at 10PM UTC, you could create a task such as the following.
 
 
 ```
 wait.tasks.create:task-id
-   repeats:**.**.22.00.00.sunday
+   repeats:sunday.22.00.00
    .lambda
       log.info:Executing repeating task
 ```
@@ -127,17 +126,15 @@ Below is an example. Notice, weekdays are case insensitive.
 
 ```
 wait.tasks.create:task-id
-   repeats:**.**.22.00.00.saturday|SUNDAY
+   repeats:saturday|SUNDAY.22.00.00
    .lambda
       log.info:Executing repeating task
 ```
 
 To understand the above repetition pattern, let's break it down into its separate components.
 
-* Month `MM` - _"whatever"_ value.
-* Day of month `dd` - _"whatever"_ value.
+* Weekdays ww, both _"saturday"_ and _"sunday"_, implying _both_ of these days.
 * Time HH.mm.ss equals 22:00:00
-* Weekdays ww, one of _"saturday"_ or _"sunday"_.
 
 #### Intervals
 
@@ -169,49 +166,20 @@ repetition pattern.
 
 ```
 wait.tasks.create:task-id
-   repeats:**.01.05.00.00.**
+   repeats:**.01.05.00.00
    .lambda
-      log.info:It is the first of the month, and the time is 5AM at night.
+      log.info:It is the 1st of the month, any month, and the time is 5AM at night.
 ```
 
-Hours must be supplied as _"military hours"_, implying from 00:00 to 23:59, where 22 equals 10PM UTC time.
-
-#### Repeat format
-
-The format of the **[repeats]** argument is as follows `MM.dd.HH.mm.ss.ww`. Where the entities implies the following.
-
-* MM - month
-* dd - day
-* HH - hours (military hours)
-* mm - minutes
-* ss - seconds
-* ww - weekdays
-
-The following entities can supply multiple values, separated by a pipe character (|).
-
-* MM - months, e.g. `01|02|03` for something that should be done in January, February and March months only.
-* dd - days, e.g. `01|15` for something that should be done on the 1st and 15th day of the month only.
-* ww - weekdays, e.g. `saturday|sunday` for something that should be done on Saturdays and Sundays only.
-
-The MM, dd and ww arguments are optionally, and can be ommitted by using two asterix instead (\*\*) - At which
-point it implies _"whatever"_. MM and dd _cannot_ be combined with weekdays, so if you supply MM and/or dd
-arguments, you _cannot_ supply a weekday. If you supply a weekday pattern besides \*\*, you cannot supply
-neither MM nor dd. These two patterns are mutually exclusive. If you supply an MM argument, you must also
-supply a dd argument, but you can supply a dd argument, without supplying an MM argument.
-
-The double asterix `**` implies _"any value"_, and means _"undefined"_. The only mandatory arguments are HH mm and
-ss, and must be supplied regardless of whether or not you create a weekday pattern, or a month/day-of-month pattern.
-
-**Notice** - All times are interpreted as UTC times, and _not_ necessarily your local time. Have this in mind as you
-create your tasks. The frontend however, will convert dates and times as you create tasks to your local timezone.
+Hours must be supplied as _"military hours"_, implying from 00:00 to 23:59, where for instance 22 equals 10PM UTC time.
 
 #### Example [repeats] patterns
 
-* Every Monday at 10PM UTC `**.**.22.00.00.monday`
-* Every Monday through Friday at 10AM UTC `**.**.10.00.00.monday|tuesday|wednesday|thursday|friday`
-* Every 1st of every month at 5AM UTC `**.01.05.00.00.**`
-* Every January the 5th at midnight `01.05.00.00.00.**`
-* Every January and July the 15th at midnight `01|07.15.00.00.00.**`
+* Every Monday at 10PM UTC `monday.22.00.00`
+* Every Monday through Friday at 10AM UTC `monday|tuesday|wednesday|thursday|friday.10.00.00`
+* Every 1st of every month at 5AM UTC `**.01.05.00.00`
+* Every January the 5th at midnight `01.05.00.00.00`
+* Every January and July the 15th at midnight `01|07.15.00.00.00`
 
 In addition, each task can have multiple (infinite) number of schedules, allowing you to create any amount of
 complexity you wish for when to repeat a task. If a task is not successfully executed during its due date, a
@@ -222,7 +190,7 @@ log entry will be created, supplying the exception, and the ID of your task. The
 A background thread will be used for executing scheduled tasks, and only _one_ background thread - Which implies
 that no tasks will ever be executing in parallel, to avoid thread starvation, due to logical errors in your schedules.
 All tasks are executed asynchronously, implying the execution thread will be released back to the operating system,
-as the thread is waiting for IO data, from socket connections, etc.
+as the thread is waiting for IO data, from socket connections, etc - Assuming you use the async slots where relevant.
 
 When a repeating task has finished executed, the next due date for the task's execution will be calculated using
 its interval pattern - Implying that if you use a 5 second pattern, the schedule for its next execution, will be
@@ -232,7 +200,8 @@ pattern declares how many units to count to before executing the task again, fro
 
 ## Deleting a task
 
-Use the **[wait.tasks.delete]** signal to delete a task. An example can be found below.
+Use the **[wait.tasks.delete]** signal to delete a task. This will also delete all future schedules for your task.
+An example can be found below.
 
 ```
 wait.tasks.delete:task-id
