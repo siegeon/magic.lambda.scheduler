@@ -59,7 +59,8 @@ wait.tasks.execute:foo-bar-task-1
 
 The above allows you to persist a _"function invocation"_ for later to execute it, once some specified condition
 occurs - Effectively giving you the most important features from Microsoft Workflow Foundation, without the
-ridiculous XML and WYSIWYG parts from MWF.
+ridiculous XML and WYSIWYG parts from MWF - In addition to that this also is a .Net Core library, contrary
+to MWF.
 
 This allows you to create and persist a function _invocation_, for then to later execute it, as some condition occurs,
 arguably giving you _"workflow capabilities"_ in your projects.
@@ -81,8 +82,8 @@ wait.tasks.create:foo-bar-task-3
       log.info:Executing foo-bar-task-3
 ```
 
-The above **[due]** argument is a date and time in the future for when you want your task to be scheduled
-for executed. After the task has been executed, it will never execute again, unless you manually execute it,
+The above **[due]** argument is a UTC date and time in the future for when you want your task to be scheduled
+for execution. After the task has been executed, it will never execute again, unless you manually execute it,
 or assign a new **[repeats]** pattern to it.
 
 **Notice** - You _cannot_ create a task with a due date being in the past, and all dates are assumed to be in
@@ -90,53 +91,18 @@ the UTC timezone.
 
 ### Repeating tasks
 
-There are 3 basic **[repeats]** patterns for the Magic Lambda Scheduler, these are as follows.
+There are 3 basic **[repeats]** patterns for the Magic Lambda Scheduler, in addition to that you can extend
+it with your own parametrized repeating `IPattern` implementation. The built in versions however, are as follows.
 
 * `x.units` - Units can be one of _"seconds"_, _"minutes"_, _"hours"_, _"days"_, _"weeks"_ or _"months"_ - And
 `x` can be any integer value.
-* `MM.dd.HH.mm.ss` - Where the entities are months, days in month, hours, minutes and seconds.
-* `ww.HH.mm.ss` - Where the entities are weekdays, hours, minutes and seconds.
+* `MM.dd.HH.mm.ss` - Where the entities are in sequence months, days in month, hour, minute and second.
+* `ww.HH.mm.ss` - Where the entities are weekdays, hour, minute and second.
 
 Notice, month, day of month, and weekdays can have double asterix (\*\*) as their values, implying _"whatever value"_.
 MM, dd and ww can also have multiple values, separated by the pipe character (|), to provide multiple values for these entities.
 
-To have a task scheduled for execution every Sunday at 10PM UTC, you could create a task such as the following.
-
-
-```
-wait.tasks.create:task-id
-   repeats:sunday.22.00.00
-   .lambda
-      log.info:Executing repeating task
-```
-
-You can create any combinations of weekdays, allowing you to supply multiple weekdays in a single
-repetition pattern. Below is an exhaustive list of all possible weekdays.
-
-* Sunday
-* Monday
-* Tuesday
-* Wednesday
-* Thursday
-* Friday
-* Saturday
-
-To evaluate a task every Saturday and Sunday for instance, you can use `saturday|sunday` as your weekday.
-Below is an example. Notice, weekdays are case insensitive.
-
-```
-wait.tasks.create:task-id
-   repeats:saturday|SUNDAY.22.00.00
-   .lambda
-      log.info:Executing repeating task
-```
-
-To understand the above repetition pattern, let's break it down into its separate components.
-
-* Weekdays ww, both _"saturday"_ and _"sunday"_, implying _both_ of these days.
-* Time HH.mm.ss equals 22:00:00
-
-#### Intervals
+### Intervals
 
 Evaluating your task every second/minute/hour can be done by using something such as the following.
 
@@ -159,7 +125,7 @@ wait.tasks.create:task-id
 
 The above task will only be evaluated every 3650 days, which becomes once every 10 years.
 
-#### Periodically scheduled tasks
+### Periodically scheduled tasks
 
 To create a task that is executed on the first day of _every_ month, at 5PM, you can use the following
 repetition pattern.
@@ -173,7 +139,30 @@ wait.tasks.create:task-id
 
 Hours must be supplied as _"military hours"_, implying from 00:00 to 23:59, where for instance 22 equals 10PM UTC time.
 
-#### Example [repeats] patterns
+### Weekdays pattern
+
+If you use the weekdays pattern, you can create any combinations of weekdays, allowing you to supply multiple
+weekdays in a single repetition pattern. Below is an exhaustive list of all possible weekdays.
+
+* Sunday
+* Monday
+* Tuesday
+* Wednesday
+* Thursday
+* Friday
+* Saturday
+
+To evaluate a task every Saturday and Sunday for instance, you can use `saturday|sunday` as your weekday.
+Below is an example. Notice, weekdays are case insensitive.
+
+```
+wait.tasks.create:task-id
+   repeats:saturday|SUNDAY.22.00.00
+   .lambda
+      log.info:Executing repeating task
+```
+
+### Example [repeats] patterns
 
 * Every Monday at 10PM UTC `monday.22.00.00`
 * Every Monday through Friday at 10AM UTC `monday|tuesday|wednesday|thursday|friday.10.00.00`
