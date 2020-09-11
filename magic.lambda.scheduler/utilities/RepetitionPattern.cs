@@ -39,7 +39,7 @@ namespace magic.lambda.scheduler.utilities
                 _entity = result.Entity;
                 _interval = result.Interval;
             }
-            else
+            else if (entities.Length == 6)
             {
                 // Every n'th type of repetition pattern.
                 var result = CreateTimeStampPattern(entities);
@@ -49,6 +49,11 @@ namespace magic.lambda.scheduler.utilities
                 _minute = result.Minute;
                 _second = result.Second;
                 _weekdays = result.Weekdays;
+            }
+            else
+            {
+                if (entities.Length != 6)
+                    throw new ArgumentException("A repetition pattern must contain 6 or 2 entities separated by '.'");
             }
         }
 
@@ -106,9 +111,6 @@ namespace magic.lambda.scheduler.utilities
         (int[] Months, int[] Days, int? Hour, int? Minute, int? Second, DayOfWeek[] Weekdays) CreateTimeStampPattern(string[] entities)
         {
             // Every n'th type of repetition pattern.
-            if (entities.Length != 6)
-                throw new ArgumentException("A repetition pattern must contain 6 or 2 entities separated by '.'");
-
             int[] months = null;
             int[] days = null;
             int? hour = null;
