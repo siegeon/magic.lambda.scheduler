@@ -142,14 +142,24 @@ wait.tasks.create:task-id
 
 Hours must be supplied as _"military hours"_, implying from 00:00 to 23:59, where for instance 22 equals 10PM UTC time.
 Also notice how we provided a double asterix (\*\*) for the month parts, implying _"any month"_. We could also have provided
-multiple days, and/or months, such as the following illustrates, that will create a task that is executed in Janury and
+multiple days, and/or months, such as the following illustrates, that will create a task that is executed in January and
 February, but only on the 5th and 15th of these months.
 
 ```
 wait.tasks.create:task-id
    repeats:01|02.5|15.05.00.00
    .lambda
-      log.info:It is the 1st of the month, any month, and the time is 5AM at night.
+      log.info:It is the 5th of 15th of January or February, and the time is 5AM at night.
+```
+
+By using the double asterix for month and day of month, you can create a task that is executed _every_ day, at
+some specific time of the day (UTC time). Below is an example.
+
+```
+wait.tasks.create:task-id
+   repeats:**.**.22.00.00
+   .lambda
+      log.info:It is the 10PM now.
 ```
 
 ### Weekdays pattern
