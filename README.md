@@ -7,10 +7,10 @@ This project provides the ability to create persisted, and/or scheduled Hyperlam
 for [Magic](https://github.com/polterguy.magic). More specifically it provides the following slots.
 
 * __[wait.tasks.create]__ - Creates a new task.
-* __[wait.tasks.execute]__ - Executes an existing task.
-* __[wait.tasks.delete]__ - Deletes a task.
 * __[wait.tasks.get]__ - Returns an existing task.
 * __[wait.tasks.list]__ - Lists all tasks.
+* __[wait.tasks.execute]__ - Executes an existing task.
+* __[wait.tasks.delete]__ - Deletes a task.
 * __[wait.scheduler.stop]__ - Stops the scheduler, implying no tasks will be executed at the scheduled time.
 * __[wait.scheduler.start]__ - Starts the scheduler.
 * __[wait.scheduler.next]__ - Returns the date and time of the next scheduled task, if any.
