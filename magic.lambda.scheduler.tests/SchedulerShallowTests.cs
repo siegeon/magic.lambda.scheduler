@@ -194,5 +194,30 @@ namespace magic.lambda.scheduler.tests
             Assert.True(next >= DateTime.UtcNow);
             Assert.True((next - DateTime.UtcNow).TotalDays >= 4 && (next - DateTime.UtcNow).TotalDays < 6);
         }
+
+        private class ExtPattern : IPattern
+        {
+            public string Value => "howdy-world";
+
+            public DateTime Next()
+            {
+                return new DateTime(2030, 11, 11, 11, 11, 11);
+            }
+        }
+
+        [Fact]
+        public void ExtensionPattern()
+        {
+            PatternFactory.AddExtensionPattern(
+                "foo",
+                str =>
+                {
+                    Assert.Equal("howdy-world", str);
+                    return new ExtPattern();
+                });
+            var pattern = PatternFactory.Create("ext:foo:howdy-world");
+            var next = pattern.Next();
+            Assert.Equal(next, new DateTime(2030, 11, 11, 11, 11, 11));
+        }
     }
 }

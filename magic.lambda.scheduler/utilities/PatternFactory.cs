@@ -5,6 +5,7 @@
 
 using System;
 using System.Linq;
+using System.Collections.Generic;
 using magic.lambda.scheduler.utilities.patterns;
 
 namespace magic.lambda.scheduler.utilities
@@ -15,6 +16,9 @@ namespace magic.lambda.scheduler.utilities
     /// </summary>
     public static class PatternFactory
     {
+        readonly static Dictionary<string, Func<string, IPattern>> _createExtensions =
+            new Dictionary<string, Func<string, IPattern>>();
+
         /// <summary>
         /// Creates a new instance of the class.
         /// </summary>
@@ -22,6 +26,14 @@ namespace magic.lambda.scheduler.utilities
         /// <returns>An instance of an IPattern.</returns>
         public static IPattern Create(string pattern)
         {
+            // Checking if this is an extension pattern.
+            if (pattern.StartsWith("ext:"))
+            {
+                var tmp = pattern.Split(':');
+                return _createExtensions[tmp[1]](string.Join(":", tmp.Skip(2)));
+            }
+
+            // Defaulting to the built in patterns.
             var entities = pattern.Split('.');
             switch(entities.Length)
             {
@@ -49,6 +61,19 @@ namespace magic.lambda.scheduler.utilities
                 default:
                     throw new ArgumentException($"'{pattern}' is not a recognized repetition pattern.");
             }
+        }
+
+        /// <summary>
+        /// Adds an extension pattern to the pattern resolver, allowing you to reference
+        /// your extension by prefixing your pattern with "ext:" and then its key,
+        /// followed by the value for your extension patter. For instance "ext:foo:57",
+        /// implying 57 being the parameter given to your extension pattern.
+        /// </summary>
+        /// <param name="key">Lookup key to resolve your extension pattern.</param>
+        /// <param name="functor">Function responsible for creating your IPattern instance.</param>
+        public static void AddExtensionPattern(string key, Func<string, IPattern> functor)
+        {
+            _createExtensions[key] = functor;
         }
     }
 }
