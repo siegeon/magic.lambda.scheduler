@@ -190,7 +190,7 @@ namespace magic.lambda.scheduler.utilities
             {
                 var id = node.GetEx<long>();
                 var lambda = CreateConnectionLambda();
-                var deleteNode = new Node($"wait.{GetDatabaseType}.delete");
+                var deleteNode = new Node($"wait.{GetDatabaseType()}.delete");
                 deleteNode.Add(new Node("table", "task_due"));
                 var whereNode = new Node("where");
                 var andNode = new Node("and");
