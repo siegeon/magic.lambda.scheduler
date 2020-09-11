@@ -185,6 +185,8 @@ wait.tasks.create:task-id
       log.info:Executing repeating task
 ```
 
+You can also provide a double asterix (\*\*) for the weekdays pattern, implying _"all days of the week"_.
+
 ### Example [repeats] patterns
 
 * Every Monday at 10PM UTC `monday.22.00.00`
