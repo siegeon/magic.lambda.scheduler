@@ -7,10 +7,10 @@
     <Authors>Thomas Hansen</Authors>
     <Company>Thomas Hansen</Company>
     <Copyright>Thomas Hansen, thomas@gaiasoul.com</Copyright>
-    <Description>Slots helper slots for Magic to allow you to dynamically create scheduled tasks.</Description>
+    <Description>Helper slots for Magic to allow you to dynamically create tasks, either as a part of your custom workflow, and/or as scheduled tasks intended to be executed at some interval, or future time.</Description>
     <PackageProjectUrl>https://github.com/polterguy/magic.lambda.scheduler</PackageProjectUrl>
     <PackOnBuild>true</PackOnBuild>
-    <PackageVersion>8.1.10</PackageVersion>
+    <PackageVersion>8.1.11</PackageVersion>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/polterguy/magic.lambda.scheduler.git</RepositoryUrl>
