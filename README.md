@@ -46,7 +46,7 @@ wait.tasks.create:foo-bar-task-2
 ```
 
 **Notice** - Your task's **[id]** argument, can only contain alpha numeric characters, 
-a-z, 0-9 - In addition to the special characters '.', '-' and '_'.
+a-z, 0-9 - In addition to the special characters `.`, `-` and `_`.
 
 ## Executing a task
 
@@ -70,8 +70,8 @@ arguably giving you _"workflow capabilities"_ in your projects.
 
 **Notice** - By creating your own `ISlot` implementation, you can easily create your own C# classes that are Magic
 Signals, allowing you to persist an invocation to your method/class - For then to later execute this method as some
-condition occurs. Refer to the [main documentation for Magic](https://github.com/polterguy/magic) to see how this
-is done.
+condition occurs. Refer to the [documentation for Magic Lambda](https://github.com/polterguy/magic.lambda) to see how this
+is done, and more specifically the _"Extending Hyperlambda"_ section.
 
 ## Scheduled tasks
 
@@ -87,7 +87,7 @@ wait.tasks.create:foo-bar-task-3
 
 The above **[due]** argument is a UTC date and time in the future for when you want your task to be scheduled
 for execution. After the task has been executed, it will never execute again, unless you manually execute it,
-or assign a new **[repeats]** pattern to it.
+or assign a **[repeats]** pattern to it by invoking the slot that schedules existing tasks.
 
 **Notice** - You _cannot_ create a task with a due date being in the past, and all dates are assumed to be in
 the UTC timezone.
@@ -99,8 +99,8 @@ it with your own parametrized repeating `IPattern` implementation. The built in 
 
 * `x.units` - Units can be one of _"seconds"_, _"minutes"_, _"hours"_, _"days"_, _"weeks"_ or _"months"_ - And
 `x` can be any integer value.
-* `MM.dd.HH.mm.ss` - Where the entities are in sequence months, days in month, hour, minute and second.
-* `ww.HH.mm.ss` - Where the entities are weekdays, hour, minute and second.
+* `[MM|MM..].[dd|dd..].HH.mm.ss` - Where the entities are in sequence months, days in month, hour, minute and second.
+* `[ww|ww..].HH.mm.ss` - Where the entities are weekdays, hour, minute and second.
 
 Notice, month, day of month, and weekdays can have double asterix (\*\*) as their values, implying _"whatever value"_.
 MM, dd and ww can also have multiple values, separated by the pipe character (|), to provide multiple values for these entities.
