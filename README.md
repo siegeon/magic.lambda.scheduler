@@ -103,7 +103,7 @@ it with your own parametrized repeating `IPattern` implementation. The built in 
 * `[ww|ww..].HH.mm.ss` - Where the entities are weekdays, hour, minute and second.
 
 Notice, month, day of month, and weekdays can have double asterix (\*\*) as their values, implying _"whatever value"_.
-MM, dd and ww can also have multiple values, separated by the pipe character (|), to provide multiple values for these entities.
+MM, dd and ww can also have multiple values, separated by the pipe character (|), to provide multiple values for these entities. See esamples of this further below in this documentation.
 
 ### Intervals
 
@@ -141,6 +141,16 @@ wait.tasks.create:task-id
 ```
 
 Hours must be supplied as _"military hours"_, implying from 00:00 to 23:59, where for instance 22 equals 10PM UTC time.
+Also notice how we provided a double asterix (\*\*) for the month parts, implying _"any month"_. We could also have provided
+multiple days, and/or months, such as the following illustrates, that will create a task that is executed in Janury and
+February, but only on the 5th and 15th of these months.
+
+```
+wait.tasks.create:task-id
+   repeats:01|02.5|15.05.00.00
+   .lambda
+      log.info:It is the 1st of the month, any month, and the time is 5AM at night.
+```
 
 ### Weekdays pattern
 
