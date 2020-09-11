@@ -182,7 +182,7 @@ Below is an example. Notice, weekdays are case insensitive.
 wait.tasks.create:task-id
    repeats:saturday|SUNDAY.22.00.00
    .lambda
-      log.info:Executing repeating task
+      log.info:It is Saturday or Sunday, and the time is 22PM.
 ```
 
 You can also provide a double asterix (\*\*) for the weekdays pattern, implying _"all days of the week"_.
