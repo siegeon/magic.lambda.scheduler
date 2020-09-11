@@ -39,19 +39,22 @@ namespace magic.lambda.scheduler.utilities.patterns
             int second)
         {
             _months = months?.ToArray();
-            _days = days.ToArray();
+            _days = days?.ToArray();
             _hour = hour;
             _minute = minute;
             _second = second;
         }
 
         /// <inheritdoc/>
-        public string Value =>
-            $"{string.Join("|", _months.Select(x => x.ToString("D2")))}." +
-            $"{string.Join("|", _days.Select(x => x.ToString("D2")))}." + 
-            $"{_hour.ToString("D2")}." +
-            $"{_minute.ToString("D2")}." +
-            $"{_second.ToString("D2")}";
+        public string Value
+        {
+            get
+            {
+                var months = _months == null ? "**" : string.Join("|", _months.Select(x => x.ToString("D2")));
+                var days = _days == null ? "**" : string.Join("|", _days.Select(x => x.ToString("D2")));
+                return $"{months}.{days}.{_hour.ToString("D2")}.{_minute.ToString("D2")}.{_second.ToString("D2")}";
+            }
+        }
 
         /// <inheritdoc/>
         public DateTime Next()
@@ -67,7 +70,8 @@ namespace magic.lambda.scheduler.utilities.patterns
             while (true)
             {
                 if (result > utcNow &&
-                    (_months == null || _months.Any(x => result.Month == x)) && _days.Any(x => result.Day == x))
+                    (_months == null || _months.Any(x => result.Month == x)) &&
+                    (_days == null || _days.Any(x => result.Day == x)))
                     return result;
                 result = result.AddDays(1);
             }

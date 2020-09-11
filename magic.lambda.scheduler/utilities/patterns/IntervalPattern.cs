@@ -19,7 +19,7 @@ namespace magic.lambda.scheduler.utilities.patterns
         /// Constructs a new instance of an interval repetition pattern.
         /// </summary>
         /// <param name="interval">How many units of the entity to allow to pass inbetween task executions.</param>
-        /// <param name="entity">Entity, such as "seconds", "minutes", "hour", etc.</param>
+        /// <param name="entity">Entity, "seconds", "minutes", "hours", "days", "weeks", or "months".</param>
         public IntervalPattern(int interval, string entity)
         {
             // Sanity checking invocation.

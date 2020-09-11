@@ -17,7 +17,7 @@ namespace magic.lambda.scheduler.tests
         {
             Assert.Throws<ArgumentException>(() =>
             {
-               new RepetitionPatternFactory("01.01.01");
+               PatternFactory.Create("01.01.01");
             });
         }
 
@@ -26,7 +26,7 @@ namespace magic.lambda.scheduler.tests
         {
             Assert.Throws<FormatException>(() =>
             {
-               new RepetitionPatternFactory("MM.dd.HH.mm.ss");
+               PatternFactory.Create("MM.dd.HH.mm.ss");
             });
         }
 
@@ -35,7 +35,7 @@ namespace magic.lambda.scheduler.tests
         {
             Assert.Throws<FormatException>(() =>
             {
-               new RepetitionPatternFactory("**.**.**.**.ss");
+               PatternFactory.Create("**.**.**.**.ss");
             });
         }
 
@@ -44,7 +44,7 @@ namespace magic.lambda.scheduler.tests
         {
             Assert.Throws<ArgumentException>(() =>
             {
-               new RepetitionPatternFactory("Monday|Wrongday.01.01.01");
+               PatternFactory.Create("Monday|Wrongday.01.01.01");
             });
         }
 
@@ -53,7 +53,7 @@ namespace magic.lambda.scheduler.tests
         {
             Assert.Throws<ArgumentException>(() =>
             {
-               new RepetitionPatternFactory("01.**.**.**.**.Monday");
+               PatternFactory.Create("01.**.**.**.**.Monday");
             });
         }
 
@@ -62,14 +62,14 @@ namespace magic.lambda.scheduler.tests
         {
             Assert.Throws<FormatException>(() =>
             {
-               new RepetitionPatternFactory("Monday.01.01.**");
+               PatternFactory.Create("Monday.01.01.**");
             });
         }
 
         [Fact]
         public void EveryMondayAtMidnight()
         {
-            var pattern = new RepetitionPatternFactory("Monday.00.00.00");
+            var pattern = PatternFactory.Create("Monday.00.00.00");
             var next = pattern.Next();
             Assert.True(next >= DateTime.UtcNow);
             Assert.Equal(DayOfWeek.Monday, next.DayOfWeek);
@@ -79,30 +79,54 @@ namespace magic.lambda.scheduler.tests
         }
 
         [Fact]
+        public void EveryDayInEveryMonth()
+        {
+            var pattern = PatternFactory.Create("**.**.23.57.10");
+            var next = pattern.Next();
+            Assert.True(next >= DateTime.UtcNow);
+            Assert.True(next <= DateTime.UtcNow.AddDays(1));
+            Assert.Equal(23, next.Hour);
+            Assert.Equal(57, next.Minute);
+            Assert.Equal(10, next.Second);
+        }
+
+        [Fact]
+        public void EveryDayInWeek()
+        {
+            var pattern = PatternFactory.Create("**.23.57.10");
+            var next = pattern.Next();
+            Assert.True(next >= DateTime.UtcNow);
+            Assert.True(next <= DateTime.UtcNow.AddDays(1));
+            Assert.Equal(23, next.Hour);
+            Assert.Equal(57, next.Minute);
+            Assert.Equal(10, next.Second);
+        }
+
+        [Fact]
         public void WeekdaysPatternToString_01()
         {
-            var pattern = new RepetitionPatternFactory("Monday.00.00.00");
-            Assert.Equal("Monday.00.00.00", pattern.Pattern);
+            var pattern = PatternFactory.Create("Monday.00.00.00");
+            Assert.Equal("Monday.00.00.00", pattern.Value);
         }
 
         [Fact]
         public void WeekdaysPatternToString_02()
         {
-            var pattern = new RepetitionPatternFactory("sunday|Monday.23.59.14");
-            Assert.Equal("Sunday|Monday.23.59.14", pattern.Pattern);
+            var pattern = PatternFactory.Create("sunday|Monday.23.59.14");
+            Assert.Equal("Sunday|Monday.23.59.14", pattern.Value);
         }
 
         [Fact]
         public void MonthPatternToString_01()
         {
-            var pattern = new RepetitionPatternFactory("05.05.00.00.00");
-            Assert.Equal("05.05.00.00.00", pattern.Pattern);
+            var pattern = PatternFactory.Create("05.05.00.00.00");
+            Assert.Equal("05.05.00.00.00", pattern.Value);
         }
 
         [Fact]
         public void EverySaturdayAndSundayAt23_57_01()
         {
-            var pattern = new RepetitionPatternFactory("Saturday|Sunday.23.57.01");
+            var pattern = PatternFactory.Create("Saturday|Sunday.23.57.01");
             var next = pattern.Next();
             Assert.True(next >= DateTime.UtcNow);
             Assert.True(next.DayOfWeek == DayOfWeek.Saturday || next.DayOfWeek == DayOfWeek.Sunday);
@@ -114,7 +138,7 @@ namespace magic.lambda.scheduler.tests
         [Fact]
         public void Every5thOfMonth()
         {
-            var pattern = new RepetitionPatternFactory("**.05.23.57.01");
+            var pattern = PatternFactory.Create("**.05.23.57.01");
             var next = pattern.Next();
             Assert.True(next >= DateTime.UtcNow);
             Assert.Equal(5, next.Day);
@@ -126,7 +150,7 @@ namespace magic.lambda.scheduler.tests
         [Fact]
         public void Every5thAnd15thOfMonth()
         {
-            var pattern = new RepetitionPatternFactory("**.05|15.23.59.59");
+            var pattern = PatternFactory.Create("**.05|15.23.59.59");
             var next = pattern.Next();
             Assert.True(next >= DateTime.UtcNow);
             if (DateTime.UtcNow.Day >= 5 && DateTime.UtcNow.Day <= 16)
@@ -141,7 +165,7 @@ namespace magic.lambda.scheduler.tests
         [Fact]
         public void EveryJanuaryAndJuly()
         {
-            var pattern = new RepetitionPatternFactory("01|07.01.00.00.00");
+            var pattern = PatternFactory.Create("01|07.01.00.00.00");
             var next = pattern.Next();
             Assert.True(next >= DateTime.UtcNow);
             if (DateTime.UtcNow.Month >= 1 && DateTime.UtcNow.Month <= 7)
@@ -156,7 +180,7 @@ namespace magic.lambda.scheduler.tests
         [Fact]
         public void Every5Seconds()
         {
-            var pattern = new RepetitionPatternFactory("5.seconds");
+            var pattern = PatternFactory.Create("5.seconds");
             var next = pattern.Next();
             Assert.True(next >= DateTime.UtcNow);
             Assert.True((next - DateTime.UtcNow).TotalSeconds >= 4 && (next - DateTime.UtcNow).TotalSeconds < 6);
@@ -165,7 +189,7 @@ namespace magic.lambda.scheduler.tests
         [Fact]
         public void Every5Days()
         {
-            var pattern = new RepetitionPatternFactory("5.days");
+            var pattern = PatternFactory.Create("5.days");
             var next = pattern.Next();
             Assert.True(next >= DateTime.UtcNow);
             Assert.True((next - DateTime.UtcNow).TotalDays >= 4 && (next - DateTime.UtcNow).TotalDays < 6);

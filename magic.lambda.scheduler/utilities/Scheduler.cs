@@ -435,8 +435,8 @@ namespace magic.lambda.scheduler.utilities
             if (repNode != null)
             {
                 // Repetition repeats.
-                var rep = new RepetitionPatternFactory(repNode.GetEx<string>());
-                repeats = rep.Pattern;
+                var rep = PatternFactory.Create(repNode.GetEx<string>());
+                repeats = rep.Value;
 
                 // Finding next due date from [repeats].
                 due = rep.Next();
@@ -470,7 +470,7 @@ namespace magic.lambda.scheduler.utilities
             andNode.Add(new Node("id", taskDueId));
             whereNode.Add(andNode);
             var valuesNode = new Node("values");
-            valuesNode.Add(new Node("due", new RepetitionPatternFactory(repeats).Next()));
+            valuesNode.Add(new Node("due", PatternFactory.Create(repeats).Next()));
             updateNode.Add(valuesNode);
             updateNode.Add(whereNode);
             return updateNode;

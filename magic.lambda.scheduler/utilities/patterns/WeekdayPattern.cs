@@ -42,11 +42,14 @@ namespace magic.lambda.scheduler.utilities.patterns
         }
 
         /// <inheritdoc/>
-        public string Value =>
-            $"{string.Join("|", _weekdays.Select(x => x.ToString()))}." +
-            $"{_hour.ToString("D2")}." +
-            $"{_minute.ToString("D2")}." +
-            $"{_second.ToString("D2")}";
+        public string Value
+        {
+            get
+            {
+                var weekdays = _weekdays == null ? "**" : string.Join("|", _weekdays.Select(x => x.ToString()));
+                return $"{weekdays}.{_hour.ToString("D2")}.{_minute.ToString("D2")}.{_second.ToString("D2")}";
+            }
+        }
 
         /// <inheritdoc/>
         public DateTime Next()
