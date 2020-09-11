@@ -4,75 +4,54 @@
  * See the enclosed LICENSE file for details.
  */
 
+using System;
 using Xunit;
 using magic.lambda.scheduler.utilities;
-using System;
 
 namespace magic.lambda.scheduler.tests
 {
-    public class SchedulerShallowTests
+    public class RepetitionPatternTests
     {
         [Fact]
         public void InvalidRepetitionPattern_01()
         {
-            Assert.Throws<ArgumentException>(() =>
-            {
-               PatternFactory.Create("01.01.01");
-            });
+            Assert.Throws<ArgumentException>(() => PatternFactory.Create("01.01.01"));
         }
 
         [Fact]
         public void InvalidRepetitionPattern_02()
         {
-            Assert.Throws<FormatException>(() =>
-            {
-               PatternFactory.Create("MM.dd.HH.mm.ss");
-            });
+            Assert.Throws<FormatException>(() => PatternFactory.Create("MM.dd.HH.mm.ss"));
         }
 
         [Fact]
         public void InvalidRepetitionPattern_03()
         {
-            Assert.Throws<FormatException>(() =>
-            {
-               PatternFactory.Create("**.**.**.**.ss");
-            });
+            Assert.Throws<FormatException>(() => PatternFactory.Create("**.**.**.**.ss"));
         }
 
         [Fact]
         public void InvalidRepetitionPattern_04()
         {
-            Assert.Throws<ArgumentException>(() =>
-            {
-               PatternFactory.Create("Monday|Wrongday.01.01.01");
-            });
+            Assert.Throws<ArgumentException>(() => PatternFactory.Create("Monday|Wrongday.01.01.01"));
         }
 
         [Fact]
         public void InvalidRepetitionPattern_05()
         {
-            Assert.Throws<ArgumentException>(() =>
-            {
-               PatternFactory.Create("01.**.**.**.**.Monday");
-            });
+            Assert.Throws<ArgumentException>(() => PatternFactory.Create("01.**.**.**.**.Monday"));
         }
 
         [Fact]
         public void InvalidRepetitionPattern_07()
         {
-            Assert.Throws<FormatException>(() =>
-            {
-               PatternFactory.Create("Monday.01.01.**");
-            });
+            Assert.Throws<FormatException>(() => PatternFactory.Create("Monday.01.01.**"));
         }
 
         [Fact]
         public void InvalidRepetitionPattern_08()
         {
-            Assert.Throws<ArgumentException>(() =>
-            {
-               PatternFactory.Create("5.years");
-            });
+            Assert.Throws<ArgumentException>(() => PatternFactory.Create("5.years"));
         }
 
         [Fact]

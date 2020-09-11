@@ -326,12 +326,12 @@ namespace magic.lambda.scheduler.utilities
 
         string GetDatabaseType()
         {
-            return _configuration.GetSection("magic:databases:default").Value;
+            return _configuration?.GetSection("magic:databases:default")?.Value ?? "magic";
         }
 
         string GetDatabaseName()
         {
-            return _configuration.GetSection("magic:tasks:database").Value;
+            return _configuration?.GetSection("magic:tasks:database")?.Value ?? "mysql";
         }
 
         ISignaler GetSignaler()
