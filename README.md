@@ -187,19 +187,7 @@ wait.tasks.create:task-id
 
 You can also provide a double asterix (\*\*) for the weekdays pattern, implying _"all days of the week"_.
 
-### Example [repeats] patterns
-
-* Every Monday at 10PM UTC `monday.22.00.00`
-* Every Monday through Friday at 10AM UTC `monday|tuesday|wednesday|thursday|friday.10.00.00`
-* Every 1st of every month at 5AM UTC `**.01.05.00.00`
-* Every January the 5th at midnight `01.05.00.00.00`
-* Every January and July the 15th at midnight `01|07.15.00.00.00`
-
-In addition, each task can have multiple (infinite) number of schedules, allowing you to create any amount of
-complexity you wish for when to repeat a task. If a task is not successfully executed during its due date, a
-log entry will be created, supplying the exception, and the ID of your task. The log entry will be of type _"error"_.
-
-#### Internals
+### Internals
 
 A background thread will be used for executing scheduled tasks, and only _one_ background thread - Which implies
 that no tasks will ever be executing in parallel, to avoid thread starvation, due to logical errors in your schedules.
