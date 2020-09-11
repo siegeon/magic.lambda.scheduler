@@ -67,6 +67,15 @@ namespace magic.lambda.scheduler.tests
         }
 
         [Fact]
+        public void InvalidRepetitionPattern_08()
+        {
+            Assert.Throws<ArgumentException>(() =>
+            {
+               PatternFactory.Create("5.years");
+            });
+        }
+
+        [Fact]
         public void EveryMondayAtMidnight()
         {
             var pattern = PatternFactory.Create("Monday.00.00.00");
@@ -117,10 +126,24 @@ namespace magic.lambda.scheduler.tests
         }
 
         [Fact]
+        public void WeekdaysPatternToString_03()
+        {
+            var pattern = PatternFactory.Create("**.00.00.00");
+            Assert.Equal("**.00.00.00", pattern.Value);
+        }
+
+        [Fact]
         public void MonthPatternToString_01()
         {
             var pattern = PatternFactory.Create("05.05.00.00.00");
             Assert.Equal("05.05.00.00.00", pattern.Value);
+        }
+
+        [Fact]
+        public void MonthPatternToString_02()
+        {
+            var pattern = PatternFactory.Create("**.**.00.00.00");
+            Assert.Equal("**.**.00.00.00", pattern.Value);
         }
 
         [Fact]
@@ -187,12 +210,50 @@ namespace magic.lambda.scheduler.tests
         }
 
         [Fact]
+        public void Every5Minutes()
+        {
+            var pattern = PatternFactory.Create("5.minutes");
+            var next = pattern.Next();
+            Assert.True(next >= DateTime.UtcNow);
+            Assert.True((next - DateTime.UtcNow).TotalMinutes >= 4 && (next - DateTime.UtcNow).TotalMinutes < 6);
+        }
+
+        [Fact]
+        public void Every5Hours()
+        {
+            var pattern = PatternFactory.Create("5.hours");
+            var next = pattern.Next();
+            Assert.True(next >= DateTime.UtcNow);
+            Assert.True((next - DateTime.UtcNow).TotalHours >= 4 && (next - DateTime.UtcNow).TotalHours < 6);
+        }
+
+        [Fact]
         public void Every5Days()
         {
             var pattern = PatternFactory.Create("5.days");
             var next = pattern.Next();
             Assert.True(next >= DateTime.UtcNow);
+            Assert.Equal("5.days", pattern.Value);
             Assert.True((next - DateTime.UtcNow).TotalDays >= 4 && (next - DateTime.UtcNow).TotalDays < 6);
+        }
+
+        [Fact]
+        public void Every5Weeks()
+        {
+            var pattern = PatternFactory.Create("5.weeks");
+            var next = pattern.Next();
+            Assert.True(next >= DateTime.UtcNow);
+            Assert.True((next - DateTime.UtcNow).TotalDays / 7 >= 4 && (next - DateTime.UtcNow).TotalDays / 7 < 6);
+        }
+
+        [Fact]
+        public void Every5Months()
+        {
+            var pattern = PatternFactory.Create("5.months");
+            var next = pattern.Next();
+            Assert.True(next >= DateTime.UtcNow);
+            Assert.Equal("5.months", pattern.Value);
+            Assert.True((next - DateTime.UtcNow).TotalDays / 30 >= 4 && (next - DateTime.UtcNow).TotalDays / 30 < 6);
         }
 
         private class ExtPattern : IPattern
@@ -206,7 +267,7 @@ namespace magic.lambda.scheduler.tests
         }
 
         [Fact]
-        public void ExtensionPattern()
+        public void ExtensionPattern_01()
         {
             PatternFactory.AddExtensionPattern(
                 "foo",
@@ -216,6 +277,21 @@ namespace magic.lambda.scheduler.tests
                     return new ExtPattern();
                 });
             var pattern = PatternFactory.Create("ext:foo:howdy-world");
+            var next = pattern.Next();
+            Assert.Equal(next, new DateTime(2030, 11, 11, 11, 11, 11));
+        }
+
+        [Fact]
+        public void ExtensionPattern_02()
+        {
+            PatternFactory.AddExtensionPattern(
+                "foo",
+                str =>
+                {
+                    Assert.Equal("howdy-world:foo", str);
+                    return new ExtPattern();
+                });
+            var pattern = PatternFactory.Create("ext:foo:howdy-world:foo");
             var next = pattern.Next();
             Assert.Equal(next, new DateTime(2030, 11, 11, 11, 11, 11));
         }
