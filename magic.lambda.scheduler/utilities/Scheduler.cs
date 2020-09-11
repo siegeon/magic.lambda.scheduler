@@ -19,17 +19,6 @@ namespace magic.lambda.scheduler.utilities
     /// <inheritdoc />
     public sealed class Scheduler : IScheduler
     {
-        class NextTaskHelper
-        {
-            public DateTime Due { get; set; }
-
-            public long TaskDueId { get; set; }
-
-            public string Repeats { get; set; }
-
-            public string TaskId { get; set; }
-        }
-
         readonly IServiceProvider _services;
         readonly ILogger _logger;
         readonly IConfiguration _configuration;
@@ -552,7 +541,7 @@ namespace magic.lambda.scheduler.utilities
             return id;
         }
 
-        async Task<NextTaskHelper> GetNextTask()
+        async Task<(DateTime Due, long TaskDueId, string Repeats, string TaskId)?> GetNextTask()
         {
             // Retrieving next upcoming task.
             var lambda = CreateConnectionLambda();
@@ -564,13 +553,11 @@ namespace magic.lambda.scheduler.utilities
                 return null;
 
             // Figuring out next date.
-            return new NextTaskHelper
-            {
-                Due = lambda.Children.First().Children.First().Children.First(x => x.Name == "due").Get<DateTime>(),
-                TaskDueId = lambda.Children.First().Children.First().Children.First(x => x.Name == "id").Get<long>(),
-                Repeats = lambda.Children.First().Children.First().Children.First(x => x.Name == "repeats").Get<string>(),
-                TaskId = lambda.Children.First().Children.First().Children.First(x => x.Name == "task").Get<string>()
-            };
+            return (
+                lambda.Children.First().Children.First().Children.First(x => x.Name == "due").Get<DateTime>(),
+                lambda.Children.First().Children.First().Children.First(x => x.Name == "id").Get<long>(),
+                lambda.Children.First().Children.First().Children.First(x => x.Name == "repeats").Get<string>(),
+                lambda.Children.First().Children.First().Children.First(x => x.Name == "task").Get<string>());
         }
 
         async Task<bool> ResetTimer()
@@ -583,7 +570,7 @@ namespace magic.lambda.scheduler.utilities
                 _timer = null;
                 return false;
             }
-            CreateTimerImplementation(date.Due);
+            CreateTimerImplementation(date.Value.Due);
             return true;
         }
 
@@ -620,7 +607,7 @@ namespace magic.lambda.scheduler.utilities
             if (taskDue == null)
                 return; // No more due tasks.
 
-            if (taskDue.Due.AddMilliseconds(250) >= DateTime.UtcNow)
+            if (taskDue.Value.Due.AddMilliseconds(250) >= DateTime.UtcNow)
             {
                 // It is not yet time to execute this task.
                 // Notice, if upcoming task was deleted before timer kicks in, this might be true.
@@ -629,7 +616,7 @@ namespace magic.lambda.scheduler.utilities
             }
 
             // Retrieving task's Hyperlambda.
-            var hyperlambda = await GetTaskHyperlambda(taskDue.TaskId);
+            var hyperlambda = await GetTaskHyperlambda(taskDue.Value.TaskId);
 
             // Converting Hyperlambda to lambda and executing task.
             var exeNode = new Node("", hyperlambda);
@@ -641,22 +628,22 @@ namespace magic.lambda.scheduler.utilities
             }
             catch (Exception error)
             {
-                _logger?.Error($"Unhandled exception while executing scheduled task with id of '{taskDue.TaskId}'", error);
+                _logger?.Error($"Unhandled exception while executing scheduled task with id of '{taskDue.Value.TaskId}'", error);
             }
 
             // Checking if task repeats, and if so, we update its due date.
-            if (taskDue.Repeats == null)
+            if (taskDue.Value.Repeats == null)
             {
                 // Task does not repeat, hence deleting its due date.
                 var deleteLambda = CreateConnectionLambda();
-                deleteLambda.Add(CreateDeleteDueLambda(taskDue.TaskDueId));
+                deleteLambda.Add(CreateDeleteDueLambda(taskDue.Value.TaskDueId));
                 await GetSignaler().SignalAsync("wait.eval", new Node("", null, new Node[] { deleteLambda }));
             }
             else
             {
                 // Task repeats, hence updating its due date.
                 var updateLambda = CreateConnectionLambda();
-                updateLambda.Add(CreateUpdateDueDateLambda(taskDue.TaskDueId, taskDue.Repeats));
+                updateLambda.Add(CreateUpdateDueDateLambda(taskDue.Value.TaskDueId, taskDue.Value.Repeats));
                 await GetSignaler().SignalAsync("wait.eval", new Node("", null, new Node[] { updateLambda }));
             }
 
