@@ -45,6 +45,9 @@ wait.tasks.create:foo-bar-task-2
       log.info:Executing foo-bar-task-2
 ```
 
+**Notice** - Your task's **[id]** argument, can only contain alpha numeric characters, 
+a-z, 0-9 - In addition to the special characters '.', '-' and '_'.
+
 ## Executing a task
 
 You can explicitly execute a persisted task at will by invoking **[wait.tasks.execute]**, and passing
