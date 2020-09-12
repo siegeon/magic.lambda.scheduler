@@ -58,9 +58,9 @@ first.
 wait.tasks.execute:foo-bar-task-1
 ```
 
-**Notice** - This slot does not synchronize access to your tasks, such as when executing a scheduled task
-does. This allows you to have multiple tasks executed simultaneously, contrary to a scheduled task which
-will never be executed simultaneously as another scheduled task is executing.
+**Notice** - This slot does _not_ synchronize access to your tasks, such as when executing a scheduled task
+at its scheduled date does. This allows you to have multiple tasks executed simultaneously, contrary to a
+scheduled task which will never be executed simultaneously as another scheduled task is executing.
 
 ## Workflows and the Magic Task Scheduler
 
