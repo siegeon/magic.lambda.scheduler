@@ -58,6 +58,10 @@ first.
 wait.tasks.execute:foo-bar-task-1
 ```
 
+**Notice** - This slot does not synchronize access to your tasks, such as when executing a scheduled task
+does. This allows you to have multiple tasks executed simultaneously, contrary to a scheduled task which
+will never be executed simultaneously as another scheduled task is executing.
+
 ## Workflows and the Magic Task Scheduler
 
 The above allows you to persist a _"function invocation"_ for later to execute it, once some specified condition
@@ -100,15 +104,16 @@ are as follows.
 
 * `x.units` - Units can be one of _"seconds"_, _"minutes"_, _"hours"_, _"days"_, _"weeks"_ or _"months"_ - And
 `x` can be any integer value.
-* `MM.dd.HH.mm.ss` - Where the entities are in sequence months, days in month, hour, minute and second.
+* `MM.dd.HH.mm.ss` - Where the entities are in sequence months, days in months, hour, minute and second.
 * `ww.HH.mm.ss` - Where the entities are weekdays, hour, minute and second.
 
-Notice, months, days in months, and weekdays can have double asterix (\*\*) as their values, implying _"whatever value"_.
-MM, dd and ww can also have multiple values, separated by the pipe character (|), to provide multiple values for these entities. See examples of this further below in this documentation.
+Notice, MM, dd, and ww can have double asterix (\*\*) as their values, implying _"whatever value"_.
+MM, dd and ww can also have multiple values, separated by the pipe character (|), to provide multiple values
+for these types. See examples of this further below in this documentation.
 
 ### Intervals
 
-Evaluating your task every second/minute/hour can be done by using something such as the following.
+Evaluating your task every second/minute/hour/etc can be done by using something such as the following.
 
 ```
 wait.tasks.create:task-id
@@ -151,14 +156,14 @@ wait.tasks.create:task-id
 
 Hours must be supplied as _"military hours"_, implying from 00:00 to 23:59, where for instance 22 equals 10PM UTC time.
 Also notice how we provided a double asterix (\*\*) for the month parts, implying _"any month"_. We could also have provided
-multiple days, and/or months, such as the following illustrates, that will create a task that is executed in January and
-February, but only on the 5th and 15th of these months.
+multiple days, and/or months, such as the following illustrates. The Hyperlambda below will create a task that is executed
+in January and February, but only on the 5th and 15th of these months.
 
 ```
 wait.tasks.create:task-id
    repeats:01|02.5|15.05.00.00
    .lambda
-      log.info:It is the 5th of 15th of January or February, and the time is 5AM at night.
+      log.info:It is the 5th or the 15th of January or February, and the time is 5AM at night.
 ```
 
 By using the double asterix for month and day of month, you can create a task that is executed _every_ day, at
@@ -176,13 +181,13 @@ wait.tasks.create:task-id
 If you use the weekdays pattern, you can create any combinations of weekdays, allowing you to supply multiple
 weekdays in a single repetition pattern. Below is an exhaustive list of all possible weekdays.
 
-* Sunday
 * Monday
 * Tuesday
 * Wednesday
 * Thursday
 * Friday
 * Saturday
+* Sunday
 
 To evaluate a task every Saturday and Sunday for instance, you can use `saturday|sunday` as your weekday.
 Below is an example. Notice, weekdays are case insensitive.
@@ -206,7 +211,7 @@ as the thread is waiting for IO data, from socket connections, etc - Assuming yo
 When a repeating task has finished executed, the next due date for the task's execution will be calculated using
 its interval pattern - Implying that if you use a 5 second pattern, the schedule for its next execution, will be
 calculated 5 seconds from when the task _finished_ executing, which might not necessarily imply that your tasks
-are executed exactly every 5 seconds, depending upon how much CPU time your task requires to execute. The interval
+are executed exactly every 5 seconds, depending upon how much time your task requires to execute. The interval
 pattern declares how many units to count to before executing the task again, from when the task _finished_ executing.
 
 ## Deleting a task
@@ -228,8 +233,8 @@ To inspect a task you can use the following.
 wait.tasks.get:task-id
 ```
 
-Besides from the task ID, the get task signal doesn't take any arguments. Using this signal, will return the
-task's due date(s) in addition to the actualy task.
+Besides from the task ID, the get task slot doesn't take any arguments. Using this signal, will return the
+task's due date(s) in addition to the task itself.
 
 ## Listing tasks
 

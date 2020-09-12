@@ -278,25 +278,12 @@ namespace magic.lambda.scheduler.utilities
         /// <inheritdoc />
         public async Task ExecuteTask(string taskId)
         {
-            await _locker.WaitAsync();
-            try
-            {
-                var task = await GetTask(taskId);
-                var hyperlambda = task.Children.First(x => x.Name == "hyperlambda").Get<string>();
-                var lambda = new Node("", hyperlambda);
-                GetSignaler().Signal("hyper2lambda", lambda);
-                lambda.Value = null;
-                await GetSignaler().SignalAsync("wait.eval", lambda);
-                await _logger?.InfoAsync($"Task with id of '{taskId}' was executed successfully");
-            }
-            catch (Exception error)
-            {
-                _logger?.Error($"Task with id of '{taskId}' failed", error);
-            }
-            finally
-            {
-                _locker.Release();
-            }
+            var task = await GetTask(taskId);
+            var hyperlambda = task.Children.First(x => x.Name == "hyperlambda").Get<string>();
+            var lambda = new Node("", hyperlambda);
+            GetSignaler().Signal("hyper2lambda", lambda);
+            lambda.Value = null;
+            await GetSignaler().SignalAsync("wait.eval", lambda);
         }
 
         /// <inheritdoc />
