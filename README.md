@@ -60,9 +60,9 @@ wait.tasks.execute:foo-bar-task-1
 
 **Notice** - This slot does _not_ synchronize access to your tasks, such as when executing a scheduled task
 at its scheduled date does. This allows you to have multiple tasks executed simultaneously, contrary to a
-scheduled task which will never be executed simultaneously as another scheduled task is executing.
+scheduled task that will never be executed simultaneously as another scheduled task is executing.
 
-## Workflows and the Magic Task Scheduler
+## Workflows and Magic Tasks
 
 The above allows you to persist a _"function invocation"_ for later to execute it, once some specified condition
 occurs - Effectively giving you the most important features from Microsoft Workflow Foundation, without the
