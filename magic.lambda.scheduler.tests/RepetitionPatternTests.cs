@@ -237,7 +237,13 @@ namespace magic.lambda.scheduler.tests
 
         private class ExtPattern : IPattern
         {
-            public string Value => "howdy-world";
+            readonly string _args;
+            public string Value => "ext:foo:" + _args;
+
+            public ExtPattern(string args)
+            {
+                _args = args ?? throw new ArgumentNullException(nameof(args));
+            }
 
             public DateTime Next()
             {
@@ -253,7 +259,7 @@ namespace magic.lambda.scheduler.tests
                 str =>
                 {
                     Assert.Equal("howdy-world", str);
-                    return new ExtPattern();
+                    return new ExtPattern(str);
                 });
             var pattern = PatternFactory.Create("ext:foo:howdy-world");
             var next = pattern.Next();
@@ -268,11 +274,12 @@ namespace magic.lambda.scheduler.tests
                 str =>
                 {
                     Assert.Equal("howdy-world:foo", str);
-                    return new ExtPattern();
+                    return new ExtPattern(str);
                 });
             var pattern = PatternFactory.Create("ext:foo:howdy-world:foo");
             var next = pattern.Next();
             Assert.Equal(next, new DateTime(2030, 11, 11, 11, 11, 11));
+            Assert.Equal("ext:foo:howdy-world:foo", pattern.Value);
         }
     }
 }

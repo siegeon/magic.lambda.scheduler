@@ -11,8 +11,8 @@ for [Magic](https://github.com/polterguy.magic). More specifically it provides t
 * __[wait.tasks.list]__ - Lists all tasks.
 * __[wait.tasks.execute]__ - Executes an existing task.
 * __[wait.tasks.delete]__ - Deletes a task.
-* __[wait.scheduler.stop]__ - Stops the scheduler, implying no tasks will be executed at the scheduled time.
-* __[wait.scheduler.start]__ - Starts the scheduler.
+* __[wait.scheduler.stop]__ - Stops the scheduler, implying no tasks will be executed at their scheduled time.
+* __[wait.scheduler.start]__ - Starts the scheduler, if there are any upcoming scheduled tasks.
 * __[wait.scheduler.next]__ - Returns the date and time of the next scheduled task, if any.
 * __[scheduler.running]__ - Returns true if the scheduler is running.
 
