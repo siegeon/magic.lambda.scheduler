@@ -264,6 +264,7 @@ namespace magic.lambda.scheduler.tests
             var pattern = PatternFactory.Create("ext:foo:howdy-world");
             var next = pattern.Next();
             Assert.Equal(next, new DateTime(2030, 11, 11, 11, 11, 11));
+            Assert.Equal("ext:foo:howdy-world", pattern.Value);
         }
 
         [Fact]
