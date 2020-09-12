@@ -201,6 +201,69 @@ wait.tasks.create:task-id
 
 You can also provide a double asterix (\*\*) for the weekdays pattern, implying _"all days of the week"_.
 
+### Creating your own repetition patter
+
+In addition to the above 3 types of repetition patterns, you can also create your own repetition pattern type,
+by implementing the `IPattern` interface on one of your own types, and registering your type create function
+by using the `PatternFactory.AddExtensionPattern` method. If you do, you'll have to reference your repetition
+pattern type using _"ext:"_, combined with its resolver key. Implying if you register your `IPattern` type such
+that it resolves using for instance _"my-pattern"_ as its key, you'll have to use _"ext:my-pattern:args"
+to reference it later, as you wish to create an instance of your custom pattern type. The _"args"_ part
+are any arguments supplied to your pattern during creation. Below is an example that creates a custom
+repetition pattern.
+
+```csharp
+private class ExtPattern : IPattern
+{
+    readonly string _args;
+    public string Value => "ext:custom-pattern:" + _args;
+
+    public ExtPattern(string args)
+    {
+        _args = args;
+    }
+
+    public DateTime Next()
+    {
+        return new DateTime(2030, 11, 11, 11, 11, 57);
+    }
+}
+```
+
+Of course, the above `IPattern` will statically resolve to the 11th of November 2030, at 23:11:57. But
+the idea is that the `args` supplied during creation, can be used to parametrize your pattern, and
+calculate the next due date for your schedule.
+
+After you have declared your custom `IPattern` type, you'll need to inform the `PatternFactory` class
+that you want to use the above class, and resolve it using some specific key from your schedules.
+This is accomplished using something resembling the following code.
+
+```csharp
+PatternFactory.AddExtensionPattern(
+    "custom-type",
+    str =>
+    {
+        return new ExtPattern(str);
+    });
+```
+
+The above code will ensure that every time you use _"custom-type"_ as a repetition pattern type,
+the create function above will be invoked, allowing you to create and decorate an instance of your
+custom `IPattern` type.
+
+To use the above pattern in your own code, you can use something such as the following.
+
+```
+wait.tasks.create:custom-repetition-pattern
+   repeats:"ext:custom-pattern:some-arguments-here"
+   .lambda
+      log.info:Executing custom-repetition-pattern
+```
+
+In the above **[repeat]** argument, the `ext` parts informs the scheduler that you want to use a
+custom repetition pattern, the `custom-pattern` parts resolves to your `IPattern` create function,
+and the _"some-arguments-here"_ parts will be passed into your above `ExtPattern` constructor.
+
 ### Internals
 
 A background thread will be used for executing scheduled tasks, and only _one_ background thread - Which implies
