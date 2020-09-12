@@ -95,15 +95,16 @@ the UTC timezone.
 ### Repeating tasks
 
 There are 3 basic **[repeats]** patterns for the Magic Lambda Scheduler, in addition to that you can extend
-it with your own parametrized repeating `IPattern` implementation. The built in versions however, are as follows.
+it with your own parametrized repeating `IPattern` implementation. The built in repetition patterns,
+are as follows.
 
 * `x.units` - Units can be one of _"seconds"_, _"minutes"_, _"hours"_, _"days"_, _"weeks"_ or _"months"_ - And
 `x` can be any integer value.
 * `[MM|MM..].[dd|dd..].HH.mm.ss` - Where the entities are in sequence months, days in month, hour, minute and second.
 * `[ww|ww..].HH.mm.ss` - Where the entities are weekdays, hour, minute and second.
 
-Notice, month, day of month, and weekdays can have double asterix (\*\*) as their values, implying _"whatever value"_.
-MM, dd and ww can also have multiple values, separated by the pipe character (|), to provide multiple values for these entities. See esamples of this further below in this documentation.
+Notice, months, days in months, and weekdays can have double asterix (\*\*) as their values, implying _"whatever value"_.
+MM, dd and ww can also have multiple values, separated by the pipe character (|), to provide multiple values for these entities. See examples of this further below in this documentation.
 
 ### Intervals
 
@@ -126,7 +127,15 @@ wait.tasks.create:task-id
       log.info:Executing seldomly repeating task once every 10 year
 ```
 
-The above task will only be evaluated every 3650 days, which becomes once every 10 years.
+The above task will only be evaluated every 3650 days, which becomes once every 10 years. Below is a list of
+all valid units types.
+
+* seconds
+* minutes
+* hours
+* days
+* weeks
+* months
 
 ### Periodically scheduled tasks
 
