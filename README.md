@@ -100,8 +100,8 @@ are as follows.
 
 * `x.units` - Units can be one of _"seconds"_, _"minutes"_, _"hours"_, _"days"_, _"weeks"_ or _"months"_ - And
 `x` can be any integer value.
-* `[MM|MM..].[dd|dd..].HH.mm.ss` - Where the entities are in sequence months, days in month, hour, minute and second.
-* `[ww|ww..].HH.mm.ss` - Where the entities are weekdays, hour, minute and second.
+* `MM.dd.HH.mm.ss` - Where the entities are in sequence months, days in month, hour, minute and second.
+* `ww.HH.mm.ss` - Where the entities are weekdays, hour, minute and second.
 
 Notice, months, days in months, and weekdays can have double asterix (\*\*) as their values, implying _"whatever value"_.
 MM, dd and ww can also have multiple values, separated by the pipe character (|), to provide multiple values for these entities. See examples of this further below in this documentation.
