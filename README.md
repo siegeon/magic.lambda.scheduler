@@ -249,7 +249,8 @@ PatternFactory.AddExtensionPattern(
 
 The above code will ensure that every time you use _"custom-type"_ as a repetition pattern type,
 the create function above will be invoked, allowing you to create and decorate an instance of your
-custom `IPattern` type.
+custom `IPattern` type. The `str` argument to your above create function, will be everything
+after the `ext:custom-type:` parts, when creating an instance of your pattern.
 
 To use the above pattern in your own code, you can use something such as the following.
 
