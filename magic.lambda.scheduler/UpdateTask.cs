@@ -11,9 +11,9 @@ using magic.lambda.scheduler.utilities;
 namespace magic.lambda.scheduler
 {
     /// <summary>
-    /// [wait.tasks.update] slot that will update an existing task.
+    /// [tasks.update] slot that will update an existing task.
     /// </summary>
-    [Slot(Name = "wait.tasks.update")]
+    [Slot(Name = "tasks.update")]
     public class UpdateTask : ISlotAsync
     {
         readonly IScheduler _scheduler;

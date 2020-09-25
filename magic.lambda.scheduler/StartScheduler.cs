@@ -11,9 +11,9 @@ using magic.lambda.scheduler.utilities;
 namespace magic.lambda.scheduler
 {
     /// <summary>
-    /// [wait.scheduler.start] slot that will start the task scheduler.
+    /// [scheduler.start] slot that will start the task scheduler.
     /// </summary>
-    [Slot(Name = "wait.scheduler.start")]
+    [Slot(Name = "scheduler.start")]
     public class StartScheduler : ISlotAsync
     {
         readonly IScheduler _scheduler;

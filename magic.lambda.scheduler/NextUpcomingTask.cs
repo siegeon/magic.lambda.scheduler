@@ -11,9 +11,9 @@ using magic.lambda.scheduler.utilities;
 namespace magic.lambda.scheduler
 {
     /// <summary>
-    /// [wait.scheduler.next] slot that will return the date for the next upcoming task.
+    /// [scheduler.next] slot that will return the date for the next upcoming task.
     /// </summary>
-    [Slot(Name = "wait.scheduler.next")]
+    [Slot(Name = "scheduler.next")]
     public class NextUpcomingTask : ISlotAsync
     {
         readonly IScheduler _scheduler;

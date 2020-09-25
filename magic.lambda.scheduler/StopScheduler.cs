@@ -11,9 +11,9 @@ using magic.lambda.scheduler.utilities;
 namespace magic.lambda.scheduler
 {
     /// <summary>
-    /// [wait.scheduler.stop] slot that will stop the task scheduler.
+    /// [scheduler.stop] slot that will stop the task scheduler.
     /// </summary>
-    [Slot(Name = "wait.scheduler.stop")]
+    [Slot(Name = "scheduler.stop")]
     public class StopScheduler : ISlotAsync
     {
         readonly IScheduler _scheduler;

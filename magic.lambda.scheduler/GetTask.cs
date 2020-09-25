@@ -13,10 +13,10 @@ using magic.lambda.scheduler.utilities;
 namespace magic.lambda.scheduler
 {
     /// <summary>
-    /// [wait.tasks.get] slot that will return an existing task with the specified name,
+    /// [tasks.get] slot that will return an existing task with the specified name,
     /// including its next due date.
     /// </summary>
-    [Slot(Name = "wait.tasks.get")]
+    [Slot(Name = "tasks.get")]
     public class GetTask : ISlotAsync
     {
         readonly IScheduler _scheduler;

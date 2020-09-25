@@ -10,7 +10,7 @@ using magic.lambda.scheduler.utilities;
 namespace magic.lambda.scheduler
 {
     /// <summary>
-    /// [wait.scheduler.running] slot that will return boolean true if scheduler
+    /// [scheduler.running] slot that will return boolean true if scheduler
     /// is running.
     /// </summary>
     [Slot(Name = "scheduler.running")]

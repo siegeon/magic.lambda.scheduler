@@ -12,9 +12,9 @@ using magic.lambda.scheduler.utilities;
 namespace magic.lambda.scheduler
 {
     /// <summary>
-    /// [wait.task.execute] slot that will return the date for the next upcoming task.
+    /// [task.execute] slot that will return the date for the next upcoming task.
     /// </summary>
-    [Slot(Name = "wait.tasks.execute")]
+    [Slot(Name = "tasks.execute")]
     public class ExecuteTask : ISlotAsync
     {
         readonly IScheduler _scheduler;

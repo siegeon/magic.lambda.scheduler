@@ -11,10 +11,10 @@ using magic.lambda.scheduler.utilities;
 namespace magic.lambda.scheduler
 {
     /// <summary>
-    /// [wait.tasks.schedule] slot that will schedule an existing task for being executed, either
+    /// [tasks.schedule] slot that will schedule an existing task for being executed, either
     /// according to some [repeats], or at a specific [due] date in the future.
     /// </summary>
-    [Slot(Name = "wait.tasks.schedule")]
+    [Slot(Name = "tasks.schedule")]
     public class ScheduleTask : ISlotAsync
     {
         readonly IScheduler _scheduler;

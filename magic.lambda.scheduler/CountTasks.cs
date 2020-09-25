@@ -12,10 +12,10 @@ using magic.node.extensions;
 namespace magic.lambda.scheduler
 {
     /// <summary>
-    /// [wait.tasks.count] slot that will return the number of tasks in your
+    /// [tasks.count] slot that will return the number of tasks in your
     /// system matching the optional [count] argument.
     /// </summary>
-    [Slot(Name = "wait.tasks.count")]
+    [Slot(Name = "tasks.count")]
     public class CountTasks : ISlotAsync
     {
         readonly IScheduler _scheduler;

@@ -11,9 +11,9 @@ using magic.lambda.scheduler.utilities;
 namespace magic.lambda.scheduler
 {
     /// <summary>
-    /// [wait.tasks.schedule.delete] slot that will delete an existing schedule for a task by its ID.
+    /// [tasks.schedule.delete] slot that will delete an existing schedule for a task by its ID.
     /// </summary>
-    [Slot(Name = "wait.tasks.schedule.delete")]
+    [Slot(Name = "tasks.schedule.delete")]
     public class ScheduleDelete : ISlotAsync
     {
         readonly IScheduler _scheduler;
