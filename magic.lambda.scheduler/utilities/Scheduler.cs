@@ -36,14 +36,11 @@ namespace magic.lambda.scheduler.utilities
         public Scheduler(
             IServiceProvider services,
             ILogger logger,
-            IConfiguration configuration,
-            bool autoStart)
+            IConfiguration configuration)
         {
             _services = services;
             _logger = logger;
             _configuration = configuration;
-            if (autoStart)
-                StartScheduler().GetAwaiter().GetResult();
         }
 
         #region [ -- Interface implementations -- ]
