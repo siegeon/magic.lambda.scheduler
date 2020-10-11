@@ -32,7 +32,6 @@ namespace magic.lambda.scheduler.utilities
         /// <param name="services">Service provider to resolve services.</param>
         /// <param name="logger">Logger to use.</param>
         /// <param name="configuration">Configuration to use.</param>
-        /// <param name="autoStart">If true, automatically starts the task scheduler.</param>
         public Scheduler(
             IServiceProvider services,
             ILogger logger,
