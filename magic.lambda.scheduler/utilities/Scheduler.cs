@@ -175,7 +175,7 @@ namespace magic.lambda.scheduler.utilities
             {
                 var id = node.GetEx<long>();
                 var lambda = CreateConnectionLambda();
-                var deleteNode = new Node($"{GetDatabaseType()}.delete");
+                var deleteNode = new Node("data.delete");
                 deleteNode.Add(new Node("table", "task_due"));
                 var whereNode = new Node("where");
                 var andNode = new Node("and");
@@ -223,7 +223,7 @@ namespace magic.lambda.scheduler.utilities
         public async Task<long> CountTasks(string query)
         {
             var lambda = CreateConnectionLambda();
-            var readLambda = new Node($"{GetDatabaseType()}.read");
+            var readLambda = new Node("data.read");
             readLambda.Add(new Node("table", "tasks"));
             var columnsLambda = new Node("columns");
             columnsLambda.Add(new Node("count(*)"));
@@ -296,16 +296,6 @@ namespace magic.lambda.scheduler.utilities
 
         #region [ -- Private helper methods -- ]
 
-        string GetDatabaseType()
-        {
-            return _configuration?.GetSection("magic:databases:default")?.Value ?? "magic";
-        }
-
-        string GetDatabaseName()
-        {
-            return _configuration?.GetSection("magic:tasks:database")?.Value ?? "mysql";
-        }
-
         ISignaler GetSignaler()
         {
             return _services.GetService(typeof(ISignaler)) as ISignaler;
@@ -314,12 +304,12 @@ namespace magic.lambda.scheduler.utilities
         Node CreateConnectionLambda()
         {
             // Creating lambda for deletion.
-            return new Node($"{GetDatabaseType()}.connect", GetDatabaseName());
+            return new Node("data.connect", "magic");
         }
 
         Node CreateDeleteLambda(string taskId)
         {
-            var result = new Node($"{GetDatabaseType()}.delete");
+            var result = new Node("data.delete");
             result.Add(new Node("table", "tasks"));
             var whereNode = new Node("where");
             var andNode = new Node("and");
@@ -331,7 +321,7 @@ namespace magic.lambda.scheduler.utilities
 
         Node CreateDeleteDueLambda(long taskDueId)
         {
-            var result = new Node($"{GetDatabaseType()}.delete");
+            var result = new Node("data.delete");
             result.Add(new Node("table", "task_due"));
             var whereNode = new Node("where");
             var andNode = new Node("and");
@@ -355,7 +345,7 @@ namespace magic.lambda.scheduler.utilities
                 throw new ArgumentException("No Hyperlambda given to create task");
 
             // Creating and returning result.
-            var result = new Node($"{GetDatabaseType()}.create");
+            var result = new Node("data.create");
             result.Add(new Node("table", "tasks"));
             var valuesNode = new Node("values");
             valuesNode.Add(new Node("id", taskId));
@@ -381,7 +371,7 @@ namespace magic.lambda.scheduler.utilities
             }
 
             // Creating and returning result.
-            var result = new Node($"{GetDatabaseType()}.update");
+            var result = new Node("data.update");
             result.Add(new Node("table", "tasks"));
             var whereNode = new Node("where");
             var andNode = new Node("and");
@@ -422,7 +412,7 @@ namespace magic.lambda.scheduler.utilities
             }
 
             // Creating lambda.
-            var result = new Node($"{GetDatabaseType()}.create");
+            var result = new Node("data.create");
             result.Add(new Node("table", "task_due"));
             var insertDueValues = new Node("values");
             insertDueValues.Add(new Node("task", taskId));
@@ -435,7 +425,7 @@ namespace magic.lambda.scheduler.utilities
 
         Node CreateUpdateDueDateLambda(long taskDueId, string repeats)
         {
-            var updateNode = new Node($"{GetDatabaseType()}.update");
+            var updateNode = new Node("data.update");
             updateNode.Add(new Node("table", "task_due"));
             var whereNode = new Node("where");
             var andNode = new Node("and");
@@ -450,7 +440,7 @@ namespace magic.lambda.scheduler.utilities
 
         Node CreateReadTaskLambda(string query, long offset, long limit, string taskId)
         {
-            var result = new Node($"{GetDatabaseType()}.read");
+            var result = new Node("data.read");
             result.Add(new Node("table", "tasks"));
             result.Add(new Node("offset", offset));
             result.Add(new Node("limit", limit));
@@ -480,7 +470,7 @@ namespace magic.lambda.scheduler.utilities
 
         Node CreateReadTaskDueDateLambda(string taskId)
         {
-            var result = new Node($"{GetDatabaseType()}.read");
+            var result = new Node("data.read");
             result.Add(new Node("table", "task_due"));
             var whereNode = new Node("where");
             var andNode = new Node("and");
@@ -492,7 +482,7 @@ namespace magic.lambda.scheduler.utilities
 
         Node CreateReadNextDueDateLambda()
         {
-            var readNode = new Node($"{GetDatabaseType()}.read");
+            var readNode = new Node("data.read");
             readNode.Add(new Node("table", "task_due"));
             readNode.Add(new Node("order", "due"));
             readNode.Add(new Node("limit", 1));
@@ -502,7 +492,7 @@ namespace magic.lambda.scheduler.utilities
         async Task<string> GetTaskHyperlambda(string id)
         {
             var selectLambda = CreateConnectionLambda();
-            var readNode = new Node($"{GetDatabaseType()}.read");
+            var readNode = new Node("data.read");
             readNode.Add(new Node("table", "tasks"));
             var whereNode = new Node("where");
             var andNode = new Node("and");
@@ -540,7 +530,8 @@ namespace magic.lambda.scheduler.utilities
                 lambda.Children.First().Children.First().Children.First(x => x.Name == "due").Get<DateTime>(),
                 lambda.Children.First().Children.First().Children.First(x => x.Name == "id").Get<long>(),
                 lambda.Children.First().Children.First().Children.First(x => x.Name == "repeats").Get<string>(),
-                lambda.Children.First().Children.First().Children.First(x => x.Name == "task").Get<string>());
+                lambda.Children.First().Children.First().Children.First(x => x.Name == "task").Get<string>()
+            );
         }
 
         async Task<bool> ResetTimer()
