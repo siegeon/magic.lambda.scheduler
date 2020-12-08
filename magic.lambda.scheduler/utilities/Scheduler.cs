@@ -110,14 +110,13 @@ namespace magic.lambda.scheduler.utilities
                 lambda.Add(CreateDeleteLambda(id)); // In case task with specified ID already exists.
                 lambda.Add(CreateInsertTaskLambda(node, id));
 
-                // Checking if task has due date. Notice, it's very much possible to persist a task without a date for execution.
+                // Checking if task has due date, and if so we schedule the task.
                 var hasDueDate = node.Children.Any(x => x.Name == "due" || x.Name == "repeats");
                 if (hasDueDate)
                     lambda.Add(CreateInsertDueDateLambda(node, id));
                 await GetSignaler().SignalAsync("eval", new Node("", null, new Node[] { lambda }));
 
-                if (hasDueDate &&
-                    (node.Children.FirstOrDefault(x => x.Name == "auto-start")?.GetEx<bool>() ?? true))
+                if (hasDueDate)
                 {
                     if (!Running)
                         await _logger?.InfoAsync("Starting task scheduler since task has a due date");
