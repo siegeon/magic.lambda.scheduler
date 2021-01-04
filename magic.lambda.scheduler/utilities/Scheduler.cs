@@ -274,6 +274,7 @@ namespace magic.lambda.scheduler.utilities
         public async Task ExecuteTask(string taskId)
         {
             var task = await GetTask(taskId);
+            await _logger?.InfoAsync($"Preparing to execute task with id of '{taskId}'");
             var hyperlambda = task.Children.First(x => x.Name == "hyperlambda").Get<string>();
             var lambda = new Node("", hyperlambda);
             GetSignaler().Signal("hyper2lambda", lambda);
@@ -597,6 +598,7 @@ namespace magic.lambda.scheduler.utilities
             exeNode.Value = null;
             try
             {
+                await _logger?.InfoAsync($"Preparing to execute task with id of '{taskDue.Value.TaskId}'");
                 await GetSignaler().SignalAsync("eval", exeNode);
             }
             catch (Exception error)
