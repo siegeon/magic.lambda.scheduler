@@ -463,7 +463,7 @@ namespace magic.lambda.scheduler.utilities
                     whereNode.Add(andNode);
                     result.Add(whereNode);
                 }
-                result.Add(new Node("order", "created"));
+                result.Add(new Node("order", "id"));
             }
             return result;
         }
