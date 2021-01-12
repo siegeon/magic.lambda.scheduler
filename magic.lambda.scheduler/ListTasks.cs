@@ -6,9 +6,9 @@
 using System.Linq;
 using System.Threading.Tasks;
 using magic.node;
+using magic.node.extensions;
 using magic.signals.contracts;
 using magic.lambda.scheduler.utilities;
-using magic.node.extensions;
 
 namespace magic.lambda.scheduler
 {
