@@ -594,10 +594,10 @@ namespace magic.lambda.scheduler.utilities
 
             // Converting Hyperlambda to lambda and executing task.
             var exeNode = new Node("", hyperlambda);
-            GetSignaler().Signal("hyper2lambda", exeNode);
-            exeNode.Value = null;
             try
             {
+                GetSignaler().Signal("hyper2lambda", exeNode);
+                exeNode.Value = null;
                 await _logger?.InfoAsync($"Preparing to execute task with id of '{taskDue.Value.TaskId}'");
                 await GetSignaler().SignalAsync("eval", exeNode);
             }
