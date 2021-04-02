@@ -21,7 +21,6 @@ namespace magic.lambda.scheduler.utilities
     {
         readonly IServiceProvider _services;
         readonly ILogger _logger;
-        readonly IConfiguration _configuration;
         Timer _timer;
         readonly SemaphoreSlim _locker = new SemaphoreSlim(1);
 
@@ -31,15 +30,12 @@ namespace magic.lambda.scheduler.utilities
         /// </summary>
         /// <param name="services">Service provider to resolve services.</param>
         /// <param name="logger">Logger to use.</param>
-        /// <param name="configuration">Configuration to use.</param>
         public Scheduler(
             IServiceProvider services,
-            ILogger logger,
-            IConfiguration configuration)
+            ILogger logger)
         {
             _services = services;
             _logger = logger;
-            _configuration = configuration;
         }
 
         #region [ -- Interface implementations -- ]
