@@ -1,8 +1,0 @@
-﻿language: csharp
-solution: magic.lambda.scheduler.sln
-mono: none
-dotnet: 5.0
-script:
- - dotnet restore
- - dotnet build
- - dotnet test
