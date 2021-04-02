@@ -1,18 +1,19 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.28307.572
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30907.101
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "misc", "misc", "{0080EF1F-A652-4498-BE59-F3FFFB3F33B2}"
 	ProjectSection(SolutionItems) = preProject
 		.gitignore = .gitignore
+		.github\workflows\build.yaml = .github\workflows\build.yaml
 		LICENSE = LICENSE
 		README.md = README.md
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "magic.lambda.scheduler", "magic.lambda.scheduler\magic.lambda.scheduler.csproj", "{D1409DA9-3541-4250-94EE-224D9DF457C4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "magic.lambda.scheduler.tests", "magic.lambda.scheduler.tests\magic.lambda.scheduler.tests.csproj", "{72CAF160-1350-4DD8-905A-9D1B291A042F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "magic.lambda.scheduler.tests", "magic.lambda.scheduler.tests\magic.lambda.scheduler.tests.csproj", "{72CAF160-1350-4DD8-905A-9D1B291A042F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

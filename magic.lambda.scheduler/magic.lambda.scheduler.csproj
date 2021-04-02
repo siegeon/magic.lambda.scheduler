@@ -6,7 +6,7 @@
     <PackageId>magic.lambda.scheduler</PackageId>
     <Authors>Thomas Hansen</Authors>
     <Company>Thomas Hansen</Company>
-    <Copyright>Thomas Hansen, thomas@gaiasoul.com</Copyright>
+    <Copyright>Thomas Hansen, thomas@servergardens.com</Copyright>
     <Description>Helper slots for Magic to allow you to dynamically create tasks, either as a part of your custom workflow, and/or as scheduled tasks intended to be executed at some interval, or future time. To use package go to https://polterguy.github.io</Description>
     <PackageProjectUrl>https://github.com/polterguy/magic.lambda.scheduler</PackageProjectUrl>
     <PackOnBuild>true</PackOnBuild>
@@ -39,8 +39,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="magic.node.extensions" Version="8.9.*" />
-    <PackageReference Include="magic.signals.contracts" Version="8.9.*" />
-    <PackageReference Include="magic.lambda.logging" Version="8.9.*" />
+    <PackageReference Include="magic.node.extensions" Version="8.9.9" />
+    <PackageReference Include="magic.signals.contracts" Version="8.9.9" />
+    <PackageReference Include="magic.lambda.logging" Version="8.9.9" />
   </ItemGroup>
 </Project>
