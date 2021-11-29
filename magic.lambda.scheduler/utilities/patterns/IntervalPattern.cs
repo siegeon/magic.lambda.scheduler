@@ -3,6 +3,7 @@
  */
 
 using System;
+using magic.node.extensions;
 
 namespace magic.lambda.scheduler.utilities.patterns
 {
@@ -32,7 +33,7 @@ namespace magic.lambda.scheduler.utilities.patterns
                 case "months":
                     break;
                 default:
-                    throw new ArgumentException("You can only use seconds, minutes, hours, days, weeks and months in an interval type of repetition pattern.");
+                    throw new HyperlambdaException("You can only use seconds, minutes, hours, days, weeks and months in an interval type of repetition pattern.");
             }
             _entity = entity;
             _interval = interval;

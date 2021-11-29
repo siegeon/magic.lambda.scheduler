@@ -7,7 +7,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
-using Microsoft.Extensions.Configuration;
 using magic.node;
 using magic.node.extensions;
 using magic.signals.contracts;
@@ -331,13 +330,13 @@ namespace magic.lambda.scheduler.utilities
             // Retrieving arguments and sanity checking invocation.
             var description = node.Children.FirstOrDefault(x => x.Name == "description")?.GetEx<string>();
             var lambdaNode = node.Children.FirstOrDefault(x => x.Name == ".lambda")?.Clone() ?? 
-                throw new ArgumentException("No [.lambda] supplied to create task");
+                throw new HyperlambdaException("No [.lambda] supplied to create task");
 
             // Converting lambda from task to Hyperlambda.
             GetSignaler().Signal("lambda2hyper", lambdaNode);
             var hyperlambda = lambdaNode.Get<string>()?.Trim();
             if (string.IsNullOrEmpty(hyperlambda?.Trim()))
-                throw new ArgumentException("No Hyperlambda given to create task");
+                throw new HyperlambdaException("No Hyperlambda given to create task");
 
             // Creating and returning result.
             var result = new Node("data.create");
@@ -403,7 +402,7 @@ namespace magic.lambda.scheduler.utilities
                 var dueNode = node.Children.FirstOrDefault(x => x.Name == "due");
                 due = dueNode.GetEx<DateTime>().ToUniversalTime();
                 if (due < DateTime.UtcNow)
-                    throw new ArgumentException("You cannot create a task with a [due] date that's in the past");
+                    throw new HyperlambdaException("You cannot create a task with a [due] date that's in the past");
             }
 
             // Creating lambda.
@@ -503,9 +502,9 @@ namespace magic.lambda.scheduler.utilities
         {
             var id = node.Children.FirstOrDefault(x => x.Name == "id")?.GetEx<string>() ??
                 node.GetEx<string>() ??
-                throw new ArgumentException("No [id] or value provided to create task");
+                throw new HyperlambdaException("No [id] or value provided to create task");
             if (id.Any(x => "abcdefghijklmnopqrstuvwxyz0123456789.-_".IndexOf(x) == -1))
-                throw new ArgumentException("[id] of task can only contain [a-z], [0-9] and '.', '-' or '_' characters");
+                throw new HyperlambdaException("[id] of task can only contain [a-z], [0-9] and '.', '-' or '_' characters");
             return id;
         }
 

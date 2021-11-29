@@ -6,6 +6,7 @@ using System;
 using System.Linq;
 using System.Collections.Generic;
 using magic.lambda.scheduler.utilities.patterns;
+using magic.node.extensions;
 
 namespace magic.lambda.scheduler.utilities
 {
@@ -58,7 +59,7 @@ namespace magic.lambda.scheduler.utilities
                         int.Parse(entities[3]),
                         int.Parse(entities[4]));
                 default:
-                    throw new ArgumentException($"'{pattern}' is not a recognized repetition pattern.");
+                    throw new HyperlambdaException($"'{pattern}' is not a recognized repetition pattern.");
             }
         }
 

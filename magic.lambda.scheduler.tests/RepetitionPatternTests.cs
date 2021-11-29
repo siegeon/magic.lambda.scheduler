@@ -5,6 +5,7 @@
 
 using System;
 using Xunit;
+using magic.node.extensions;
 using magic.lambda.scheduler.utilities;
 
 namespace magic.lambda.scheduler.tests
@@ -14,7 +15,7 @@ namespace magic.lambda.scheduler.tests
         [Fact]
         public void InvalidRepetitionPattern_01()
         {
-            Assert.Throws<ArgumentException>(() => PatternFactory.Create("01.01.01"));
+            Assert.Throws<HyperlambdaException>(() => PatternFactory.Create("01.01.01"));
         }
 
         [Fact]
@@ -38,7 +39,7 @@ namespace magic.lambda.scheduler.tests
         [Fact]
         public void InvalidRepetitionPattern_05()
         {
-            Assert.Throws<ArgumentException>(() => PatternFactory.Create("01.**.**.**.**.Monday"));
+            Assert.Throws<HyperlambdaException>(() => PatternFactory.Create("01.**.**.**.**.Monday"));
         }
 
         [Fact]
@@ -50,7 +51,7 @@ namespace magic.lambda.scheduler.tests
         [Fact]
         public void InvalidRepetitionPattern_08()
         {
-            Assert.Throws<ArgumentException>(() => PatternFactory.Create("5.years"));
+            Assert.Throws<HyperlambdaException>(() => PatternFactory.Create("5.years"));
         }
 
         [Fact]
