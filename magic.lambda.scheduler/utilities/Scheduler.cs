@@ -249,13 +249,13 @@ namespace magic.lambda.scheduler.utilities
             if (lambda.Children.Skip(1).First().Children.Any())
             {
                 var schedule = new Node("schedule");
-                foreach (var idx in lambda.Children.Skip(1).First().Children)
+                foreach (var idx in lambda.Children.Skip(1).First().Children.Select(x => x.Children))
                 {
                     var tmp = new Node(".");
-                    tmp.Add(new Node("id", idx.Children.First(x => x.Name == "id").Value));
-                    if (idx.Children.First(x => x.Name == "repeats")?.Value != null)
-                        tmp.Add(new Node("repeats", idx.Children.First(x => x.Name == "repeats")?.Value));
-                    tmp.Add(new Node("due", idx.Children.First(x => x.Name == "due").Value));
+                    tmp.Add(new Node("id", idx.First(x => x.Name == "id").Value));
+                    if (idx.First(x => x.Name == "repeats")?.Value != null)
+                        tmp.Add(new Node("repeats", idx.First(x => x.Name == "repeats")?.Value));
+                    tmp.Add(new Node("due", idx.First(x => x.Name == "due").Value));
                     schedule.Add(tmp);
                 }
                 if (schedule.Children.Any())
