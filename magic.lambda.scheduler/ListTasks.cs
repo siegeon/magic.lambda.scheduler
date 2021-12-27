@@ -43,12 +43,12 @@ namespace magic.lambda.scheduler
             if (jobs.Any())
             {
                 input.AddRange(jobs);
-                foreach (var idx in input.Children)
+                foreach (var idx in input.Children.Select(x => x.Children))
                 {
-                    var desc = idx.Children.First(x => x.Name == "description");
+                    var desc = idx.First(x => x.Name == "description");
                     if (desc.Value == null)
                         desc.UnTie();
-                    idx.Children.First(x => x.Name == "hyperlambda").UnTie();
+                    idx.First(x => x.Name == "hyperlambda").UnTie();
                 }
             }
         }
