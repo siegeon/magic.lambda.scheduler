@@ -24,7 +24,7 @@ namespace magic.lambda.scheduler.utilities
         /// Creates a new instance of the class.
         /// </summary>
         /// <param name="pattern">Repetition pattern to use.</param>
-        /// <returns>An instance of an IPattern.</returns>
+        /// <returns>An instance of an IRepetitionPattern.</returns>
         public static IRepetitionPattern Create(string pattern)
         {
             // Checking if this is an extension pattern.
@@ -40,6 +40,7 @@ namespace magic.lambda.scheduler.utilities
             {
                 case 2:
                     return new IntervalPattern(int.Parse(entities[0]), entities[1]);
+
                 case 4:
                     var weekdays = entities[0] == "**" ?
                         null :
@@ -50,6 +51,7 @@ namespace magic.lambda.scheduler.utilities
                         int.Parse(entities[1]),
                         int.Parse(entities[2]),
                         int.Parse(entities[3]));
+
                 case 5:
                     var months = entities[0] == "**" ? null : entities[0].Split('|').Select(x => int.Parse(x));
                     var days = entities[1] == "**" ? null : entities[1].Split('|').Select(x => int.Parse(x));
@@ -59,6 +61,7 @@ namespace magic.lambda.scheduler.utilities
                         int.Parse(entities[2]),
                         int.Parse(entities[3]),
                         int.Parse(entities[4]));
+
                 default:
                     throw new HyperlambdaException($"'{pattern}' is not a recognized repetition pattern.");
             }
