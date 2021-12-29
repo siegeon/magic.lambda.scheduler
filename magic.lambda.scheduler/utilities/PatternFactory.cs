@@ -17,15 +17,15 @@ namespace magic.lambda.scheduler.utilities
     /// </summary>
     public static class PatternFactory
     {
-        readonly static Dictionary<string, Func<string, ITaskPattern>> _createExtensions =
-            new Dictionary<string, Func<string, ITaskPattern>>();
+        readonly static Dictionary<string, Func<string, IRepetitionPattern>> _createExtensions =
+            new Dictionary<string, Func<string, IRepetitionPattern>>();
 
         /// <summary>
         /// Creates a new instance of the class.
         /// </summary>
         /// <param name="pattern">Repetition pattern to use.</param>
         /// <returns>An instance of an IPattern.</returns>
-        public static ITaskPattern Create(string pattern)
+        public static IRepetitionPattern Create(string pattern)
         {
             // Checking if this is an extension pattern.
             if (pattern.StartsWith("ext:"))
@@ -72,7 +72,7 @@ namespace magic.lambda.scheduler.utilities
         /// </summary>
         /// <param name="key">Lookup key to resolve your extension pattern.</param>
         /// <param name="functor">Function responsible for creating your IPattern instance.</param>
-        public static void AddExtensionPattern(string key, Func<string, ITaskPattern> functor)
+        public static void AddExtensionPattern(string key, Func<string, IRepetitionPattern> functor)
         {
             _createExtensions[key] = functor;
         }

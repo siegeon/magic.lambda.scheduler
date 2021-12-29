@@ -31,6 +31,20 @@ namespace magic.lambda.scheduler.contracts
         Task<IEnumerable<Node>> List(string query, long offset, long limit);
 
         /// <summary>
+        /// Returns the specified task, and its associated due date(s).
+        /// </summary>
+        /// <param name="taskId">ID of task to retrieve.</param>
+        /// <returns>Node declaration of task.</returns>
+        Task<Node> Get(string taskId);
+
+        /// <summary>
+        /// Counts tasks in system matching the optional query.
+        /// </summary>
+        /// <param name="query">String tasks needs to start with in their ID to be considered a match.</param>
+        /// <returns>Number of tasks in system matching optional query.</returns>
+        Task<long> Count(string query);
+
+        /// <summary>
         /// Updates an existing task.
         /// </summary>
         /// <param name="node">Node declaration of task.</param>
@@ -43,20 +57,6 @@ namespace magic.lambda.scheduler.contracts
         /// <param name="node">Node containing ID of task to delete.</param>
         /// <returns>Awaitable task.</returns>
         Task Delete(Node node);
-
-        /// <summary>
-        /// Counts tasks in system matching the optional query.
-        /// </summary>
-        /// <param name="query">String tasks needs to start with in their ID to be considered a match.</param>
-        /// <returns>Number of tasks in system matching optional query.</returns>
-        Task<long> Count(string query);
-
-        /// <summary>
-        /// Returns the specified task, and its associated due date(s).
-        /// </summary>
-        /// <param name="taskId">ID of task to retrieve.</param>
-        /// <returns>Node declaration of task.</returns>
-        Task<Node> Get(string taskId);
 
         /// <summary>
         /// Executes the task with the specified ID.

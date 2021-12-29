@@ -11,7 +11,7 @@ namespace magic.lambda.scheduler.utilities.patterns
     /// <summary>
     /// Interval repetition pattern, such as for instance "5.seconds", "5.months", etc.
     /// </summary>
-    public class IntervalPattern : ITaskPattern
+    public class IntervalPattern : IRepetitionPattern
     {
         readonly string _entity;
         readonly int _interval;

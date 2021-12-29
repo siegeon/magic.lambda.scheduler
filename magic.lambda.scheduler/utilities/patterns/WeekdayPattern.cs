@@ -13,7 +13,7 @@ namespace magic.lambda.scheduler.utilities.patterns
     /// When type of pattern, such as e.g. "**.05|15.23.57.11.**",
     /// implying "every month at the 5th and the 15th, at 23:57:11".
     /// </summary>
-    public class WeekdayPattern : ITaskPattern
+    public class WeekdayPattern : IRepetitionPattern
     {
         readonly DayOfWeek[] _weekdays;
         readonly int _hour;

@@ -9,7 +9,7 @@ using magic.node;
 namespace magic.lambda.scheduler.contracts
 {
     /// <summary>
-    /// Interface for scheduler, allowing you to schedule tasks, and/or start and stop scheduler.
+    /// Interface for task scheduler, allowing you to schedule tasks, and/or start and stop scheduler.
     /// </summary>
     public interface ITaskScheduler : IDisposable
     {
