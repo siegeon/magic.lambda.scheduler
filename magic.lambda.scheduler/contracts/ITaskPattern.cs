@@ -7,7 +7,7 @@ using System;
 namespace magic.lambda.scheduler.contracts
 {
     /// <summary>
-    /// Common interface for repetition pattern instances.
+    /// Common interface for repetition patterns.
     /// </summary>
     public interface ITaskPattern
     {
@@ -19,6 +19,8 @@ namespace magic.lambda.scheduler.contracts
 
         /// <summary>
         /// Returns the string representation of the repetition pattern.
+        /// 
+        /// This is the patter we persist as the repetition pattern for the task when a task is persisted.
         /// </summary>
         /// <value>String representation for repetition pattern.</value>
         string Value { get; }

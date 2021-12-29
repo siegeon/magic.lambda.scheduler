@@ -9,7 +9,7 @@ using magic.node;
 namespace magic.lambda.scheduler.contracts
 {
     /// <summary>
-    /// Interface for scheduler, allowing you to manage schedules for tasks.
+    /// Interface for scheduler, allowing you to schedule tasks, and/or start and stop scheduler.
     /// </summary>
     public interface ITaskScheduler : IDisposable
     {
@@ -17,38 +17,38 @@ namespace magic.lambda.scheduler.contracts
         /// Returns whether or not the scheduler is running or not.
         /// </summary>
         /// <value>Returns true if the scheduler is running.</value>
-        bool Running { get; }
+        bool IsRunning { get; }
 
         /// <summary>
         /// Starts the task scheduler.
         /// </summary>
         /// <returns>Awaitable task.</returns>
-        Task StartScheduler();
+        Task Start();
 
         /// <summary>
         /// Stops the scheduler.
         /// </summary>
         /// <returns>Awaitable task.</returns>
-        Task StopScheduler();
+        Task Stop();
 
         /// <summary>
         /// Returns the date of the next upcoming task, if scheduler is running.
         /// </summary>
         /// <returns>Date and time for next upcoming scheduled task's execution.</returns>
-        Task<DateTime?> NextTask();
+        Task<DateTime?> Next();
 
         /// <summary>
         /// Schedules an existing task.
         /// </summary>
         /// <param name="node">Node declaration of task.</param>
         /// <returns>Awaitable task.</returns>
-        Task ScheduleTask(Node node);
+        Task Schedule(Node node);
 
         /// <summary>
         /// Deletes an existing schedule for a task.
         /// </summary>
         /// <param name="node">Node declaration of task.</param>
         /// <returns>Awaitable task.</returns>
-        Task ScheduleDelete(Node node);
+        Task Delete(Node node);
     }
 }

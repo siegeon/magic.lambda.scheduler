@@ -37,7 +37,7 @@ namespace magic.lambda.scheduler.slots.tasks
         public async Task SignalAsync(ISignaler signaler, Node input)
         {
             input.AddRange(
-                (await _storage.GetTask(input.GetEx<string>()))
+                (await _storage.Get(input.GetEx<string>()))
                 .Children
                 .ToList());
         }

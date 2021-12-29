@@ -35,7 +35,7 @@ namespace magic.lambda.scheduler.slots.tasks
         /// <param name="input">Arguments to slot.</param>
         public async Task SignalAsync(ISignaler signaler, Node input)
         {
-            var jobs = await _storage.ListTasks(
+            var jobs = await _storage.List(
                 input.GetEx<string>(),
                 input.Children.FirstOrDefault(x => x.Name == "offset")?.GetEx<long>() ?? 0,
                 input.Children.FirstOrDefault(x => x.Name == "limit")?.GetEx<long>() ?? 10);

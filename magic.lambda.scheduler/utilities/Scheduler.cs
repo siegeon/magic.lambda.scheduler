@@ -40,13 +40,13 @@ namespace magic.lambda.scheduler.utilities
         #region [ -- Interface implementations -- ]
 
         /// <inheritdoc />
-        public bool Running
+        public bool IsRunning
         {
             get => _timer != null;
         }
 
         /// <inheritdoc />
-        public async Task StartScheduler()
+        public async Task Start()
         {
             await _locker.WaitAsync();
             try
@@ -68,7 +68,7 @@ namespace magic.lambda.scheduler.utilities
         }
 
         /// <inheritdoc />
-        public async Task StopScheduler()
+        public async Task Stop()
         {
             await _locker.WaitAsync();
             try
@@ -89,7 +89,7 @@ namespace magic.lambda.scheduler.utilities
         }
 
         /// <inheritdoc />
-        public async Task<DateTime?> NextTask()
+        public async Task<DateTime?> Next()
         {
             return _timer == null ? null : (await GetNextTask())?.Due;
         }
@@ -113,7 +113,7 @@ namespace magic.lambda.scheduler.utilities
 
                 if (hasDueDate)
                 {
-                    if (!Running)
+                    if (!IsRunning)
                         await _logger?.InfoAsync("Starting task scheduler since task has a due date");
                     await ResetTimer(); // In case task is next upcoming for execution.
                 }
@@ -142,7 +142,7 @@ namespace magic.lambda.scheduler.utilities
         }
 
         /// <inheritdoc />
-        public async Task ScheduleTask(Node node)
+        public async Task Schedule(Node node)
         {
             await _locker.WaitAsync();
             try
@@ -151,7 +151,7 @@ namespace magic.lambda.scheduler.utilities
                 var lambda = CreateConnectionLambda();
                 lambda.Add(CreateInsertDueDateLambda(node, id));
                 await GetSignaler().SignalAsync("eval", new Node("", null, new Node[] { lambda }));
-                if (!Running)
+                if (!IsRunning)
                     await _logger?.InfoAsync("Starting task scheduler since we now have a due date for a task");
                 await ResetTimer(); // In case schedule is next upcoming execution.
             }
@@ -162,7 +162,7 @@ namespace magic.lambda.scheduler.utilities
         }
 
         /// <inheritdoc />
-        public async Task ScheduleDelete(Node node)
+        public async Task Delete(Node node)
         {
             await _locker.WaitAsync();
             try

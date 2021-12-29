@@ -34,7 +34,7 @@ namespace magic.lambda.scheduler.slots.tasks
         /// <param name="input">Arguments to slot.</param>
         public async Task SignalAsync(ISignaler signaler, Node input)
         {
-            await _storage.ExecuteTask(input.GetEx<string>());
+            await _storage.Execute(input.GetEx<string>());
         }
     }
 }

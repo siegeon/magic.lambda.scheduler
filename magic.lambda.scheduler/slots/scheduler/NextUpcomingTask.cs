@@ -33,7 +33,7 @@ namespace magic.lambda.scheduler
         /// <param name="input">Arguments to slot.</param>
         public async Task SignalAsync(ISignaler signaler, Node input)
         {
-            input.Value = await _scheduler.NextTask();
+            input.Value = await _scheduler.Next();
         }
     }
 }
