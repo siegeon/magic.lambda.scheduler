@@ -296,7 +296,17 @@ namespace magic.lambda.scheduler.utilities
         /// <inheritdoc />
         public void Execute(string id)
         {
-            throw new NotImplementedException();
+            // Retrieving task.
+            var task = Get(id);
+            if (task == null)
+                throw new HyperlambdaException($"Task with id of '{id}' was not found");
+
+            // Transforming task's Hyperlambda to a lambda object.
+            var hlNode = new Node("", task.Hyperlambda);
+            _signaler.Signal("hyper2lambda", hlNode);
+
+            // Executing task.
+            _signaler.Signal("eval", hlNode);
         }
 
         #endregion
@@ -304,33 +314,75 @@ namespace magic.lambda.scheduler.utilities
         #region [ -- Interface implementation for ITaskScheduler -- ]
 
         /// <inheritdoc />
-        public bool IsRunning
+        public void Schedule(string taskId, IRepetitionPattern repetition)
         {
-            get => throw new NotImplementedException();
+            // Creating our connection, making sure we dispose it when we're done with it.
+            using (var connection = CreateConnection())
+            {
+                // Creating our SQL.
+                var sql = "insert into task_due (task, due, repeats) values (@task, @due, @repeats)";
+
+                // Creating our SQL command, making sure we dispose it when we're done with it.
+                using (var cmd = connection.CreateCommand())
+                {
+                    // Assigning SQL to command text.
+                    cmd.CommandText = sql;
+
+                    // Creating our task ID argument.
+                    var parTask = cmd.CreateParameter();
+                    parTask.ParameterName = "@task";
+                    parTask.Value = taskId;
+                    cmd.Parameters.Add(parTask);
+
+                    // Creating our due date argument.
+                    var parDue = cmd.CreateParameter();
+                    parDue.ParameterName = "@due";
+                    parDue.Value = repetition.Next();
+                    cmd.Parameters.Add(parDue);
+
+                    // Creating our due date argument.
+                    var parRep = cmd.CreateParameter();
+                    parRep.ParameterName = "@repeats";
+                    parRep.Value = repetition.Value;
+                    cmd.Parameters.Add(parRep);
+
+                    // Executing command.
+                    cmd.ExecuteNonQuery();
+                }
+            }
         }
 
         /// <inheritdoc />
-        public void Start()
+        public void Schedule(string taskId, DateTime due)
         {
-            throw new NotImplementedException();
-        }
+            // Creating our connection, making sure we dispose it when we're done with it.
+            using (var connection = CreateConnection())
+            {
+                // Creating our SQL.
+                var sql = "insert into task_due (task, due) values (@task, @due)";
 
-        /// <inheritdoc />
-        public void Stop()
-        {
-            throw new NotImplementedException();
-        }
+                // Creating our SQL command, making sure we dispose it when we're done with it.
+                using (var cmd = connection.CreateCommand())
+                {
+                    // Assigning SQL to command text.
+                    cmd.CommandText = sql;
 
-        /// <inheritdoc />
-        public DateTime? Next()
-        {
-            throw new NotImplementedException();
-        }
+                    // Creating our task ID argument.
+                    var parTask = cmd.CreateParameter();
+                    parTask.ParameterName = "@task";
+                    parTask.Value = taskId;
+                    cmd.Parameters.Add(parTask);
 
-        /// <inheritdoc />
-        public void Schedule(MagicTask task, IRepetitionPattern repetition)
-        {
-            throw new NotImplementedException();
+                    // Creating our due date argument.
+                    var parDue = cmd.CreateParameter();
+                    parDue.ParameterName = "@due";
+                    parDue.Value = due;
+                    cmd.Parameters.Add(parDue);
+
+                    // Executing command.
+                    cmd.ExecuteNonQuery();
+                }
+            }
         }
 
         /// <inheritdoc />

@@ -5,6 +5,7 @@
 using System;
 using System.Data;
 using System.Linq;
+using System.Globalization;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,7 +14,6 @@ using magic.node;
 using magic.node.contracts;
 using magic.signals.services;
 using magic.signals.contracts;
-using magic.lambda.logging.helpers;
 using magic.node.extensions.hyperlambda;
 using magic.lambda.scheduler.contracts;
 using magic.lambda.scheduler.utilities;
@@ -90,6 +90,9 @@ namespace magic.lambda.scheduler.tests
                             dbParamMoq
                                 .SetupSet(x => x.Value = It.IsAny<long>())
                                 .Callback<object>(x => Arguments[Arguments.Count - 1] = (Arguments[Arguments.Count - 1].Item1, x?.ToString()));
+                            dbParamMoq
+                                .SetupSet(x => x.Value = It.IsAny<DateTime>())
+                                .Callback<object>(x => Arguments[Arguments.Count - 1] = (Arguments[Arguments.Count - 1].Item1, ((DateTime)x).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm", CultureInfo.InvariantCulture)));
                             return dbParamMoq.Object;
                         });
 

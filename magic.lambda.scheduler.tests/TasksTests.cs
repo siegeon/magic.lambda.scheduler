@@ -2,7 +2,9 @@
  * Magic Cloud, copyright Aista, Ltd. See the attached LICENSE file for details.
  */
 
+using System;
 using System.Linq;
+using System.Globalization;
 using Xunit;
 using magic.node.extensions;
 
@@ -178,6 +180,38 @@ tasks.list:foo
             Assert.Single(ConnectionFactory.Arguments.Where(x => x.Item1 == "@id" && x.Item2 == "foo"));
             Assert.Single(ConnectionFactory.Arguments.Where(x => x.Item1 == "@offset" && x.Item2 == "0"));
             Assert.Single(ConnectionFactory.Arguments.Where(x => x.Item1 == "@limit" && x.Item2 == "1"));
+        }
+
+        [Fact]
+        public void Schedule_Due()
+        {
+            ConnectionFactory.Arguments.Clear();
+            Common.Evaluate(@"
+tasks.schedule:foo
+   due:date:""2030-12-24T17:00""");
+            Assert.Equal("CONNECTION-STRING-magic", ConnectionFactory.ConnectionString);
+            Assert.Equal("insert into task_due (task, due) values (@task, @due)", ConnectionFactory.CommandText);
+            Assert.Equal(2, ConnectionFactory.Arguments.Count);
+            Assert.Single(ConnectionFactory.Arguments.Where(x => x.Item1 == "@task" && x.Item2 == "foo"));
+            Assert.Single(ConnectionFactory.Arguments.Where(x => x.Item1 == "@due" && x.Item2 == "2030-12-24T17:00"));
+        }
+
+        [Fact]
+        public void Schedule_Pattern_01()
+        {
+            ConnectionFactory.Arguments.Clear();
+            Common.Evaluate(@"
+tasks.schedule:foo
+   repeats:5.seconds");
+            Assert.Equal("CONNECTION-STRING-magic", ConnectionFactory.ConnectionString);
+            Assert.Equal("insert into task_due (task, due, repeats) values (@task, @due, @repeats)", ConnectionFactory.CommandText);
+            Assert.Equal(3, ConnectionFactory.Arguments.Count);
+            Assert.Single(ConnectionFactory.Arguments.Where(x => x.Item1 == "@task" && x.Item2 == "foo"));
+            Assert.Single(ConnectionFactory.Arguments.Where(x => x.Item1 == "@repeats" && x.Item2 == "5.seconds"));
+            var due = ConnectionFactory.Arguments.FirstOrDefault(x => x.Item1 == "@due");
+            var dueDate = DateTime.ParseExact(due.Item2, "yyyy-MM-ddTHH:mm", CultureInfo.InvariantCulture);
+            Assert.True(dueDate > DateTime.UtcNow.AddMinutes(-5));
+            Assert.True(dueDate < DateTime.UtcNow.AddMinutes(5));
         }
     }
 }
