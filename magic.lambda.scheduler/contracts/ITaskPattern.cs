@@ -9,7 +9,7 @@ namespace magic.lambda.scheduler.contracts
     /// <summary>
     /// Common interface for repetition pattern instances.
     /// </summary>
-    public interface IPattern
+    public interface ITaskPattern
     {
         /// <summary>
         /// Calculates the next date and time for when the task is to be executed.

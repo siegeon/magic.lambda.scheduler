@@ -15,13 +15,13 @@ namespace magic.lambda.scheduler.slots.scheduler
     [Slot(Name = "scheduler.running")]
     public class SchedulerRunning : ISlot
     {
-        readonly IScheduler _scheduler;
+        readonly ITaskScheduler _scheduler;
 
         /// <summary>
         /// Creates a new instance of your slot.
         /// </summary>
         /// <param name="scheduler">Which background service to use.</param>
-        public SchedulerRunning(IScheduler scheduler)
+        public SchedulerRunning(ITaskScheduler scheduler)
         {
             _scheduler = scheduler;
         }

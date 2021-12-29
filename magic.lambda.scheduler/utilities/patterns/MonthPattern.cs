@@ -13,7 +13,7 @@ namespace magic.lambda.scheduler.utilities.patterns
     /// Month type of pattern, such as e.g. "**.05|15.23.57.11",
     /// implying "every month at the 5th and the 15th, at 23:57:11".
     /// </summary>
-    public class MonthPattern : IPattern
+    public class MonthPattern : ITaskPattern
     {
         readonly int[] _months;
         readonly int[] _days;

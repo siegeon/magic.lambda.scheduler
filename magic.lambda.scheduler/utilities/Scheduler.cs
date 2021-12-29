@@ -16,7 +16,7 @@ using magic.lambda.scheduler.contracts;
 namespace magic.lambda.scheduler.utilities
 {
     /// <inheritdoc />
-    public sealed class Scheduler : IScheduler
+    public sealed class Scheduler : ITaskScheduler
     {
         readonly IServiceProvider _services;
         readonly ILogger _logger;

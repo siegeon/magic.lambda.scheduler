@@ -15,13 +15,13 @@ namespace magic.lambda.scheduler.slots.scheduler
     [Slot(Name = "tasks.schedule.delete")]
     public class ScheduleDelete : ISlotAsync
     {
-        readonly IScheduler _scheduler;
+        readonly ITaskScheduler _scheduler;
 
         /// <summary>
         /// Creates a new instance of your slot.
         /// </summary>
         /// <param name="scheduler">Which background service to use.</param>
-        public ScheduleDelete(IScheduler scheduler)
+        public ScheduleDelete(ITaskScheduler scheduler)
         {
             _scheduler = scheduler;
         }

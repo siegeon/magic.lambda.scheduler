@@ -236,7 +236,7 @@ namespace magic.lambda.scheduler.tests
             Assert.True((next - DateTime.UtcNow).TotalDays / 30 >= 4 && (next - DateTime.UtcNow).TotalDays / 30 < 6);
         }
 
-        private class ExtPattern : IPattern
+        private class ExtPattern : ITaskPattern
         {
             readonly string _args;
             public string Value => "ext:foo:" + _args;

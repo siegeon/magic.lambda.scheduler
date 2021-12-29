@@ -16,13 +16,13 @@ namespace magic.lambda.scheduler.slots.scheduler
     [Slot(Name = "tasks.schedule")]
     public class ScheduleTask : ISlotAsync
     {
-        readonly IScheduler _scheduler;
+        readonly ITaskScheduler _scheduler;
 
         /// <summary>
         /// Creates a new instance of your slot.
         /// </summary>
         /// <param name="scheduler">Which background service to use.</param>
-        public ScheduleTask(IScheduler scheduler)
+        public ScheduleTask(ITaskScheduler scheduler)
         {
             _scheduler = scheduler;
         }

@@ -11,7 +11,7 @@ namespace magic.lambda.scheduler.contracts
     /// <summary>
     /// Interface for scheduler, allowing you to manage schedules for tasks.
     /// </summary>
-    public interface IScheduler : IDisposable
+    public interface ITaskScheduler : IDisposable
     {
         /// <summary>
         /// Returns whether or not the scheduler is running or not.
