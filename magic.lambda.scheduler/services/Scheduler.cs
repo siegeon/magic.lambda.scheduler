@@ -12,7 +12,7 @@ using magic.node.extensions;
 using magic.signals.contracts;
 using magic.lambda.scheduler.contracts;
 
-namespace magic.lambda.scheduler.utilities
+namespace magic.lambda.scheduler.services
 {
     /// <inheritdoc />
     public sealed class Scheduler : ITaskScheduler, ITaskStorage
@@ -174,16 +174,19 @@ namespace magic.lambda.scheduler.utilities
                         cmd.Parameters.Add(parFilter);
                     }
 
-                    sqlBuilder.Append(GetTail());
+                    sqlBuilder.Append(GetTail(offset, limit));
 
                     // Assigning SQL to command text.
                     cmd.CommandText = sqlBuilder.ToString();
 
                     // Creating our offset argument.
-                    var parOffset = cmd.CreateParameter();
-                    parOffset.ParameterName = "@offset";
-                    parOffset.Value = offset;
-                    cmd.Parameters.Add(parOffset);
+                    if (offset > 0)
+                    {
+                        var parOffset = cmd.CreateParameter();
+                        parOffset.ParameterName = "@offset";
+                        parOffset.Value = offset;
+                        cmd.Parameters.Add(parOffset);
+                    }
 
                     // Creating our limit argument.
                     var parLimit = cmd.CreateParameter();
@@ -196,11 +199,10 @@ namespace magic.lambda.scheduler.utilities
                     {
                         while (reader.Read())
                         {
-                            var idxResult = new MagicTask(reader.GetString(0), reader.GetString(1), reader.GetString(2))
+                            yield return new MagicTask(reader[0] as string, reader[1] as string, reader[2] as string)
                             {
-                                Created = reader.GetDateTime(3)
+                                Created = (DateTime)reader[3]
                             };
-                            yield return idxResult;
                         }
                     }
                 }
@@ -260,16 +262,10 @@ namespace magic.lambda.scheduler.utilities
                     parFilter.Value = id;
                     cmd.Parameters.Add(parFilter);
 
-                    sqlBuilder.Append(GetTail());
+                    sqlBuilder.Append(GetTail(0L, 1L));
 
                     // Assigning SQL to command text.
                     cmd.CommandText = sqlBuilder.ToString();
-
-                    // Creating our offset argument.
-                    var parOffset = cmd.CreateParameter();
-                    parOffset.ParameterName = "@offset";
-                    parOffset.Value = 0L;
-                    cmd.Parameters.Add(parOffset);
 
                     // Creating our offset argument.
                     var parLimit = cmd.CreateParameter();
@@ -282,9 +278,9 @@ namespace magic.lambda.scheduler.utilities
                     {
                         if (reader.Read())
                         {
-                            return new MagicTask(reader.GetString(0), reader.GetString(1), reader.GetString(2))
+                            return new MagicTask(reader[0] as string, reader[1] as string, reader[2] as string)
                             {
-                                Created = reader.GetDateTime(3)
+                                Created = (DateTime)reader[3]
                             };
                         }
                     }
@@ -417,15 +413,19 @@ namespace magic.lambda.scheduler.utilities
         /*
          * Returns paging SQL parts to caller according to database type.
          */
-        string GetTail()
+        string GetTail(long offset, long limit)
         {
             var dbType = _configuration["magic:databases:default"];
             switch (dbType)
             {
                 case "mssql":
+                    if (offset > 0)
+                        return " fetch next @limit rows only";
                     return " offset @offset rows fetch next @limit rows only";
                 default:
-                    return " offset @offset limit @limit";
+                    if (offset > 0)
+                        return " offset @offset limit @limit";
+                    return " limit @limit";
             }
         }
 

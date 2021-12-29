@@ -47,11 +47,13 @@ namespace magic.lambda.scheduler.slots.tasks
             // Returning results to caller.
             foreach (var idx in tasks)
             {
+                // Building our currently iterated task node structure.
                 var cur = new Node(".");
                 cur.Add(new Node("id", idx.ID));
                 cur.Add(new Node("created", idx.Created));
                 if (!string.IsNullOrEmpty(idx.Description))
                     cur.Add(new Node("description", idx.Description));
+                input.Add(cur);
             }
         }
     }

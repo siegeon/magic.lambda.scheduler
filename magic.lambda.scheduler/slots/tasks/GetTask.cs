@@ -56,12 +56,9 @@ namespace magic.lambda.scheduler.slots.tasks
             if (task == null)
                 return;
 
-            // Creating a lambda object out of the Hyperlambda for our task.
-            var hlNode = new Node("", task.Hyperlambda);
-            signaler.Signal("hyper2lambda", hlNode);
-            input.Add(new Node(".lambda", null, hlNode.Children.ToList()));
-
             // Returning task properties to caller.
+            input.Add(new Node("hyperlambda", task.Hyperlambda));
+            input.Add(new Node("created", task.Created));
             input.Add(new Node("id", task.ID));
             if (!string.IsNullOrEmpty(task.Description))
                 input.Add(new Node("description", task.Description));
