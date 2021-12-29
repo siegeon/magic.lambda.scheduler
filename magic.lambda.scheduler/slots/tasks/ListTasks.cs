@@ -17,15 +17,15 @@ namespace magic.lambda.scheduler.slots.tasks
     [Slot(Name = "tasks.list")]
     public class ListTasks : ISlotAsync
     {
-        readonly IScheduler _scheduler;
+        readonly ITaskStorage _storage;
 
         /// <summary>
         /// Creates a new instance of your slot.
         /// </summary>
-        /// <param name="scheduler">Scheduler service to use.</param>
-        public ListTasks(IScheduler scheduler)
+        /// <param name="storage">Storage to use for tasks.</param>
+        public ListTasks(ITaskStorage storage)
         {
-            _scheduler = scheduler;
+            _storage = storage;
         }
 
         /// <summary>
@@ -35,7 +35,7 @@ namespace magic.lambda.scheduler.slots.tasks
         /// <param name="input">Arguments to slot.</param>
         public async Task SignalAsync(ISignaler signaler, Node input)
         {
-            var jobs = await _scheduler.ListTasks(
+            var jobs = await _storage.ListTasks(
                 input.GetEx<string>(),
                 input.Children.FirstOrDefault(x => x.Name == "offset")?.GetEx<long>() ?? 0,
                 input.Children.FirstOrDefault(x => x.Name == "limit")?.GetEx<long>() ?? 10);

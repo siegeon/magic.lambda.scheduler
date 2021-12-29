@@ -12,20 +12,20 @@ namespace magic.lambda.scheduler.slots.tasks
 {
     /// <summary>
     /// [tasks.count] slot that will return the number of tasks in your
-    /// system matching the optional [count] argument.
+    /// system matching the optional filter condition.
     /// </summary>
     [Slot(Name = "tasks.count")]
     public class CountTasks : ISlotAsync
     {
-        readonly IScheduler _scheduler;
+        readonly ITaskStorage _storage;
 
         /// <summary>
         /// Creates a new instance of your slot.
         /// </summary>
-        /// <param name="scheduler">Scheduler service to use.</param>
-        public CountTasks(IScheduler scheduler)
+        /// <param name="storage">Storage to use for tasks.</param>
+        public CountTasks(ITaskStorage storage)
         {
-            _scheduler = scheduler;
+            _storage = storage;
         }
 
         /// <summary>
@@ -35,7 +35,7 @@ namespace magic.lambda.scheduler.slots.tasks
         /// <param name="input">Arguments to slot.</param>
         public async Task SignalAsync(ISignaler signaler, Node input)
         {
-            input.Value = await _scheduler.CountTasks(input.GetEx<string>());
+            input.Value = await _storage.CountTasks(input.GetEx<string>());
         }
     }
 }

@@ -15,15 +15,15 @@ namespace magic.lambda.scheduler.slots.tasks
     [Slot(Name = "tasks.create")]
     public class CreateTask : ISlotAsync
     {
-        readonly IScheduler _scheduler;
+        readonly ITaskStorage _storage;
 
         /// <summary>
         /// Creates a new instance of your slot.
         /// </summary>
-        /// <param name="scheduler">Which background service to use.</param>
-        public CreateTask(IScheduler scheduler)
+        /// <param name="storage">Storage to use for tasks.</param>
+        public CreateTask(ITaskStorage storage)
         {
-            _scheduler = scheduler;
+            _storage = storage;
         }
 
         /// <summary>
@@ -33,7 +33,7 @@ namespace magic.lambda.scheduler.slots.tasks
         /// <param name="input">Arguments to slot.</param>
         public async Task SignalAsync(ISignaler signaler, Node input)
         {
-            await _scheduler.CreateTask(input);
+            await _storage.CreateTask(input);
         }
     }
 }

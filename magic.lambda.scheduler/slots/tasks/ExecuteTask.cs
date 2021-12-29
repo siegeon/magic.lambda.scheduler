@@ -11,20 +11,20 @@ using magic.lambda.scheduler.contracts;
 namespace magic.lambda.scheduler.slots.tasks
 {
     /// <summary>
-    /// [task.execute] slot that will return the date for the next upcoming task.
+    /// [task.execute] slot that will execute the specified task.
     /// </summary>
     [Slot(Name = "tasks.execute")]
     public class ExecuteTask : ISlotAsync
     {
-        readonly IScheduler _scheduler;
+        readonly ITaskStorage _storage;
 
         /// <summary>
         /// Creates a new instance of your slot.
         /// </summary>
-        /// <param name="scheduler">Which background service to use.</param>
-        public ExecuteTask(IScheduler scheduler)
+        /// <param name="storage">Storage to use for tasks.</param>
+        public ExecuteTask(ITaskStorage storage)
         {
-            _scheduler = scheduler;
+            _storage = storage;
         }
 
         /// <summary>
@@ -34,7 +34,7 @@ namespace magic.lambda.scheduler.slots.tasks
         /// <param name="input">Arguments to slot.</param>
         public async Task SignalAsync(ISignaler signaler, Node input)
         {
-            await _scheduler.ExecuteTask(input.GetEx<string>());
+            await _storage.ExecuteTask(input.GetEx<string>());
         }
     }
 }

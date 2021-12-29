@@ -18,15 +18,15 @@ namespace magic.lambda.scheduler.slots.tasks
     [Slot(Name = "tasks.get")]
     public class GetTask : ISlotAsync
     {
-        readonly IScheduler _scheduler;
+        readonly ITaskStorage _storage;
 
         /// <summary>
         /// Creates a new instance of your slot.
         /// </summary>
-        /// <param name="scheduler">Which background service to use.</param>
-        public GetTask(IScheduler scheduler)
+        /// <param name="storage">Storage to use for tasks.</param>
+        public GetTask(ITaskStorage storage)
         {
-            _scheduler = scheduler;
+            _storage = storage;
         }
 
         /// <summary>
@@ -37,7 +37,7 @@ namespace magic.lambda.scheduler.slots.tasks
         public async Task SignalAsync(ISignaler signaler, Node input)
         {
             input.AddRange(
-                (await _scheduler.GetTask(input.GetEx<string>()))
+                (await _storage.GetTask(input.GetEx<string>()))
                 .Children
                 .ToList());
         }
