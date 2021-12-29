@@ -46,6 +46,6 @@ namespace magic.lambda.scheduler.contracts
         /// Date and time when task was created.
         /// </summary>
         /// <value>Date and time when task was created.</value>
-        public DateTime? Created { get; set; }
+        public DateTime? Created { get; internal set; }
     }
 }

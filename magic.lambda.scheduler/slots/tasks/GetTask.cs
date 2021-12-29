@@ -52,6 +52,10 @@ namespace magic.lambda.scheduler.slots.tasks
             input.Value = null;
             input.Clear();
 
+            // Making sure we found specified task.
+            if (task == null)
+                return;
+
             // Creating a lambda object out of the Hyperlambda for our task.
             var hlNode = new Node("", task.Hyperlambda);
             signaler.Signal("hyper2lambda", hlNode);

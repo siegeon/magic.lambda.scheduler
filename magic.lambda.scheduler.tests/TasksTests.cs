@@ -117,5 +117,67 @@ tasks.delete:foo-bar2");
             ConnectionFactory.Arguments.Clear();
             Assert.Throws<HyperlambdaException>(() => Common.Evaluate(@"tasks.delete"));
         }
+
+        [Fact]
+        public void ListTasks()
+        {
+            ConnectionFactory.Arguments.Clear();
+            Common.Evaluate(@"tasks.list");
+            Assert.Equal("CONNECTION-STRING-magic", ConnectionFactory.ConnectionString);
+            Assert.Equal("select id, description, hyperlambda, created from tasks offset @offset limit @limit", ConnectionFactory.CommandText);
+            Assert.Equal(2, ConnectionFactory.Arguments.Count);
+            Assert.Single(ConnectionFactory.Arguments.Where(x => x.Item1 == "@offset" && x.Item2 == "0"));
+            Assert.Single(ConnectionFactory.Arguments.Where(x => x.Item1 == "@limit" && x.Item2 == "10"));
+        }
+
+        [Fact]
+        public void ListTasksWithFilterAndPaging()
+        {
+            ConnectionFactory.Arguments.Clear();
+            Common.Evaluate(@"
+tasks.list:foo
+   limit:11
+   offset:25");
+            Assert.Equal("CONNECTION-STRING-magic", ConnectionFactory.ConnectionString);
+            Assert.Equal("select id, description, hyperlambda, created from tasks where id like @filter or description like @filter offset @offset limit @limit", ConnectionFactory.CommandText);
+            Assert.Equal(3, ConnectionFactory.Arguments.Count);
+            Assert.Single(ConnectionFactory.Arguments.Where(x => x.Item1 == "@offset" && x.Item2 == "25"));
+            Assert.Single(ConnectionFactory.Arguments.Where(x => x.Item1 == "@limit" && x.Item2 == "11"));
+            Assert.Single(ConnectionFactory.Arguments.Where(x => x.Item1 == "@filter" && x.Item2 == "foo"));
+        }
+
+        [Fact]
+        public void CountTasks()
+        {
+            ConnectionFactory.Arguments.Clear();
+            Common.Evaluate(@"tasks.count");
+            Assert.Equal("CONNECTION-STRING-magic", ConnectionFactory.ConnectionString);
+            Assert.Equal("select count(*) from tasks", ConnectionFactory.CommandText);
+            Assert.Empty(ConnectionFactory.Arguments);
+        }
+
+        [Fact]
+        public void CountTasksWhere()
+        {
+            ConnectionFactory.Arguments.Clear();
+            Common.Evaluate(@"tasks.count:foo");
+            Assert.Equal("CONNECTION-STRING-magic", ConnectionFactory.ConnectionString);
+            Assert.Equal("select count(*) from tasks where id like @filter or description like @filter", ConnectionFactory.CommandText);
+            Assert.Single(ConnectionFactory.Arguments);
+            Assert.Single(ConnectionFactory.Arguments.Where(x => x.Item1 == "@filter" && x.Item2 == "foo"));
+        }
+
+        [Fact]
+        public void GetTask()
+        {
+            ConnectionFactory.Arguments.Clear();
+            Common.Evaluate(@"tasks.get:foo");
+            Assert.Equal("CONNECTION-STRING-magic", ConnectionFactory.ConnectionString);
+            Assert.Equal("select id, description, hyperlambda, created from tasks where id = @id offset @offset limit @limit", ConnectionFactory.CommandText);
+            Assert.Equal(3, ConnectionFactory.Arguments.Count);
+            Assert.Single(ConnectionFactory.Arguments.Where(x => x.Item1 == "@id" && x.Item2 == "foo"));
+            Assert.Single(ConnectionFactory.Arguments.Where(x => x.Item1 == "@offset" && x.Item2 == "0"));
+            Assert.Single(ConnectionFactory.Arguments.Where(x => x.Item1 == "@limit" && x.Item2 == "1"));
+        }
     }
 }

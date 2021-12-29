@@ -152,19 +152,145 @@ namespace magic.lambda.scheduler.utilities
         /// <inheritdoc />
         public IEnumerable<MagicTask> List(string filter, long offset, long limit)
         {
-            throw new NotImplementedException();
+            // Creating our connection, making sure we dispose it when we're done with it.
+            using (var connection = CreateConnection())
+            {
+                // Creating our SQL.
+                var sqlBuilder = new StringBuilder();
+                sqlBuilder.Append("select id, description, hyperlambda, created from tasks");
+
+                // Creating our SQL command, making sure we dispose it when we're done with it.
+                using (var cmd = connection.CreateCommand())
+                {
+                    // Checking if we've got a filter condition.
+                    if (!string.IsNullOrEmpty(filter))
+                    {
+                        sqlBuilder.Append(" where id like @filter or description like @filter");
+
+                        // Creating our filter argument.
+                        var parFilter = cmd.CreateParameter();
+                        parFilter.ParameterName = "@filter";
+                        parFilter.Value = filter;
+                        cmd.Parameters.Add(parFilter);
+                    }
+
+                    sqlBuilder.Append(GetTail());
+
+                    // Assigning SQL to command text.
+                    cmd.CommandText = sqlBuilder.ToString();
+
+                    // Creating our offset argument.
+                    var parOffset = cmd.CreateParameter();
+                    parOffset.ParameterName = "@offset";
+                    parOffset.Value = offset;
+                    cmd.Parameters.Add(parOffset);
+
+                    // Creating our limit argument.
+                    var parLimit = cmd.CreateParameter();
+                    parLimit.ParameterName = "@limit";
+                    parLimit.Value = limit;
+                    cmd.Parameters.Add(parLimit);
+
+                    // Executing command.
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            var idxResult = new MagicTask(reader.GetString(0), reader.GetString(1), reader.GetString(2))
+                            {
+                                Created = reader.GetDateTime(3)
+                            };
+                            yield return idxResult;
+                        }
+                    }
+                }
+            }
         }
 
         /// <inheritdoc />
         public long Count(string filter)
         {
-            throw new NotImplementedException();
+            // Creating our connection, making sure we dispose it when we're done with it.
+            using (var connection = CreateConnection())
+            {
+                // Creating our SQL.
+                var sqlBuilder = new StringBuilder();
+                sqlBuilder.Append("select count(*) from tasks");
+
+                // Creating our SQL command, making sure we dispose it when we're done with it.
+                using (var cmd = connection.CreateCommand())
+                {
+                    // Checking if we've got a filter condition.
+                    if (!string.IsNullOrEmpty(filter))
+                    {
+                        sqlBuilder.Append(" where id like @filter or description like @filter");
+
+                        // Creating our filter argument.
+                        var parFilter = cmd.CreateParameter();
+                        parFilter.ParameterName = "@filter";
+                        parFilter.Value = filter;
+                        cmd.Parameters.Add(parFilter);
+                    }
+
+                    // Assigning SQL to command text.
+                    cmd.CommandText = sqlBuilder.ToString();
+
+                    // Executing command.
+                    return (long)cmd.ExecuteScalar();
+                }
+            }
         }
 
         /// <inheritdoc />
         public MagicTask Get(string id)
         {
-            throw new NotImplementedException();
+            // Creating our connection, making sure we dispose it when we're done with it.
+            using (var connection = CreateConnection())
+            {
+                // Creating our SQL.
+                var sqlBuilder = new StringBuilder();
+                sqlBuilder.Append("select id, description, hyperlambda, created from tasks where id = @id");
+
+                // Creating our SQL command, making sure we dispose it when we're done with it.
+                using (var cmd = connection.CreateCommand())
+                {
+                    // Creating our filter argument.
+                    var parFilter = cmd.CreateParameter();
+                    parFilter.ParameterName = "@id";
+                    parFilter.Value = id;
+                    cmd.Parameters.Add(parFilter);
+
+                    sqlBuilder.Append(GetTail());
+
+                    // Assigning SQL to command text.
+                    cmd.CommandText = sqlBuilder.ToString();
+
+                    // Creating our offset argument.
+                    var parOffset = cmd.CreateParameter();
+                    parOffset.ParameterName = "@offset";
+                    parOffset.Value = 0L;
+                    cmd.Parameters.Add(parOffset);
+
+                    // Creating our offset argument.
+                    var parLimit = cmd.CreateParameter();
+                    parLimit.ParameterName = "@limit";
+                    parLimit.Value = 1L;
+                    cmd.Parameters.Add(parLimit);
+
+                    // Executing command.
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            return new MagicTask(reader.GetString(0), reader.GetString(1), reader.GetString(2))
+                            {
+                                Created = reader.GetDateTime(3)
+                            };
+                        }
+                    }
+                    return null;
+                }
+            }
         }
 
         /// <inheritdoc />
@@ -234,6 +360,21 @@ namespace magic.lambda.scheduler.utilities
 
             // Returning open connection to caller.
             return connection;
+        }
+
+        /*
+         * Returns paging SQL parts to caller according to database type.
+         */
+        string GetTail()
+        {
+            var dbType = _configuration["magic:databases:default"];
+            switch (dbType)
+            {
+                case "mssql":
+                    return " offset @offset rows fetch next @limit rows only";
+                default:
+                    return " offset @offset limit @limit";
+            }
         }
 
         #endregion

@@ -86,9 +86,26 @@ namespace magic.lambda.scheduler.tests
                                 .Callback<string>(x => Arguments.Add((x, null)));
                             dbParamMoq
                                 .SetupSet(x => x.Value = It.IsAny<string>())
-                                .Callback<object>(x => Arguments[Arguments.Count - 1] = (Arguments[Arguments.Count - 1].Item1, x as string));
+                                .Callback<object>(x => Arguments[Arguments.Count - 1] = (Arguments[Arguments.Count - 1].Item1, x?.ToString()));
+                            dbParamMoq
+                                .SetupSet(x => x.Value = It.IsAny<long>())
+                                .Callback<object>(x => Arguments[Arguments.Count - 1] = (Arguments[Arguments.Count - 1].Item1, x?.ToString()));
                             return dbParamMoq.Object;
                         });
+
+                    comMoq
+                        .Setup(p => p.ExecuteReader())
+                        .Returns(() =>
+                        {
+                            var dbReader = new Mock<IDataReader>();
+                            dbReader
+                                .Setup(p => p.Read())
+                                .Returns(false);
+                            return dbReader.Object;
+                        });
+                    comMoq
+                        .Setup(p => p.ExecuteScalar())
+                        .Returns(7L);
                     return comMoq.Object;
                 });
 
