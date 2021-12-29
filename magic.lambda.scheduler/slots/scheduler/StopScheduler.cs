@@ -2,7 +2,6 @@
  * Magic Cloud, copyright Aista, Ltd. See the attached LICENSE file for details.
  */
 
-using System.Threading.Tasks;
 using magic.node;
 using magic.signals.contracts;
 using magic.lambda.scheduler.contracts;
@@ -13,7 +12,7 @@ namespace magic.lambda.scheduler.slots.scheduler
     /// [scheduler.stop] slot that will stop the task scheduler.
     /// </summary>
     [Slot(Name = "scheduler.stop")]
-    public class StopScheduler : ISlotAsync
+    public class StopScheduler : ISlot
     {
         readonly ITaskScheduler _scheduler;
 
@@ -31,9 +30,9 @@ namespace magic.lambda.scheduler.slots.scheduler
         /// </summary>
         /// <param name="signaler">Signaler that raised signal.</param>
         /// <param name="input">Arguments to slot.</param>
-        public async Task SignalAsync(ISignaler signaler, Node input)
+        public void Signal(ISignaler signaler, Node input)
         {
-            await _scheduler.Stop();
+            _scheduler.Stop();
         }
     }
 }

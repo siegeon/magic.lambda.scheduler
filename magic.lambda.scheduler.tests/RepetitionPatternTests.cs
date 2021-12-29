@@ -1,4 +1,3 @@
-// #define DEEP_TESTING
 /*
  * Magic Cloud, copyright Aista, Ltd. See the attached LICENSE file for details.
  */

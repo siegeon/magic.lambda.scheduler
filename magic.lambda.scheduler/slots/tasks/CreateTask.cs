@@ -2,8 +2,9 @@
  * Magic Cloud, copyright Aista, Ltd. See the attached LICENSE file for details.
  */
 
-using System.Threading.Tasks;
+using System.Linq;
 using magic.node;
+using magic.node.extensions;
 using magic.signals.contracts;
 using magic.lambda.scheduler.contracts;
 
@@ -13,7 +14,7 @@ namespace magic.lambda.scheduler.slots.tasks
     /// [tasks.create] slot that will create a new task.
     /// </summary>
     [Slot(Name = "tasks.create")]
-    public class CreateTask : ISlotAsync
+    public class CreateTask : ISlot
     {
         readonly ITaskStorage _storage;
 
@@ -31,9 +32,59 @@ namespace magic.lambda.scheduler.slots.tasks
         /// </summary>
         /// <param name="signaler">Signaler that raised signal.</param>
         /// <param name="input">Arguments to slot.</param>
-        public async Task SignalAsync(ISignaler signaler, Node input)
+        public void Signal(ISignaler signaler, Node input)
         {
-            await _storage.Create(input);
+            _storage.CreateAsync(Create(signaler, input));
         }
+
+        #region [ -- Internal helper methods -- ]
+
+        /*
+         * Returns an ID for a task given the specified node.
+         */
+        internal static string GetID(Node node)
+        {
+            /*
+             * Retrieving ID of task, prioritising [id] argument, resorting to value if no [id] is found,
+             * and throwing an exception if neitehr is found.
+             */
+            var id = node.Children.FirstOrDefault(x => x.Name == "id")?.GetEx<string>() ??
+                node.GetEx<string>() ??
+                throw new HyperlambdaException($"No [id] or value provided to [{node.Name}]");
+
+            // Sanity checking ID.
+            if (id.Any(x => "abcdefghijklmnopqrstuvwxyz0123456789.-_".IndexOf(x) == -1))
+                throw new HyperlambdaException("ID of task can only contain [a-z], [0-9] and '.', '-' or '_' characters");
+
+            // Returning ID to caller.
+            return id;
+        }
+
+        /*
+         * Creates a task from the specified node structure and returns the created task to caller.
+         */
+        internal static MagicTask Create(ISignaler signaler, Node node)
+        {
+            // Sanity checking invocation.
+            if (!node.Children.Any(x => x.Name == ".lambda"))
+                throw new HyperlambdaException("[tasks.create] invoked without a [.lambda] object");
+
+            // Retrieving and sanity checking ID of task.
+            var id = GetID(node);
+
+            // Retrieving Hyperlambda for task.
+            var hlNode = new Node();
+            hlNode.AddRange(node.Children.FirstOrDefault(x => x.Name == ".lambda").Clone().Children);
+            signaler.Signal("lambda2hyper", hlNode);
+            var hyperlambda = hlNode.Get<string>();
+
+            // Retrieving description for task.
+            var description = node.Children.FirstOrDefault(x => x.Name == "description")?.GetEx<string>();
+
+            // Returning newly created task to caller.
+            return new MagicTask(id, description, hyperlambda);
+        }
+
+        #endregion
     }
 }

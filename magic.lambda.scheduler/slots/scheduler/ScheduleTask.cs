@@ -2,7 +2,6 @@
  * Magic Cloud, copyright Aista, Ltd. See the attached LICENSE file for details.
  */
 
-using System.Threading.Tasks;
 using magic.node;
 using magic.signals.contracts;
 using magic.lambda.scheduler.contracts;
@@ -14,7 +13,7 @@ namespace magic.lambda.scheduler.slots.scheduler
     /// according to some [repeats], or at a specific [due] date in the future.
     /// </summary>
     [Slot(Name = "tasks.schedule")]
-    public class ScheduleTask : ISlotAsync
+    public class ScheduleTask : ISlot
     {
         readonly ITaskScheduler _scheduler;
 
@@ -32,9 +31,9 @@ namespace magic.lambda.scheduler.slots.scheduler
         /// </summary>
         /// <param name="signaler">Signaler that raised signal.</param>
         /// <param name="input">Arguments to slot.</param>
-        public async Task SignalAsync(ISignaler signaler, Node input)
+        public void Signal(ISignaler signaler, Node input)
         {
-            await _scheduler.Schedule(input);
+            //_scheduler.Schedule(input);
         }
     }
 }

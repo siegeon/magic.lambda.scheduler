@@ -2,19 +2,17 @@
  * Magic Cloud, copyright Aista, Ltd. See the attached LICENSE file for details.
  */
 
-using System.Threading.Tasks;
 using magic.node;
-using magic.node.extensions;
 using magic.signals.contracts;
 using magic.lambda.scheduler.contracts;
 
 namespace magic.lambda.scheduler.slots.tasks
 {
     /// <summary>
-    /// [task.execute] slot that will execute the specified task.
+    /// [tasks.execute] slot that will execute the task with the specified ID.
     /// </summary>
     [Slot(Name = "tasks.execute")]
-    public class ExecuteTask : ISlotAsync
+    public class ExecuteTask : ISlot
     {
         readonly ITaskStorage _storage;
 
@@ -32,9 +30,9 @@ namespace magic.lambda.scheduler.slots.tasks
         /// </summary>
         /// <param name="signaler">Signaler that raised signal.</param>
         /// <param name="input">Arguments to slot.</param>
-        public async Task SignalAsync(ISignaler signaler, Node input)
+        public void Signal(ISignaler signaler, Node input)
         {
-            await _storage.Execute(input.GetEx<string>());
+            _storage.Execute(CreateTask.GetID(input));
         }
     }
 }

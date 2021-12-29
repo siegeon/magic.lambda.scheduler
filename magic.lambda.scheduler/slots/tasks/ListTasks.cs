@@ -3,7 +3,6 @@
  */
 
 using System.Linq;
-using System.Threading.Tasks;
 using magic.node;
 using magic.node.extensions;
 using magic.signals.contracts;
@@ -15,7 +14,7 @@ namespace magic.lambda.scheduler.slots.tasks
     /// [tasks.list] slot that will return the names of all tasks in the system.
     /// </summary>
     [Slot(Name = "tasks.list")]
-    public class ListTasks : ISlotAsync
+    public class ListTasks : ISlot
     {
         readonly ITaskStorage _storage;
 
@@ -33,23 +32,26 @@ namespace magic.lambda.scheduler.slots.tasks
         /// </summary>
         /// <param name="signaler">Signaler that raised signal.</param>
         /// <param name="input">Arguments to slot.</param>
-        public async Task SignalAsync(ISignaler signaler, Node input)
+        public void Signal(ISignaler signaler, Node input)
         {
-            var jobs = await _storage.List(
+            // Retrieving tasks
+            var tasks = _storage.List(
                 input.GetEx<string>(),
                 input.Children.FirstOrDefault(x => x.Name == "offset")?.GetEx<long>() ?? 0,
                 input.Children.FirstOrDefault(x => x.Name == "limit")?.GetEx<long>() ?? 10);
+
+            // House cleaning.
             input.Clear();
-            if (jobs.Any())
+            input.Value = null;
+
+            // Returning results to caller.
+            foreach (var idx in tasks)
             {
-                input.AddRange(jobs);
-                foreach (var idx in input.Children.Select(x => x.Children))
-                {
-                    var desc = idx.First(x => x.Name == "description");
-                    if (desc.Value == null)
-                        desc.UnTie();
-                    idx.First(x => x.Name == "hyperlambda").UnTie();
-                }
+                var cur = new Node(".");
+                cur.Add(new Node("id", idx.ID));
+                cur.Add(new Node("created", idx.Created));
+                if (!string.IsNullOrEmpty(idx.Description))
+                    cur.Add(new Node("description", idx.Description));
             }
         }
     }
