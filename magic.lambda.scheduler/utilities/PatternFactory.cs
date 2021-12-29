@@ -5,8 +5,9 @@
 using System;
 using System.Linq;
 using System.Collections.Generic;
-using magic.lambda.scheduler.utilities.patterns;
 using magic.node.extensions;
+using magic.lambda.scheduler.contracts;
+using magic.lambda.scheduler.utilities.patterns;
 
 namespace magic.lambda.scheduler.utilities
 {

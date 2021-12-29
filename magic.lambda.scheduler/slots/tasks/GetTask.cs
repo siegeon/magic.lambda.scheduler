@@ -2,18 +2,21 @@
  * Magic Cloud, copyright Aista, Ltd. See the attached LICENSE file for details.
  */
 
+using System.Linq;
+using System.Threading.Tasks;
 using magic.node;
+using magic.node.extensions;
 using magic.signals.contracts;
-using magic.lambda.scheduler.utilities;
+using magic.lambda.scheduler.contracts;
 
-namespace magic.lambda.scheduler
+namespace magic.lambda.scheduler.slots.tasks
 {
     /// <summary>
-    /// [scheduler.running] slot that will return boolean true if scheduler
-    /// is running.
+    /// [tasks.get] slot that will return an existing task with the specified name,
+    /// including its next due date.
     /// </summary>
-    [Slot(Name = "scheduler.running")]
-    public class SchedulerRunning : ISlot
+    [Slot(Name = "tasks.get")]
+    public class GetTask : ISlotAsync
     {
         readonly IScheduler _scheduler;
 
@@ -21,7 +24,7 @@ namespace magic.lambda.scheduler
         /// Creates a new instance of your slot.
         /// </summary>
         /// <param name="scheduler">Which background service to use.</param>
-        public SchedulerRunning(IScheduler scheduler)
+        public GetTask(IScheduler scheduler)
         {
             _scheduler = scheduler;
         }
@@ -31,9 +34,12 @@ namespace magic.lambda.scheduler
         /// </summary>
         /// <param name="signaler">Signaler that raised signal.</param>
         /// <param name="input">Arguments to slot.</param>
-        public void Signal(ISignaler signaler, Node input)
+        public async Task SignalAsync(ISignaler signaler, Node input)
         {
-            input.Value = _scheduler.Running;
+            input.AddRange(
+                (await _scheduler.GetTask(input.GetEx<string>()))
+                .Children
+                .ToList());
         }
     }
 }

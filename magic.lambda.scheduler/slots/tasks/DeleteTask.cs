@@ -5,9 +5,9 @@
 using System.Threading.Tasks;
 using magic.node;
 using magic.signals.contracts;
-using magic.lambda.scheduler.utilities;
+using magic.lambda.scheduler.contracts;
 
-namespace magic.lambda.scheduler
+namespace magic.lambda.scheduler.slots.tasks
 {
     /// <summary>
     /// [tasks.delete] slot that will delete a named task.

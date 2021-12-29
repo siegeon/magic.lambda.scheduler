@@ -7,6 +7,7 @@ using System;
 using Xunit;
 using magic.node.extensions;
 using magic.lambda.scheduler.utilities;
+using magic.lambda.scheduler.contracts;
 
 namespace magic.lambda.scheduler.tests
 {

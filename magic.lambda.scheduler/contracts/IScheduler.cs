@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using magic.node;
 
-namespace magic.lambda.scheduler.utilities
+namespace magic.lambda.scheduler.contracts
 {
     /// <summary>
     /// Interface for task scheduler, allowing you to create, edit and delet tasks.

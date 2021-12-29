@@ -5,25 +5,23 @@
 using System.Threading.Tasks;
 using magic.node;
 using magic.signals.contracts;
-using magic.lambda.scheduler.utilities;
-using magic.node.extensions;
+using magic.lambda.scheduler.contracts;
 
 namespace magic.lambda.scheduler
 {
     /// <summary>
-    /// [tasks.count] slot that will return the number of tasks in your
-    /// system matching the optional [count] argument.
+    /// [scheduler.next] slot that will return the date for the next upcoming task.
     /// </summary>
-    [Slot(Name = "tasks.count")]
-    public class CountTasks : ISlotAsync
+    [Slot(Name = "scheduler.next")]
+    public class NextUpcomingTask : ISlotAsync
     {
         readonly IScheduler _scheduler;
 
         /// <summary>
         /// Creates a new instance of your slot.
         /// </summary>
-        /// <param name="scheduler">Scheduler service to use.</param>
-        public CountTasks(IScheduler scheduler)
+        /// <param name="scheduler">Which background service to use.</param>
+        public NextUpcomingTask(IScheduler scheduler)
         {
             _scheduler = scheduler;
         }
@@ -35,7 +33,7 @@ namespace magic.lambda.scheduler
         /// <param name="input">Arguments to slot.</param>
         public async Task SignalAsync(ISignaler signaler, Node input)
         {
-            input.Value = await _scheduler.CountTasks(input.GetEx<string>());
+            input.Value = await _scheduler.NextTask();
         }
     }
 }

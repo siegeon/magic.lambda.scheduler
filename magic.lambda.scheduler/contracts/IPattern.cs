@@ -4,7 +4,7 @@
 
 using System;
 
-namespace magic.lambda.scheduler.utilities
+namespace magic.lambda.scheduler.contracts
 {
     /// <summary>
     /// Common interface for repetition pattern instances.

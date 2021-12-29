@@ -5,15 +5,15 @@
 using System.Threading.Tasks;
 using magic.node;
 using magic.signals.contracts;
-using magic.lambda.scheduler.utilities;
+using magic.lambda.scheduler.contracts;
 
-namespace magic.lambda.scheduler
+namespace magic.lambda.scheduler.slots.tasks
 {
     /// <summary>
-    /// [tasks.update] slot that will update an existing task.
+    /// [tasks.create] slot that will create a new task.
     /// </summary>
-    [Slot(Name = "tasks.update")]
-    public class UpdateTask : ISlotAsync
+    [Slot(Name = "tasks.create")]
+    public class CreateTask : ISlotAsync
     {
         readonly IScheduler _scheduler;
 
@@ -21,7 +21,7 @@ namespace magic.lambda.scheduler
         /// Creates a new instance of your slot.
         /// </summary>
         /// <param name="scheduler">Which background service to use.</param>
-        public UpdateTask(IScheduler scheduler)
+        public CreateTask(IScheduler scheduler)
         {
             _scheduler = scheduler;
         }
@@ -33,7 +33,7 @@ namespace magic.lambda.scheduler
         /// <param name="input">Arguments to slot.</param>
         public async Task SignalAsync(ISignaler signaler, Node input)
         {
-            await _scheduler.UpdateTask(input);
+            await _scheduler.CreateTask(input);
         }
     }
 }

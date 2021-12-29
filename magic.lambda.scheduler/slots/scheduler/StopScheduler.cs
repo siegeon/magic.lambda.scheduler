@@ -4,17 +4,16 @@
 
 using System.Threading.Tasks;
 using magic.node;
-using magic.node.extensions;
 using magic.signals.contracts;
-using magic.lambda.scheduler.utilities;
+using magic.lambda.scheduler.contracts;
 
-namespace magic.lambda.scheduler
+namespace magic.lambda.scheduler.slots.scheduler
 {
     /// <summary>
-    /// [task.execute] slot that will return the date for the next upcoming task.
+    /// [scheduler.stop] slot that will stop the task scheduler.
     /// </summary>
-    [Slot(Name = "tasks.execute")]
-    public class ExecuteTask : ISlotAsync
+    [Slot(Name = "scheduler.stop")]
+    public class StopScheduler : ISlotAsync
     {
         readonly IScheduler _scheduler;
 
@@ -22,7 +21,7 @@ namespace magic.lambda.scheduler
         /// Creates a new instance of your slot.
         /// </summary>
         /// <param name="scheduler">Which background service to use.</param>
-        public ExecuteTask(IScheduler scheduler)
+        public StopScheduler(IScheduler scheduler)
         {
             _scheduler = scheduler;
         }
@@ -34,7 +33,7 @@ namespace magic.lambda.scheduler
         /// <param name="input">Arguments to slot.</param>
         public async Task SignalAsync(ISignaler signaler, Node input)
         {
-            await _scheduler.ExecuteTask(input.GetEx<string>());
+            await _scheduler.StopScheduler();
         }
     }
 }

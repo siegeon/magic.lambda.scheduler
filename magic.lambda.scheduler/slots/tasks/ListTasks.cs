@@ -7,9 +7,9 @@ using System.Threading.Tasks;
 using magic.node;
 using magic.node.extensions;
 using magic.signals.contracts;
-using magic.lambda.scheduler.utilities;
+using magic.lambda.scheduler.contracts;
 
-namespace magic.lambda.scheduler
+namespace magic.lambda.scheduler.slots.tasks
 {
     /// <summary>
     /// [tasks.list] slot that will return the names of all tasks in the system.

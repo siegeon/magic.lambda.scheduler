@@ -2,19 +2,18 @@
  * Magic Cloud, copyright Aista, Ltd. See the attached LICENSE file for details.
  */
 
-using System.Threading.Tasks;
 using magic.node;
 using magic.signals.contracts;
-using magic.lambda.scheduler.utilities;
+using magic.lambda.scheduler.contracts;
 
-namespace magic.lambda.scheduler
+namespace magic.lambda.scheduler.slots.scheduler
 {
     /// <summary>
-    /// [tasks.schedule] slot that will schedule an existing task for being executed, either
-    /// according to some [repeats], or at a specific [due] date in the future.
+    /// [scheduler.running] slot that will return boolean true if scheduler
+    /// is running.
     /// </summary>
-    [Slot(Name = "tasks.schedule")]
-    public class ScheduleTask : ISlotAsync
+    [Slot(Name = "scheduler.running")]
+    public class SchedulerRunning : ISlot
     {
         readonly IScheduler _scheduler;
 
@@ -22,7 +21,7 @@ namespace magic.lambda.scheduler
         /// Creates a new instance of your slot.
         /// </summary>
         /// <param name="scheduler">Which background service to use.</param>
-        public ScheduleTask(IScheduler scheduler)
+        public SchedulerRunning(IScheduler scheduler)
         {
             _scheduler = scheduler;
         }
@@ -32,9 +31,9 @@ namespace magic.lambda.scheduler
         /// </summary>
         /// <param name="signaler">Signaler that raised signal.</param>
         /// <param name="input">Arguments to slot.</param>
-        public async Task SignalAsync(ISignaler signaler, Node input)
+        public void Signal(ISignaler signaler, Node input)
         {
-            await _scheduler.ScheduleTask(input);
+            input.Value = _scheduler.Running;
         }
     }
 }

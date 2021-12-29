@@ -11,6 +11,7 @@ using magic.node;
 using magic.node.extensions;
 using magic.signals.contracts;
 using magic.lambda.logging.helpers;
+using magic.lambda.scheduler.contracts;
 
 namespace magic.lambda.scheduler.utilities
 {

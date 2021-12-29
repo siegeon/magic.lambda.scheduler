@@ -4,24 +4,26 @@
 
 using System.Threading.Tasks;
 using magic.node;
+using magic.node.extensions;
 using magic.signals.contracts;
-using magic.lambda.scheduler.utilities;
+using magic.lambda.scheduler.contracts;
 
-namespace magic.lambda.scheduler
+namespace magic.lambda.scheduler.slots.tasks
 {
     /// <summary>
-    /// [tasks.create] slot that will create a new task.
+    /// [tasks.count] slot that will return the number of tasks in your
+    /// system matching the optional [count] argument.
     /// </summary>
-    [Slot(Name = "tasks.create")]
-    public class CreateTask : ISlotAsync
+    [Slot(Name = "tasks.count")]
+    public class CountTasks : ISlotAsync
     {
         readonly IScheduler _scheduler;
 
         /// <summary>
         /// Creates a new instance of your slot.
         /// </summary>
-        /// <param name="scheduler">Which background service to use.</param>
-        public CreateTask(IScheduler scheduler)
+        /// <param name="scheduler">Scheduler service to use.</param>
+        public CountTasks(IScheduler scheduler)
         {
             _scheduler = scheduler;
         }
@@ -33,7 +35,7 @@ namespace magic.lambda.scheduler
         /// <param name="input">Arguments to slot.</param>
         public async Task SignalAsync(ISignaler signaler, Node input)
         {
-            await _scheduler.CreateTask(input);
+            input.Value = await _scheduler.CountTasks(input.GetEx<string>());
         }
     }
 }
