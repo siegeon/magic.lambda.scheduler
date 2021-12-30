@@ -124,6 +124,28 @@ namespace magic.lambda.scheduler.utilities
             }
         }
 
+        /*
+         * Gets insert tail for SQL.
+         */
+        public static string GetInsertTail(IMagicConfiguration configuration)
+        {
+            var dbType = configuration["magic:databases:default"];
+            switch (dbType)
+            {
+                case "mssql":
+                    return "; select scope_identity();";
+
+                case "mysql":
+                    return "; select last_insert_id();";
+
+                case "pgsql":
+                    return " returning *";
+
+                default:
+                    throw new HyperlambdaException($"The scheduler doesn't support database type '{dbType}'");
+            }
+        }
+
         #region [ -- Private helper methods -- ]
 
         /*

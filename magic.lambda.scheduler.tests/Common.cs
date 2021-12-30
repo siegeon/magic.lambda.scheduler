@@ -23,6 +23,7 @@ namespace magic.lambda.scheduler.tests
      * Helper slot required to create a database connection for logger library.
      */
     [Slot(Name = ".db-factory.connection.mysql")]
+    [Slot(Name = ".db-factory.connection.pgsql")]
     [Slot(Name = ".db-factory.connection.mssql")]
     internal class ConnectionFactory : ISlot
     {

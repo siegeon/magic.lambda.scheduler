@@ -6,6 +6,7 @@ using System;
 using System.Data;
 using System.Text;
 using System.Linq;
+using System.Threading;
 using System.Collections.Generic;
 using magic.node;
 using magic.node.contracts;
@@ -211,15 +212,19 @@ namespace magic.lambda.scheduler.services
         {
             DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
             {
-                var sql = "insert into task_due (task, due, repeats) values (@task, @due, @repeats)";
+                var sqlBuilder = new StringBuilder();
+                sqlBuilder.Append("insert into task_due (task, due, repeats) values (@task, @due, @repeats)");
+                sqlBuilder.Append(DatabaseHelper.GetInsertTail(_configuration));
 
-                DatabaseHelper.CreateCommand(connection, sql, (cmd) =>
+                DatabaseHelper.CreateCommand(connection, sqlBuilder.ToString(), (cmd) =>
                 {
+                    var due = repetition.Next();
                     DatabaseHelper.AddParameter(cmd, "@task", taskId);
-                    DatabaseHelper.AddParameter(cmd, "@due", repetition.Next());
+                    DatabaseHelper.AddParameter(cmd, "@due", due);
                     DatabaseHelper.AddParameter(cmd, "@repeats", repetition.Value);
 
-                    cmd.ExecuteNonQuery();
+                    var scheduledId = (long)cmd.ExecuteScalar();
+                    CreateSchedule(scheduledId, taskId, due);
                 });
             });
         }
@@ -229,14 +234,17 @@ namespace magic.lambda.scheduler.services
         {
             DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
             {
-                var sql = "insert into task_due (task, due) values (@task, @due)";
+                var sqlBuilder = new StringBuilder();
+                sqlBuilder.Append("insert into task_due (task, due) values (@task, @due)");
+                sqlBuilder.Append(DatabaseHelper.GetInsertTail(_configuration));
 
-                DatabaseHelper.CreateCommand(connection, sql, (cmd) =>
+                DatabaseHelper.CreateCommand(connection, sqlBuilder.ToString(), (cmd) =>
                 {
                     DatabaseHelper.AddParameter(cmd, "@task", taskId);
                     DatabaseHelper.AddParameter(cmd, "@due", due);
 
-                    cmd.ExecuteNonQuery();
+                    var scheduleId = (long)cmd.ExecuteScalar();
+                    CreateSchedule(scheduleId, taskId, due);
                 });
             });
         }
@@ -281,6 +289,35 @@ namespace magic.lambda.scheduler.services
                     };
                 });
             });
+        }
+
+        /*
+         * Creates a timer for the specified schedule ID and executes the task at
+         * that specific time.
+         */
+        void CreateSchedule(long scheduleId, string taskId, DateTime due)
+        {
+            /*
+             * Notice, since the maximum future date for Timer is 45 days into the future, we
+             * might have to do some "trickery" here to make sure we tick in the timer 45 days from
+             * now, and postpone the execution if the schedule is for more than 45 days into the future.
+             */
+            var nextDue = (long)Math.Max(
+                250L,
+                Math.Min(
+                    (due - DateTime.UtcNow).TotalMilliseconds,
+                    new TimeSpan(45, 0, 0, 0).TotalMilliseconds));
+            var postpone = (due - DateTime.UtcNow).TotalMilliseconds > new TimeSpan(45, 0, 0, 0).TotalMilliseconds;
+            var timer = new Timer((state) =>
+            {
+                // Checking if we have to postpone execution of task further into the future.
+                if (postpone)
+                {
+                    // More than 45 days until schedule is due, hence just re-creating our timer.
+                    CreateSchedule(scheduleId, taskId, due);
+                    return;
+                }
+            }, null, nextDue, Timeout.Infinite);
         }
 
         #endregion

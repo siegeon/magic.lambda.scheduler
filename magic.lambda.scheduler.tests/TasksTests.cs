@@ -200,7 +200,35 @@ tasks.get:foo
 tasks.schedule:foo
    due:date:""2030-12-24T17:00""");
             Assert.Equal("CONNECTION-STRING-magic", ConnectionFactory.ConnectionString);
-            Assert.Equal("insert into task_due (task, due) values (@task, @due)", ConnectionFactory.CommandText);
+            Assert.Equal("insert into task_due (task, due) values (@task, @due); select last_insert_id();", ConnectionFactory.CommandText);
+            Assert.Equal(2, ConnectionFactory.Arguments.Count);
+            Assert.Single(ConnectionFactory.Arguments.Where(x => x.Item1 == "@task" && x.Item2 == "foo"));
+            Assert.Single(ConnectionFactory.Arguments.Where(x => x.Item1 == "@due" && x.Item2 == "2030-12-24T17:00"));
+        }
+
+        [Fact]
+        public void Schedule_Due_MSSQL()
+        {
+            ConnectionFactory.Arguments.Clear();
+            Common.Evaluate(@"
+tasks.schedule:foo
+   due:date:""2030-12-24T17:00""", "mssql");
+            Assert.Equal("CONNECTION-STRING-magic", ConnectionFactory.ConnectionString);
+            Assert.Equal("insert into task_due (task, due) values (@task, @due); select scope_identity();", ConnectionFactory.CommandText);
+            Assert.Equal(2, ConnectionFactory.Arguments.Count);
+            Assert.Single(ConnectionFactory.Arguments.Where(x => x.Item1 == "@task" && x.Item2 == "foo"));
+            Assert.Single(ConnectionFactory.Arguments.Where(x => x.Item1 == "@due" && x.Item2 == "2030-12-24T17:00"));
+        }
+
+        [Fact]
+        public void Schedule_Due_PGSQL()
+        {
+            ConnectionFactory.Arguments.Clear();
+            Common.Evaluate(@"
+tasks.schedule:foo
+   due:date:""2030-12-24T17:00""", "pgsql");
+            Assert.Equal("CONNECTION-STRING-magic", ConnectionFactory.ConnectionString);
+            Assert.Equal("insert into task_due (task, due) values (@task, @due) returning *", ConnectionFactory.CommandText);
             Assert.Equal(2, ConnectionFactory.Arguments.Count);
             Assert.Single(ConnectionFactory.Arguments.Where(x => x.Item1 == "@task" && x.Item2 == "foo"));
             Assert.Single(ConnectionFactory.Arguments.Where(x => x.Item1 == "@due" && x.Item2 == "2030-12-24T17:00"));
@@ -214,7 +242,7 @@ tasks.schedule:foo
 tasks.schedule:foo
    repeats:5.seconds");
             Assert.Equal("CONNECTION-STRING-magic", ConnectionFactory.ConnectionString);
-            Assert.Equal("insert into task_due (task, due, repeats) values (@task, @due, @repeats)", ConnectionFactory.CommandText);
+            Assert.Equal("insert into task_due (task, due, repeats) values (@task, @due, @repeats); select last_insert_id();", ConnectionFactory.CommandText);
             Assert.Equal(3, ConnectionFactory.Arguments.Count);
             Assert.Single(ConnectionFactory.Arguments.Where(x => x.Item1 == "@task" && x.Item2 == "foo"));
             Assert.Single(ConnectionFactory.Arguments.Where(x => x.Item1 == "@repeats" && x.Item2 == "5.seconds"));

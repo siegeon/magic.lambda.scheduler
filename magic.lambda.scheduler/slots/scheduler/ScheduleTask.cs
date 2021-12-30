@@ -44,13 +44,19 @@ namespace magic.lambda.scheduler.slots.scheduler
             var pattern = input.Children.FirstOrDefault(x => x.Name == "repeats")?.GetEx<string>();
             if (pattern != null)
             {
-                var repeats = PatternFactory.Create(pattern);
-                _scheduler.ScheduleTask(taskId, repeats);
+                _scheduler.ScheduleTask(taskId, PatternFactory.Create(pattern));
             }
             else
             {
-                var due = input.Children.FirstOrDefault(x => x.Name == "due")?.GetEx<DateTime>() ?? 
+                var due = input
+                    .Children
+                    .FirstOrDefault(x => x.Name == "due")?
+                    .GetEx<DateTime>() ?? 
                     throw new HyperlambdaException("No [due] or [repeats] provided to [tasks.schedule]");
+
+                // Sanity checking invocation.
+                if (due < DateTime.UtcNow)
+                    throw new HyperlambdaException($"[tasks.schedule] cannot be invoked with a date and time being in the past.");
                 _scheduler.ScheduleTask(taskId, due);
             }
         }
