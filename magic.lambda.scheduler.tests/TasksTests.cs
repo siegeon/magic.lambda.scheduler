@@ -167,6 +167,7 @@ tasks.list:foo
         public void CountTasks()
         {
             ConnectionFactory.Arguments.Clear();
+            ConnectionFactory.ExecuteScalar = 7L;
             Common.Evaluate(@"tasks.count");
             Assert.Equal("CONNECTION-STRING-magic", ConnectionFactory.ConnectionString);
             Assert.Equal("select count(*) from tasks", ConnectionFactory.CommandText);
@@ -177,6 +178,7 @@ tasks.list:foo
         public void CountTasksWhere()
         {
             ConnectionFactory.Arguments.Clear();
+            ConnectionFactory.ExecuteScalar = 7L;
             Common.Evaluate(@"tasks.count:foo");
             Assert.Equal("CONNECTION-STRING-magic", ConnectionFactory.ConnectionString);
             Assert.Equal("select count(*) from tasks where id like @filter or description like @filter", ConnectionFactory.CommandText);
@@ -196,6 +198,7 @@ tasks.get:foo
         public void Schedule_Due()
         {
             ConnectionFactory.Arguments.Clear();
+            ConnectionFactory.ExecuteScalar = 7UL;
             Common.Evaluate(@"
 tasks.schedule:foo
    due:date:""2030-12-24T17:00""");
@@ -210,6 +213,7 @@ tasks.schedule:foo
         public void Schedule_Due_MSSQL()
         {
             ConnectionFactory.Arguments.Clear();
+            ConnectionFactory.ExecuteScalar = 7UL;
             Common.Evaluate(@"
 tasks.schedule:foo
    due:date:""2030-12-24T17:00""", "mssql");
@@ -224,6 +228,7 @@ tasks.schedule:foo
         public void Schedule_Due_PGSQL()
         {
             ConnectionFactory.Arguments.Clear();
+            ConnectionFactory.ExecuteScalar = 7UL;
             Common.Evaluate(@"
 tasks.schedule:foo
    due:date:""2030-12-24T17:00""", "pgsql");
@@ -238,6 +243,7 @@ tasks.schedule:foo
         public void Schedule_Pattern_01()
         {
             ConnectionFactory.Arguments.Clear();
+            ConnectionFactory.ExecuteScalar = 7UL;
             Common.Evaluate(@"
 tasks.schedule:foo
    repeats:5.seconds");

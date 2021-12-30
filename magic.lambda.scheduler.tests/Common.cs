@@ -31,6 +31,7 @@ namespace magic.lambda.scheduler.tests
         public static bool OpenInvoked { get; private set; }
         public static string CommandText { get; private set; }
         public static List<(string, string)> Arguments { get; } = new List<(string, string)>();
+        public static object ExecuteScalar;
 
         public void Signal(ISignaler signaler, Node input)
         {
@@ -111,7 +112,7 @@ namespace magic.lambda.scheduler.tests
                         });
                     comMoq
                         .Setup(p => p.ExecuteScalar())
-                        .Returns(7L);
+                        .Returns(ExecuteScalar);
                     return comMoq.Object;
                 });
 
