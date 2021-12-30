@@ -32,7 +32,7 @@ namespace magic.lambda.scheduler.slots.tasks
         /// <param name="input">Arguments to slot.</param>
         public void Signal(ISignaler signaler, Node input)
         {
-            _storage.Update(CreateTask.Create(signaler, input));
+            _storage.UpdateTask(CreateTask.Create(signaler, input));
         }
     }
 }

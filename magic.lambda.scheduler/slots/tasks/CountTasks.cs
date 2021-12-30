@@ -34,7 +34,7 @@ namespace magic.lambda.scheduler.slots.tasks
         /// <param name="input">Arguments to slot.</param>
         public void Signal(ISignaler signaler, Node input)
         {
-            input.Value = _storage.Count(input.GetEx<string>());
+            input.Value = _storage.CountTasks(input.GetEx<string>());
         }
     }
 }

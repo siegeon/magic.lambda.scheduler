@@ -12,6 +12,7 @@ using magic.node.extensions;
 using magic.signals.contracts;
 using magic.lambda.scheduler.contracts;
 using magic.lambda.scheduler.utilities;
+using System.Linq;
 
 namespace magic.lambda.scheduler.services
 {
@@ -36,7 +37,7 @@ namespace magic.lambda.scheduler.services
         #region [ -- Interface implementation for ITaskStorage -- ]
 
         /// <inheritdoc />
-        public void CreateAsync(MagicTask task)
+        public void CreateTask(MagicTask task)
         {
             DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
             {
@@ -59,7 +60,7 @@ namespace magic.lambda.scheduler.services
         }
 
         /// <inheritdoc />
-        public void Update(MagicTask task)
+        public void UpdateTask(MagicTask task)
         {
             DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
             {
@@ -78,7 +79,7 @@ namespace magic.lambda.scheduler.services
         }
 
         /// <inheritdoc />
-        public void Delete(string id)
+        public void DeleteTask(string id)
         {
             DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
             {
@@ -95,7 +96,7 @@ namespace magic.lambda.scheduler.services
         }
 
         /// <inheritdoc />
-        public IEnumerable<MagicTask> List(string filter, long offset, long limit)
+        public IEnumerable<MagicTask> ListTasks(string filter, long offset, long limit)
         {
             return DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
             {
@@ -113,24 +114,22 @@ namespace magic.lambda.scheduler.services
                         DatabaseHelper.AddParameter(cmd, "@offset", offset);
                     DatabaseHelper.AddParameter(cmd, "@limit", limit);
 
-                    using (var reader = cmd.ExecuteReader())
+                    return DatabaseHelper.Iterate(cmd, (reader) =>
                     {
-                        var result = new List<MagicTask>();
-                        while (reader.Read())
+                        return new MagicTask(
+                            reader[0] as string,
+                            reader[1] as string,
+                            reader[2] as string)
                         {
-                            result.Add(new MagicTask(reader[0] as string, reader[1] as string, reader[2] as string)
-                            {
-                                Created = (DateTime)reader[3]
-                            });
-                        }
-                        return result;
-                    }
+                            Created = (DateTime)reader[3]
+                        };
+                    });
                 });
             });
         }
 
         /// <inheritdoc />
-        public long Count(string filter)
+        public long CountTasks(string filter)
         {
             return DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
             {
@@ -150,7 +149,7 @@ namespace magic.lambda.scheduler.services
         }
 
         /// <inheritdoc />
-        public MagicTask Get(string id, bool schedules = false)
+        public MagicTask GetTask(string id, bool schedules = false)
         {
             return DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
             {
@@ -164,26 +163,18 @@ namespace magic.lambda.scheduler.services
                     DatabaseHelper.AddParameter(cmd, "@id", id);
                     DatabaseHelper.AddParameter(cmd, "@limit", 1L);
 
-                    MagicTask result = null;
-                    using (var reader = cmd.ExecuteReader())
+                    var result = DatabaseHelper.Iterate(cmd, (reader) =>
                     {
-                        if (reader.Read())
+                        return new MagicTask(
+                            reader[0] as string,
+                            reader[1] as string,
+                            reader[2] as string)
                         {
-                            result = new MagicTask(
-                                reader[0] as string,
-                                reader[1] as string,
-                                reader[2] as string)
-                            {
-                                Created = (DateTime)reader[3],
-                            };
-                        }
-                        else
-                        {
-                            throw new HyperlambdaException($"Task with ID of '{id}' was not found.");
-                        }
-                    }
+                            Created = (DateTime)reader[3],
+                        };
+                    }).FirstOrDefault() ?? throw new HyperlambdaException($"Task with ID of '{id}' was not found.");;
 
-                    if (result != null && schedules)
+                    if (schedules)
                     {
                         foreach (var idx in GetSchedules(connection, result.ID))
                         {
@@ -196,10 +187,10 @@ namespace magic.lambda.scheduler.services
         }
 
         /// <inheritdoc />
-        public void Execute(string id)
+        public void ExecuteTask(string id)
         {
             // Retrieving task.
-            var task = Get(id);
+            var task = GetTask(id);
             if (task == null)
                 throw new HyperlambdaException($"Task with ID of '{id}' was not found");
 
@@ -216,7 +207,7 @@ namespace magic.lambda.scheduler.services
         #region [ -- Interface implementation for ITaskScheduler -- ]
 
         /// <inheritdoc />
-        public void Schedule(string taskId, IRepetitionPattern repetition)
+        public void ScheduleTask(string taskId, IRepetitionPattern repetition)
         {
             DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
             {
@@ -234,7 +225,7 @@ namespace magic.lambda.scheduler.services
         }
 
         /// <inheritdoc />
-        public void Schedule(string taskId, DateTime due)
+        public void ScheduleTask(string taskId, DateTime due)
         {
             DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
             {
@@ -251,7 +242,7 @@ namespace magic.lambda.scheduler.services
         }
 
         /// <inheritdoc />
-        public void Delete(int id)
+        public void DeleteSchedule(int id)
         {
             DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
             {
@@ -276,28 +267,19 @@ namespace magic.lambda.scheduler.services
          */
         IEnumerable<Schedule> GetSchedules(IDbConnection connection, string id)
         {
-            // Creating our SQL.
             var sql = "select id, due, repeats from task_due where task = @task";
 
-            // Creating our SQL command, making sure we dispose it when we're done with it.
             return DatabaseHelper.CreateCommand(connection, sql, (cmd) =>
             {
-                // Creating our limit argument.
                 DatabaseHelper.AddParameter(cmd, "@task", id);
 
-                // Executing command.
-                using (var reader = cmd.ExecuteReader())
+                return DatabaseHelper.Iterate(cmd, (reader) =>
                 {
-                    var result = new List<contracts.Schedule>();
-                    while (reader.Read())
+                    return new contracts.Schedule((DateTime)reader[1], reader[2] as string)
                     {
-                        result.Add(new contracts.Schedule((DateTime)reader[1], reader[2] as string)
-                        {
-                            Id = (int)reader[0],
-                        });
-                    }
-                    return result;
-                }
+                        Id = (int)reader[0],
+                    };
+                });
             });
         }
 

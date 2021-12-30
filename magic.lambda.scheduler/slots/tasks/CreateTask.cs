@@ -34,7 +34,7 @@ namespace magic.lambda.scheduler.slots.tasks
         /// <param name="input">Arguments to slot.</param>
         public void Signal(ISignaler signaler, Node input)
         {
-            _storage.CreateAsync(Create(signaler, input));
+            _storage.CreateTask(Create(signaler, input));
         }
 
         #region [ -- Internal helper methods -- ]

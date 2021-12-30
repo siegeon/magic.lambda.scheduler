@@ -45,13 +45,13 @@ namespace magic.lambda.scheduler.slots.scheduler
             if (pattern != null)
             {
                 var repeats = PatternFactory.Create(pattern);
-                _scheduler.Schedule(taskId, repeats);
+                _scheduler.ScheduleTask(taskId, repeats);
             }
             else
             {
                 var due = input.Children.FirstOrDefault(x => x.Name == "due")?.GetEx<DateTime>() ?? 
                     throw new HyperlambdaException("No [due] or [repeats] provided to [tasks.schedule]");
-                _scheduler.Schedule(taskId, due);
+                _scheduler.ScheduleTask(taskId, due);
             }
         }
     }

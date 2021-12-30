@@ -40,7 +40,7 @@ namespace magic.lambda.scheduler.slots.tasks
                 filter += "%";
 
             // Retrieving tasks
-            var tasks = _storage.List(
+            var tasks = _storage.ListTasks(
                 filter,
                 input.Children.FirstOrDefault(x => x.Name == "offset")?.GetEx<long>() ?? 0,
                 input.Children.FirstOrDefault(x => x.Name == "limit")?.GetEx<long>() ?? 10);

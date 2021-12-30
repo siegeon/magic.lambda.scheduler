@@ -4,6 +4,7 @@
 
 using System;
 using System.Data;
+using System.Collections.Generic;
 using magic.node;
 using magic.node.contracts;
 using magic.node.extensions;
@@ -83,6 +84,22 @@ namespace magic.lambda.scheduler.utilities
             par.ParameterName = name;
             par.Value = value;
             command.Parameters.Add(par);
+        }
+
+        /*
+         * Reads all records returned from specified command and returns to caller.
+         */
+        public static IList<T> Iterate<T>(IDbCommand command, Func<IDataReader, T> functor)
+        {
+            using (var reader = command.ExecuteReader())
+            {
+                var result = new List<T>();
+                while (reader.Read())
+                {
+                    result.Add(functor(reader));
+                }
+                return result;
+            }
         }
 
         /*
