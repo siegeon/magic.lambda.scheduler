@@ -44,8 +44,8 @@ namespace magic.lambda.scheduler.contracts
         /// <summary>
         /// Updates an existing task.
         /// </summary>
-        /// <param name="node">Node declaration of task.</param>
-        void UpdateTask(MagicTask node);
+        /// <param name="task">Node declaration of task.</param>
+        void UpdateTask(MagicTask task);
 
         /// <summary>
         /// Deletes the task with the specified ID.

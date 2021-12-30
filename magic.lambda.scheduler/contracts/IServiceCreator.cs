@@ -8,7 +8,7 @@ namespace magic.lambda.scheduler.contracts
     /// Common interface for creating services dynamically without having to resort to
     /// the service locator anti-pattern.
     /// </summary>
-    public interface IServiceCreator<T> where T : class
+    public interface IServiceCreator<out T> where T : class
     {
         /// <summary>
         /// Creates a new service for you of the specified type.

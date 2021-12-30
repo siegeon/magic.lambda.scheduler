@@ -24,7 +24,7 @@ namespace magic.lambda.scheduler.services
          * Helper POCO class kind of to encapsulate a single schedule for
          * a task in the future some time.
          */
-        private class TaskSchedule : IDisposable
+        sealed private class TaskSchedule : IDisposable
         {
             public TaskSchedule(
                 Timer timer,
@@ -62,7 +62,8 @@ namespace magic.lambda.scheduler.services
         /// </summary>
         /// <param name="signaler">Needed to signal slots.</param>
         /// <param name="configuration">Needed to retrieve default database type.</param>
-        /// <param name="signalCreator">Needed to able to create an ISignaler during execution of scheduled tasks.</param>
+        /// <param name="signalCreator">Needed to able to create an ISignaler instance during execution of scheduled tasks.</param>
+        /// <param name="configCreator">Needed to able to create an IMagicConfiguration instance during execution of scheduled tasks.</param>
         public Scheduler(
             ISignaler signaler,
             IMagicConfiguration configuration,
@@ -233,7 +234,7 @@ namespace magic.lambda.scheduler.services
                     DatabaseHelper.AddParameter(cmd, "@repeats", repetition.Value);
 
                     var scheduledId = (ulong)cmd.ExecuteScalar();
-                    CreateTimer(_signaler, _configuration, scheduledId, taskId, due, repetition);
+                    CreateTimer(_signalCreator, _configCreator, scheduledId, taskId, due, repetition);
                 });
             });
         }
@@ -253,7 +254,7 @@ namespace magic.lambda.scheduler.services
                     DatabaseHelper.AddParameter(cmd, "@due", due);
 
                     var scheduleId = (ulong)cmd.ExecuteScalar();
-                    CreateTimer(_signaler, _configuration, scheduleId, taskId, due, null);
+                    CreateTimer(_signalCreator, _configCreator, scheduleId, taskId, due, null);
                 });
             });
         }
@@ -315,7 +316,7 @@ namespace magic.lambda.scheduler.services
                         {
                             Created = (DateTime)reader[3],
                         };
-                    }).FirstOrDefault() ?? throw new HyperlambdaException($"Task with ID of '{id}' was not found.");;
+                    }).FirstOrDefault() ?? throw new HyperlambdaException($"Task with ID of '{id}' was not found.");
 
                     if (schedules)
                     {
@@ -372,8 +373,8 @@ namespace magic.lambda.scheduler.services
          * Creates a timer that ensures task is executed at its next due date.
          */
         static void CreateTimer(
-            ISignaler signaler,
-            IMagicConfiguration configuration,
+            IServiceCreator<ISignaler> signalFactory,
+            IServiceCreator<IMagicConfiguration> configFactory,
             ulong scheduleId,
             string taskId,
             DateTime due,
@@ -397,8 +398,8 @@ namespace magic.lambda.scheduler.services
                 {
                     // More than 45 days until schedule is due, hence just re-creating our timer.
                     CreateTimer(
-                        signaler,
-                        configuration,
+                        signalFactory,
+                        configFactory,
                         scheduleId,
                         taskId,
                         due,
@@ -408,8 +409,8 @@ namespace magic.lambda.scheduler.services
 
                 // Executing task.
                 ExecuteSchedule(
-                    signaler,
-                    configuration,
+                    signalFactory,
+                    configFactory,
                     scheduleId,
                     taskId,
                     repetition);
@@ -428,8 +429,8 @@ namespace magic.lambda.scheduler.services
          * Helper method to execute task during scheduled time.
          */
         static void ExecuteSchedule(
-            ISignaler signaler,
-            IMagicConfiguration configuration,
+            IServiceCreator<ISignaler> signalFactory,
+            IServiceCreator<IMagicConfiguration> configFactory,
             ulong scheduleId,
             string taskId,
             IRepetitionPattern repetition)
@@ -437,7 +438,7 @@ namespace magic.lambda.scheduler.services
             // Making sure we never allow for exception to propagate out of method.
             try
             {
-                ExecuteTask(signaler, configuration, taskId);
+                ExecuteTask(signalFactory.Create(), configFactory.Create(), taskId);
             }
             catch
             {
@@ -448,7 +449,7 @@ namespace magic.lambda.scheduler.services
                 // Making sure we update task_due value if task is repeating.
                 if (repetition != null)
                 {
-                    DatabaseHelper.Connect(signaler, configuration, (connection) =>
+                    DatabaseHelper.Connect(signalFactory.Create(), configFactory.Create(), (connection) =>
                     {
                         var sqlBuilder = new StringBuilder();
                         sqlBuilder.Append("update task_due set due = @due where id = @id");
@@ -463,8 +464,8 @@ namespace magic.lambda.scheduler.services
 
                             // Creating a new timer for task
                             CreateTimer(
-                                signaler,
-                                configuration,
+                                signalFactory,
+                                configFactory,
                                 scheduleId,
                                 taskId,
                                 nextDue,
