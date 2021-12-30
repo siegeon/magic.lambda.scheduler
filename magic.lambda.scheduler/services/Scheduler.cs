@@ -132,6 +132,17 @@ namespace magic.lambda.scheduler.services
 
                     if (cmd.ExecuteNonQuery() != 1)
                         throw new HyperlambdaException($"Task with ID of '{id}' was not found");
+
+                    // Making sure we delete all related timers.
+                    lock (_locker)
+                    {
+                        var items = _schedules.Where(x => x.Value.TaskId == id).ToList();
+                        foreach (var idx in items)
+                        {
+                            _schedules.Remove(idx.Key);
+                            idx.Value.Timer.Dispose();
+                        }
+                    }
                 });
             });
         }
