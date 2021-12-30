@@ -148,6 +148,22 @@ tasks.list:foo
         }
 
         [Fact]
+        public void ListTasksWithFilterAndPaging_MSSQL()
+        {
+            ConnectionFactory.Arguments.Clear();
+            Common.Evaluate(@"
+tasks.list:foo
+   limit:11
+   offset:25", "mssql");
+            Assert.Equal("CONNECTION-STRING-magic", ConnectionFactory.ConnectionString);
+            Assert.Equal("select id, description, hyperlambda, created from tasks where id like @filter or description like @filter offset @offset rows fetch next @limit rows only", ConnectionFactory.CommandText);
+            Assert.Equal(3, ConnectionFactory.Arguments.Count);
+            Assert.Single(ConnectionFactory.Arguments.Where(x => x.Item1 == "@offset" && x.Item2 == "25"));
+            Assert.Single(ConnectionFactory.Arguments.Where(x => x.Item1 == "@limit" && x.Item2 == "11"));
+            Assert.Single(ConnectionFactory.Arguments.Where(x => x.Item1 == "@filter" && x.Item2 == "foo%"));
+        }
+
+        [Fact]
         public void CountTasks()
         {
             ConnectionFactory.Arguments.Clear();

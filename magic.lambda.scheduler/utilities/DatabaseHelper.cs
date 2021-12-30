@@ -75,6 +75,17 @@ namespace magic.lambda.scheduler.utilities
         }
 
         /*
+         * Adds a parameter to the specified command.
+         */
+        public static void AddParameter(IDbCommand command, string name, object value)
+        {
+            var par = command.CreateParameter();
+            par.ParameterName = name;
+            par.Value = value;
+            command.Parameters.Add(par);
+        }
+
+        /*
          * Returns paging SQL parts to caller according to database type.
          */
         public static string GetPagingSql(
@@ -87,8 +98,8 @@ namespace magic.lambda.scheduler.utilities
             {
                 case "mssql":
                     if (offset > 0)
-                        return " fetch next @limit rows only";
-                    return " offset @offset rows fetch next @limit rows only";
+                        return " offset @offset rows fetch next @limit rows only";
+                    return " fetch next @limit rows only";
                 default:
                     if (offset > 0)
                         return " offset @offset limit @limit";

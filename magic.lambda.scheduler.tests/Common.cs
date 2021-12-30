@@ -6,7 +6,6 @@ using System;
 using System.Data;
 using System.Linq;
 using System.Globalization;
-using System.Threading.Tasks;
 using System.Collections.Generic;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
@@ -24,6 +23,7 @@ namespace magic.lambda.scheduler.tests
      * Helper slot required to create a database connection for logger library.
      */
     [Slot(Name = ".db-factory.connection.mysql")]
+    [Slot(Name = ".db-factory.connection.mssql")]
     internal class ConnectionFactory : ISlot
     {
         public static string ConnectionString { get; private set; }
@@ -121,28 +121,20 @@ namespace magic.lambda.scheduler.tests
 
     public static class Common
     {
-        static public Node Evaluate(string hl)
+        static public Node Evaluate(string hl, string dbType = "mysql")
         {
-            var signaler = Initialize();
+            var signaler = Initialize(dbType);
             var lambda = HyperlambdaParser.Parse(hl);
             signaler.Signal("eval", lambda);
             return lambda;
         }
 
-        static async public Task<Node> EvaluateAsync(string hl)
+        public static ISignaler Initialize(string dbType = "mysql")
         {
-            var signaler = Initialize();
-            var lambda = HyperlambdaParser.Parse(hl);
-            await signaler.SignalAsync("eval", lambda);
-            return lambda;
+            return InitializeServices(dbType).GetService<ISignaler>();
         }
 
-        public static ISignaler Initialize()
-        {
-            return InitializeServices().GetService<ISignaler>();
-        }
-
-        public static IServiceProvider InitializeServices()
+        public static IServiceProvider InitializeServices(string dbType = "mysql")
         {
             // Creating our services collection.
             var services = new ServiceCollection();
@@ -160,9 +152,9 @@ namespace magic.lambda.scheduler.tests
             var mockConfiguration = new Mock<IMagicConfiguration>();
             mockConfiguration
                 .SetupGet(x => x[It.Is<string>(x => x == "magic:databases:default")])
-                .Returns(() => "mysql");
+                .Returns(() => dbType);
             mockConfiguration
-                .SetupGet(x => x[It.Is<string>(x => x == "magic:databases:mysql:generic")])
+                .SetupGet(x => x[It.Is<string>(x => x == $"magic:databases:{dbType}:generic")])
                 .Returns(() => "CONNECTION-STRING-{database}");
             services.AddTransient((svc) => mockConfiguration.Object);
 

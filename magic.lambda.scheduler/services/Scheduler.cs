@@ -40,7 +40,6 @@ namespace magic.lambda.scheduler.services
         {
             DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
             {
-                // Creating our SQL.
                 var sqlBuilder = new StringBuilder();
                 sqlBuilder
                     .Append("insert into tasks (id, hyperlambda")
@@ -48,31 +47,12 @@ namespace magic.lambda.scheduler.services
                     .Append(" values (@id, @hyperlambda")
                     .Append(task.Description == null ? ")" : ", @description)");
 
-                // Creating our SQL command, making sure we dispose it when we're done with it.
                 DatabaseHelper.CreateCommand(connection, sqlBuilder.ToString(), (cmd) =>
                 {
-                    // Creating our ID argument.
-                    var parId = cmd.CreateParameter();
-                    parId.ParameterName = "@id";
-                    parId.Value = task.ID;
-                    cmd.Parameters.Add(parId);
-
-                    // Creating our Hyperlambda argument.
-                    var parHyp = cmd.CreateParameter();
-                    parHyp.ParameterName = "@hyperlambda";
-                    parHyp.Value = task.Hyperlambda;
-                    cmd.Parameters.Add(parHyp);
-
-                    // Checking if we've got a description, and if so creating our description parameter.
-                    if (!string.IsNullOrEmpty(task.Description))
-                    {
-                        var parDesc = cmd.CreateParameter();
-                        parDesc.ParameterName = "@description";
-                        parDesc.Value = task.Description;
-                        cmd.Parameters.Add(parDesc);
-                    }
-
-                    // Executing command.
+                    DatabaseHelper.AddParameter(cmd, "@id", task.ID);
+                    DatabaseHelper.AddParameter(cmd, "@hyperlambda", task.Hyperlambda);
+                    if (task.Description != null)
+                        DatabaseHelper.AddParameter(cmd, "@description", task.Description);
                     cmd.ExecuteNonQuery();
                 });
             });
@@ -83,31 +63,14 @@ namespace magic.lambda.scheduler.services
         {
             DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
             {
-                // Creating our SQL.
                 var sql = "update tasks set description = @description, hyperlambda = @hyperlambda where id = @id";
 
-                // Creating our SQL command, making sure we dispose it when we're done with it.
                 DatabaseHelper.CreateCommand(connection, sql, (cmd) =>
                 {
-                    // Creating our ID argument.
-                    var parId = cmd.CreateParameter();
-                    parId.ParameterName = "@id";
-                    parId.Value = task.ID;
-                    cmd.Parameters.Add(parId);
+                    DatabaseHelper.AddParameter(cmd, "@id", task.ID);
+                    DatabaseHelper.AddParameter(cmd, "@hyperlambda", task.Hyperlambda);
+                    DatabaseHelper.AddParameter(cmd, "@description", task.Description);
 
-                    // Creating our Hyperlambda argument.
-                    var parHyp = cmd.CreateParameter();
-                    parHyp.ParameterName = "@hyperlambda";
-                    parHyp.Value = task.Hyperlambda;
-                    cmd.Parameters.Add(parHyp);
-
-                    // Creating our description argument.
-                    var parDesc = cmd.CreateParameter();
-                    parDesc.ParameterName = "@description";
-                    parDesc.Value = task.Description;
-                    cmd.Parameters.Add(parDesc);
-
-                    // Executing command.
                     if (cmd.ExecuteNonQuery() != 1)
                         throw new HyperlambdaException($"Task with ID of '{task.ID}' was not found");
                 });
@@ -119,19 +82,12 @@ namespace magic.lambda.scheduler.services
         {
             DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
             {
-                // Creating our SQL.
                 var sql = "delete from tasks where id = @id";
 
-                // Creating our SQL command, making sure we dispose it when we're done with it.
                 DatabaseHelper.CreateCommand(connection, sql, (cmd) =>
                 {
-                    // Creating our ID argument.
-                    var parId = cmd.CreateParameter();
-                    parId.ParameterName = "@id";
-                    parId.Value = id;
-                    cmd.Parameters.Add(parId);
+                    DatabaseHelper.AddParameter(cmd, "@id", id);
 
-                    // Executing command.
                     if (cmd.ExecuteNonQuery() != 1)
                         throw new HyperlambdaException($"Task with ID of '{id}' was not found");
                 });
@@ -143,42 +99,20 @@ namespace magic.lambda.scheduler.services
         {
             return DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
             {
-                // Creating our SQL.
                 var sqlBuilder = new StringBuilder();
                 sqlBuilder
                     .Append("select id, description, hyperlambda, created from tasks")
                     .Append(string.IsNullOrEmpty(filter) ? "" : " where id like @filter or description like @filter")
                     .Append(DatabaseHelper.GetPagingSql(_configuration, offset, limit));
 
-                // Creating our SQL command, making sure we dispose it when we're done with it.
                 return DatabaseHelper.CreateCommand(connection, sqlBuilder.ToString(), (cmd) =>
                 {
-                    // Checking if we've got a filter condition.
                     if (!string.IsNullOrEmpty(filter))
-                    {
-                        // Creating our filter argument.
-                        var parFilter = cmd.CreateParameter();
-                        parFilter.ParameterName = "@filter";
-                        parFilter.Value = filter;
-                        cmd.Parameters.Add(parFilter);
-                    }
-
-                    // Creating our offset argument.
+                        DatabaseHelper.AddParameter(cmd, "@filter", filter);
                     if (offset > 0)
-                    {
-                        var parOffset = cmd.CreateParameter();
-                        parOffset.ParameterName = "@offset";
-                        parOffset.Value = offset;
-                        cmd.Parameters.Add(parOffset);
-                    }
+                        DatabaseHelper.AddParameter(cmd, "@offset", offset);
+                    DatabaseHelper.AddParameter(cmd, "@limit", limit);
 
-                    // Creating our limit argument.
-                    var parLimit = cmd.CreateParameter();
-                    parLimit.ParameterName = "@limit";
-                    parLimit.Value = limit;
-                    cmd.Parameters.Add(parLimit);
-
-                    // Executing command.
                     using (var reader = cmd.ExecuteReader())
                     {
                         var result = new List<MagicTask>();
@@ -200,26 +134,16 @@ namespace magic.lambda.scheduler.services
         {
             return DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
             {
-                // Creating our SQL.
                 var sqlBuilder = new StringBuilder();
                 sqlBuilder
                     .Append("select count(*) from tasks")
                     .Append(string.IsNullOrEmpty(filter) ? "" : " where id like @filter or description like @filter");
 
-                // Creating our SQL command, making sure we dispose it when we're done with it.
                 return DatabaseHelper.CreateCommand(connection, sqlBuilder.ToString(), (cmd) =>
                 {
-                    // Checking if we've got a filter condition.
                     if (!string.IsNullOrEmpty(filter))
-                    {
-                        // Creating our filter argument.
-                        var parFilter = cmd.CreateParameter();
-                        parFilter.ParameterName = "@filter";
-                        parFilter.Value = filter;
-                        cmd.Parameters.Add(parFilter);
-                    }
+                        DatabaseHelper.AddParameter(cmd, "@filter", filter);
 
-                    // Executing command.
                     return (long)cmd.ExecuteScalar();
                 });
             });
@@ -230,28 +154,16 @@ namespace magic.lambda.scheduler.services
         {
             return DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
             {
-                // Creating our SQL.
                 var sqlBuilder = new StringBuilder();
                 sqlBuilder
                     .Append("select id, description, hyperlambda, created from tasks where id = @id")
                     .Append(DatabaseHelper.GetPagingSql(_configuration, 0L, 1L));
 
-                // Creating our SQL command, making sure we dispose it when we're done with it.
                 return DatabaseHelper.CreateCommand(connection, sqlBuilder.ToString(), (cmd) =>
                 {
-                    // Creating our filter argument.
-                    var parFilter = cmd.CreateParameter();
-                    parFilter.ParameterName = "@id";
-                    parFilter.Value = id;
-                    cmd.Parameters.Add(parFilter);
+                    DatabaseHelper.AddParameter(cmd, "@id", id);
+                    DatabaseHelper.AddParameter(cmd, "@limit", 1L);
 
-                    // Creating our offset argument.
-                    var parLimit = cmd.CreateParameter();
-                    parLimit.ParameterName = "@limit";
-                    parLimit.Value = 1L;
-                    cmd.Parameters.Add(parLimit);
-
-                    // Executing command and putting results into temporary variable.
                     MagicTask result = null;
                     using (var reader = cmd.ExecuteReader())
                     {
@@ -271,7 +183,6 @@ namespace magic.lambda.scheduler.services
                         }
                     }
 
-                    // Checking if caller wants to return schedules too.
                     if (result != null && schedules)
                     {
                         foreach (var idx in GetSchedules(connection, result.ID))
@@ -309,31 +220,14 @@ namespace magic.lambda.scheduler.services
         {
             DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
             {
-                // Creating our SQL.
                 var sql = "insert into task_due (task, due, repeats) values (@task, @due, @repeats)";
 
-                // Creating our SQL command, making sure we dispose it when we're done with it.
                 DatabaseHelper.CreateCommand(connection, sql, (cmd) =>
                 {
-                    // Creating our task ID argument.
-                    var parTask = cmd.CreateParameter();
-                    parTask.ParameterName = "@task";
-                    parTask.Value = taskId;
-                    cmd.Parameters.Add(parTask);
+                    DatabaseHelper.AddParameter(cmd, "@task", taskId);
+                    DatabaseHelper.AddParameter(cmd, "@due", repetition.Next());
+                    DatabaseHelper.AddParameter(cmd, "@repeats", repetition.Value);
 
-                    // Creating our due date argument.
-                    var parDue = cmd.CreateParameter();
-                    parDue.ParameterName = "@due";
-                    parDue.Value = repetition.Next();
-                    cmd.Parameters.Add(parDue);
-
-                    // Creating our due date argument.
-                    var parRep = cmd.CreateParameter();
-                    parRep.ParameterName = "@repeats";
-                    parRep.Value = repetition.Value;
-                    cmd.Parameters.Add(parRep);
-
-                    // Executing command.
                     cmd.ExecuteNonQuery();
                 });
             });
@@ -344,25 +238,13 @@ namespace magic.lambda.scheduler.services
         {
             DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
             {
-                // Creating our SQL.
                 var sql = "insert into task_due (task, due) values (@task, @due)";
 
-                // Creating our SQL command, making sure we dispose it when we're done with it.
                 DatabaseHelper.CreateCommand(connection, sql, (cmd) =>
                 {
-                    // Creating our task ID argument.
-                    var parTask = cmd.CreateParameter();
-                    parTask.ParameterName = "@task";
-                    parTask.Value = taskId;
-                    cmd.Parameters.Add(parTask);
+                    DatabaseHelper.AddParameter(cmd, "@task", taskId);
+                    DatabaseHelper.AddParameter(cmd, "@due", due);
 
-                    // Creating our due date argument.
-                    var parDue = cmd.CreateParameter();
-                    parDue.ParameterName = "@due";
-                    parDue.Value = due;
-                    cmd.Parameters.Add(parDue);
-
-                    // Executing command.
                     cmd.ExecuteNonQuery();
                 });
             });
@@ -373,25 +255,15 @@ namespace magic.lambda.scheduler.services
         {
             DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
             {
-                // Creating our SQL.
                 var sql = "delete from task_due where id = @id";
 
-                // Creating our SQL command, making sure we dispose it when we're done with it.
-                using (var cmd = connection.CreateCommand())
+                DatabaseHelper.CreateCommand(connection, sql, (cmd) =>
                 {
-                    // Assigning SQL to command text.
-                    cmd.CommandText = sql;
+                    DatabaseHelper.AddParameter(cmd, "@id", id);
 
-                    // Creating our ID argument.
-                    var parId = cmd.CreateParameter();
-                    parId.ParameterName = "@id";
-                    parId.Value = id;
-                    cmd.Parameters.Add(parId);
-
-                    // Executing command.
                     if (cmd.ExecuteNonQuery() != 1)
                         throw new HyperlambdaException($"Task with ID of '{id}' was not found.");
-                }
+                });
             });
         }
 
@@ -411,10 +283,7 @@ namespace magic.lambda.scheduler.services
             return DatabaseHelper.CreateCommand(connection, sql, (cmd) =>
             {
                 // Creating our limit argument.
-                var parLimit = cmd.CreateParameter();
-                parLimit.ParameterName = "@task";
-                parLimit.Value = id;
-                cmd.Parameters.Add(parLimit);
+                DatabaseHelper.AddParameter(cmd, "@task", id);
 
                 // Executing command.
                 using (var reader = cmd.ExecuteReader())
