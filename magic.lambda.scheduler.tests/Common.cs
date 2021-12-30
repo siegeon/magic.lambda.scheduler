@@ -120,6 +120,20 @@ namespace magic.lambda.scheduler.tests
         }
     }
 
+    class ServiceCreator<T> : IServiceCreator<T> where T : class
+    {
+        readonly IServiceProvider _provider;
+        public ServiceCreator(IServiceProvider provider)
+        {
+            _provider = provider;
+        }
+
+        public T Create()
+        {
+            return _provider.GetService<T>();
+        }
+    }
+
     public static class Common
     {
         static public Node Evaluate(string hl, string dbType = "mysql")
@@ -144,6 +158,8 @@ namespace magic.lambda.scheduler.tests
             services.AddTransient<ISignaler, Signaler>();
             services.AddTransient<ITaskStorage, Scheduler>();
             services.AddTransient<ITaskScheduler, Scheduler>();
+            services.AddTransient<IServiceCreator<ISignaler>>((svc) => new ServiceCreator<ISignaler>(svc));
+            services.AddTransient<IServiceCreator<IMagicConfiguration>>((svc) => new ServiceCreator<IMagicConfiguration>(svc));
 
             // Instantiating and adding our slot/signals provider
             var types = new SignalsProvider(InstantiateAllTypes<ISlot>(services));

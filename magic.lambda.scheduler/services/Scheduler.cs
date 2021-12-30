@@ -20,8 +20,41 @@ namespace magic.lambda.scheduler.services
     /// <inheritdoc />
     public sealed class Scheduler : ITaskScheduler, ITaskStorage
     {
+        /*
+         * Helper POCO class kind of to encapsulate a single schedule for
+         * a task in the future some time.
+         */
+        private class TaskSchedule : IDisposable
+        {
+            public TaskSchedule(
+                Timer timer,
+                string taskId,
+                long scheduleId, 
+                IRepetitionPattern repetition)
+            {
+                Timer = timer;
+                TaskId = taskId;
+                ScheduleId = scheduleId;
+                Repetition = repetition;
+            }
+
+            public Timer Timer { get; private set; }
+            public string TaskId { get; private set; }
+            public long ScheduleId { get; private set; }
+            public IRepetitionPattern Repetition { get; set; }
+
+            public void Dispose()
+            {
+                Timer.Dispose();
+            }
+        }
+
         readonly ISignaler _signaler;
         readonly IMagicConfiguration _configuration;
+        readonly IServiceCreator<ISignaler> _signalCreator;
+        readonly IServiceCreator<IMagicConfiguration> _configCreator;
+        static readonly Dictionary<long, TaskSchedule> _schedules = new Dictionary<long, TaskSchedule>();
+        static readonly object _locker = new object();
 
         /// <summary>
         /// Creates a new instance of the task scheduler, allowing you to create, edit, delete, and
@@ -29,10 +62,17 @@ namespace magic.lambda.scheduler.services
         /// </summary>
         /// <param name="signaler">Needed to signal slots.</param>
         /// <param name="configuration">Needed to retrieve default database type.</param>
-        public Scheduler(ISignaler signaler, IMagicConfiguration configuration)
+        /// <param name="signalCreator">Needed to able to create an ISignaler during execution of scheduled tasks.</param>
+        public Scheduler(
+            ISignaler signaler,
+            IMagicConfiguration configuration,
+            IServiceCreator<ISignaler> signalCreator,
+            IServiceCreator<IMagicConfiguration> configCreator)
         {
             _signaler = signaler;
             _configuration = configuration;
+            _signalCreator = signalCreator;
+            _configCreator = configCreator;
         }
 
         #region [ -- Interface implementation for ITaskStorage -- ]
@@ -152,12 +192,97 @@ namespace magic.lambda.scheduler.services
         /// <inheritdoc />
         public MagicTask GetTask(string id, bool schedules = false)
         {
-            return DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
+            return GetTask(_signaler, _configuration, id, schedules);
+        }
+
+        /// <inheritdoc />
+        public void ExecuteTask(string id)
+        {
+            ExecuteTask(_signaler, _configuration, id);
+        }
+
+        #endregion
+
+        #region [ -- Interface implementation for ITaskScheduler -- ]
+
+        /// <inheritdoc />
+        public void ScheduleTask(string taskId, IRepetitionPattern repetition)
+        {
+            DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
+            {
+                var sqlBuilder = new StringBuilder();
+                sqlBuilder.Append("insert into task_due (task, due, repeats) values (@task, @due, @repeats)");
+                sqlBuilder.Append(DatabaseHelper.GetInsertTail(_configuration));
+
+                DatabaseHelper.CreateCommand(connection, sqlBuilder.ToString(), (cmd) =>
+                {
+                    var due = repetition.Next();
+                    DatabaseHelper.AddParameter(cmd, "@task", taskId);
+                    DatabaseHelper.AddParameter(cmd, "@due", due);
+                    DatabaseHelper.AddParameter(cmd, "@repeats", repetition.Value);
+
+                    var scheduledId = (long)cmd.ExecuteScalar();
+                    CreateTimer(_signaler, _configuration, scheduledId, taskId, due, repetition);
+                });
+            });
+        }
+
+        /// <inheritdoc />
+        public void ScheduleTask(string taskId, DateTime due)
+        {
+            DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
+            {
+                var sqlBuilder = new StringBuilder();
+                sqlBuilder.Append("insert into task_due (task, due) values (@task, @due)");
+                sqlBuilder.Append(DatabaseHelper.GetInsertTail(_configuration));
+
+                DatabaseHelper.CreateCommand(connection, sqlBuilder.ToString(), (cmd) =>
+                {
+                    DatabaseHelper.AddParameter(cmd, "@task", taskId);
+                    DatabaseHelper.AddParameter(cmd, "@due", due);
+
+                    var scheduleId = (long)cmd.ExecuteScalar();
+                    CreateTimer(_signaler, _configuration, scheduleId, taskId, due, null);
+                });
+            });
+        }
+
+        /// <inheritdoc />
+        public void DeleteSchedule(int id)
+        {
+            DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
+            {
+                var sql = "delete from task_due where id = @id";
+
+                DatabaseHelper.CreateCommand(connection, sql, (cmd) =>
+                {
+                    DatabaseHelper.AddParameter(cmd, "@id", id);
+
+                    if (cmd.ExecuteNonQuery() != 1)
+                        throw new HyperlambdaException($"Task with ID of '{id}' was not found.");
+                });
+            });
+        }
+
+        #endregion
+
+        #region [ -- Private helper methods -- ]
+
+        /*
+         * Static helper method to retrieve task from database.
+         */
+        static MagicTask GetTask(
+            ISignaler signaler,
+            IMagicConfiguration configuration,
+            string id,
+            bool schedules = false)
+        {
+            return DatabaseHelper.Connect(signaler, configuration, (connection) =>
             {
                 var sqlBuilder = new StringBuilder();
                 sqlBuilder
                     .Append("select id, description, hyperlambda, created from tasks where id = @id")
-                    .Append(DatabaseHelper.GetPagingSql(_configuration, 0L, 1L));
+                    .Append(DatabaseHelper.GetPagingSql(configuration, 0L, 1L));
 
                 return DatabaseHelper.CreateCommand(connection, sqlBuilder.ToString(), (cmd) =>
                 {
@@ -187,93 +312,28 @@ namespace magic.lambda.scheduler.services
             });
         }
 
-        /// <inheritdoc />
-        public void ExecuteTask(string id)
+        /*
+         * Static helper method to execute task.
+         */
+        static void ExecuteTask(ISignaler signaler, IMagicConfiguration configuration, string id)
         {
             // Retrieving task.
-            var task = GetTask(id);
+            var task = GetTask(signaler, configuration, id);
             if (task == null)
                 throw new HyperlambdaException($"Task with ID of '{id}' was not found");
 
             // Transforming task's Hyperlambda to a lambda object.
             var hlNode = new Node("", task.Hyperlambda);
-            _signaler.Signal("hyper2lambda", hlNode);
+            signaler.Signal("hyper2lambda", hlNode);
 
             // Executing task.
-            _signaler.Signal("eval", hlNode);
+            signaler.Signal("eval", hlNode);
         }
-
-        #endregion
-
-        #region [ -- Interface implementation for ITaskScheduler -- ]
-
-        /// <inheritdoc />
-        public void ScheduleTask(string taskId, IRepetitionPattern repetition)
-        {
-            DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
-            {
-                var sqlBuilder = new StringBuilder();
-                sqlBuilder.Append("insert into task_due (task, due, repeats) values (@task, @due, @repeats)");
-                sqlBuilder.Append(DatabaseHelper.GetInsertTail(_configuration));
-
-                DatabaseHelper.CreateCommand(connection, sqlBuilder.ToString(), (cmd) =>
-                {
-                    var due = repetition.Next();
-                    DatabaseHelper.AddParameter(cmd, "@task", taskId);
-                    DatabaseHelper.AddParameter(cmd, "@due", due);
-                    DatabaseHelper.AddParameter(cmd, "@repeats", repetition.Value);
-
-                    var scheduledId = (long)cmd.ExecuteScalar();
-                    CreateSchedule(scheduledId, taskId, due);
-                });
-            });
-        }
-
-        /// <inheritdoc />
-        public void ScheduleTask(string taskId, DateTime due)
-        {
-            DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
-            {
-                var sqlBuilder = new StringBuilder();
-                sqlBuilder.Append("insert into task_due (task, due) values (@task, @due)");
-                sqlBuilder.Append(DatabaseHelper.GetInsertTail(_configuration));
-
-                DatabaseHelper.CreateCommand(connection, sqlBuilder.ToString(), (cmd) =>
-                {
-                    DatabaseHelper.AddParameter(cmd, "@task", taskId);
-                    DatabaseHelper.AddParameter(cmd, "@due", due);
-
-                    var scheduleId = (long)cmd.ExecuteScalar();
-                    CreateSchedule(scheduleId, taskId, due);
-                });
-            });
-        }
-
-        /// <inheritdoc />
-        public void DeleteSchedule(int id)
-        {
-            DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
-            {
-                var sql = "delete from task_due where id = @id";
-
-                DatabaseHelper.CreateCommand(connection, sql, (cmd) =>
-                {
-                    DatabaseHelper.AddParameter(cmd, "@id", id);
-
-                    if (cmd.ExecuteNonQuery() != 1)
-                        throw new HyperlambdaException($"Task with ID of '{id}' was not found.");
-                });
-            });
-        }
-
-        #endregion
-
-        #region [ -- Private helper methods -- ]
 
         /*
          * Returns schedules for task.
          */
-        IEnumerable<Schedule> GetSchedules(IDbConnection connection, string id)
+        static IEnumerable<Schedule> GetSchedules(IDbConnection connection, string id)
         {
             var sql = "select id, due, repeats from task_due where task = @task";
 
@@ -292,32 +352,117 @@ namespace magic.lambda.scheduler.services
         }
 
         /*
-         * Creates a timer for the specified schedule ID and executes the task at
-         * that specific time.
+         * Creates a timer that ensures task is executed at its next due date.
          */
-        void CreateSchedule(long scheduleId, string taskId, DateTime due)
+        static void CreateTimer(
+            ISignaler signaler,
+            IMagicConfiguration configuration,
+            long scheduleId,
+            string taskId,
+            DateTime due,
+            IRepetitionPattern repetition)
         {
             /*
              * Notice, since the maximum future date for Timer is 45 days into the future, we
              * might have to do some "trickery" here to make sure we tick in the timer 45 days from
              * now, and postpone the execution if the schedule is for more than 45 days into the future.
+             *
+             * Notice, we also never execute a task before at least 250 milliseconds from now.
              */
-            var nextDue = (long)Math.Max(
-                250L,
-                Math.Min(
-                    (due - DateTime.UtcNow).TotalMilliseconds,
-                    new TimeSpan(45, 0, 0, 0).TotalMilliseconds));
-            var postpone = (due - DateTime.UtcNow).TotalMilliseconds > new TimeSpan(45, 0, 0, 0).TotalMilliseconds;
+            var whenMs = (due - DateTime.UtcNow).TotalMilliseconds;
+            var maxMs = new TimeSpan(45, 0, 0, 0).TotalMilliseconds;
+            var nextDue = (long)Math.Max(250L, Math.Min(whenMs, maxMs));
+            var postpone = whenMs > maxMs;
             var timer = new Timer((state) =>
             {
                 // Checking if we have to postpone execution of task further into the future.
                 if (postpone)
                 {
                     // More than 45 days until schedule is due, hence just re-creating our timer.
-                    CreateSchedule(scheduleId, taskId, due);
+                    CreateTimer(
+                        signaler,
+                        configuration,
+                        scheduleId,
+                        taskId,
+                        due,
+                        repetition);
                     return;
                 }
+
+                // Executing task.
+                ExecuteSchedule(
+                    signaler,
+                    configuration,
+                    scheduleId,
+                    taskId,
+                    repetition);
+
             }, null, nextDue, Timeout.Infinite);
+
+            // Creating our schedule and keeping a reference to it such that we can stop schedule if asked to do so.
+            var schedule = new TaskSchedule(timer, taskId, scheduleId, repetition);
+            lock (_locker)
+            {
+                _schedules[scheduleId] = schedule;
+            }
+        }
+
+        /*
+         * Helper method to execute task during scheduled time.
+         */
+        static void ExecuteSchedule(
+            ISignaler signaler,
+            IMagicConfiguration configuration,
+            long scheduleId,
+            string taskId,
+            IRepetitionPattern repetition)
+        {
+            // Making sure we never allow for exception to propagate out of method.
+            try
+            {
+                ExecuteTask(signaler, configuration, taskId);
+            }
+            catch
+            {
+                ; // Not really sure what to do here ...?
+            }
+            finally
+            {
+                // Making sure we update task_due value if task is repeating.
+                if (repetition != null)
+                {
+                    DatabaseHelper.Connect(signaler, configuration, (connection) =>
+                    {
+                        var sqlBuilder = new StringBuilder();
+                        sqlBuilder.Append("update task_due set due = @due where id = @id");
+
+                        DatabaseHelper.CreateCommand(connection, sqlBuilder.ToString(), (cmd) =>
+                        {
+                            var nextDue = repetition.Next();
+                            DatabaseHelper.AddParameter(cmd, "@due", nextDue);
+                            DatabaseHelper.AddParameter(cmd, "@id", scheduleId);
+
+                            cmd.ExecuteNonQuery();
+
+                            // Creating a new timer for task
+                            CreateTimer(
+                                signaler,
+                                configuration,
+                                scheduleId,
+                                taskId,
+                                nextDue,
+                                repetition);
+                        });
+                    });
+                }
+                else
+                {
+                    lock (_locker)
+                    {
+                        _schedules.Remove(scheduleId);
+                    }
+                }
+            }
         }
 
         #endregion
