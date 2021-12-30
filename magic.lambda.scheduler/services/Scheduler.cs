@@ -5,6 +5,7 @@
 using System;
 using System.Data;
 using System.Text;
+using System.Linq;
 using System.Collections.Generic;
 using magic.node;
 using magic.node.contracts;
@@ -12,7 +13,6 @@ using magic.node.extensions;
 using magic.signals.contracts;
 using magic.lambda.scheduler.contracts;
 using magic.lambda.scheduler.utilities;
-using System.Linq;
 
 namespace magic.lambda.scheduler.services
 {
@@ -275,7 +275,7 @@ namespace magic.lambda.scheduler.services
 
                 return DatabaseHelper.Iterate(cmd, (reader) =>
                 {
-                    return new contracts.Schedule((DateTime)reader[1], reader[2] as string)
+                    return new Schedule((DateTime)reader[1], reader[2] as string)
                     {
                         Id = (int)reader[0],
                     };
