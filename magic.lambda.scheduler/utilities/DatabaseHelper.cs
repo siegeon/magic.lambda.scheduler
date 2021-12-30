@@ -43,6 +43,38 @@ namespace magic.lambda.scheduler.utilities
         }
 
         /*
+         * Helper method to create a command towards the specified database connection,
+         * and execute some arbitrary function with your command.
+         */
+        public static void CreateCommand(
+            IDbConnection connection,
+            string sql,
+            Action<IDbCommand> functor)
+        {
+            using (var command = connection.CreateCommand())
+            {
+                command.CommandText = sql;
+                functor(command);
+            }
+        }
+
+        /*
+         * Helper method to create a command towards the specified database connection,
+         * and execute some arbitrary function with your command.
+         */
+        public static T CreateCommand<T>(
+            IDbConnection connection,
+            string sql,
+            Func<IDbCommand, T> functor)
+        {
+            using (var command = connection.CreateCommand())
+            {
+                command.CommandText = sql;
+                return functor(command);
+            }
+        }
+
+        /*
          * Returns paging SQL parts to caller according to database type.
          */
         public static string GetPagingSql(

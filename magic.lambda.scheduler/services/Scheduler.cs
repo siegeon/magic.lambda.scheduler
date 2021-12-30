@@ -38,25 +38,19 @@ namespace magic.lambda.scheduler.services
         /// <inheritdoc />
         public void CreateAsync(MagicTask task)
         {
-            // Creating our connection, making sure we dispose it when we're done with it.
             DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
             {
                 // Creating our SQL.
                 var sqlBuilder = new StringBuilder();
-                sqlBuilder.Append("insert into tasks (id, hyperlambda");
-                if (!string.IsNullOrEmpty(task.Description))
-                    sqlBuilder.Append(", description");
-                sqlBuilder.Append(") values (@id, @hyperlambda");
-                if (!string.IsNullOrEmpty(task.Description))
-                    sqlBuilder.Append(", @description");
-                sqlBuilder.Append(")");
+                sqlBuilder
+                    .Append("insert into tasks (id, hyperlambda")
+                    .Append(task.Description == null ? ")" : ", description)")
+                    .Append(" values (@id, @hyperlambda")
+                    .Append(task.Description == null ? ")" : ", @description)");
 
                 // Creating our SQL command, making sure we dispose it when we're done with it.
-                using (var cmd = connection.CreateCommand())
+                DatabaseHelper.CreateCommand(connection, sqlBuilder.ToString(), (cmd) =>
                 {
-                    // Assigning SQL to command text.
-                    cmd.CommandText = sqlBuilder.ToString();
-
                     // Creating our ID argument.
                     var parId = cmd.CreateParameter();
                     parId.ParameterName = "@id";
@@ -80,25 +74,21 @@ namespace magic.lambda.scheduler.services
 
                     // Executing command.
                     cmd.ExecuteNonQuery();
-                }
+                });
             });
         }
 
         /// <inheritdoc />
         public void Update(MagicTask task)
         {
-            // Creating our connection, making sure we dispose it when we're done with it.
             DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
             {
                 // Creating our SQL.
                 var sql = "update tasks set description = @description, hyperlambda = @hyperlambda where id = @id";
 
                 // Creating our SQL command, making sure we dispose it when we're done with it.
-                using (var cmd = connection.CreateCommand())
+                DatabaseHelper.CreateCommand(connection, sql, (cmd) =>
                 {
-                    // Assigning SQL to command text.
-                    cmd.CommandText = sql;
-
                     // Creating our ID argument.
                     var parId = cmd.CreateParameter();
                     parId.ParameterName = "@id";
@@ -120,25 +110,21 @@ namespace magic.lambda.scheduler.services
                     // Executing command.
                     if (cmd.ExecuteNonQuery() != 1)
                         throw new HyperlambdaException($"Task with ID of '{task.ID}' was not found");
-                }
+                });
             });
         }
 
         /// <inheritdoc />
         public void Delete(string id)
         {
-            // Creating our connection, making sure we dispose it when we're done with it.
             DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
             {
                 // Creating our SQL.
                 var sql = "delete from tasks where id = @id";
 
                 // Creating our SQL command, making sure we dispose it when we're done with it.
-                using (var cmd = connection.CreateCommand())
+                DatabaseHelper.CreateCommand(connection, sql, (cmd) =>
                 {
-                    // Assigning SQL to command text.
-                    cmd.CommandText = sql;
-
                     // Creating our ID argument.
                     var parId = cmd.CreateParameter();
                     parId.ParameterName = "@id";
@@ -148,39 +134,34 @@ namespace magic.lambda.scheduler.services
                     // Executing command.
                     if (cmd.ExecuteNonQuery() != 1)
                         throw new HyperlambdaException($"Task with ID of '{id}' was not found");
-                }
+                });
             });
         }
 
         /// <inheritdoc />
         public IEnumerable<MagicTask> List(string filter, long offset, long limit)
         {
-            // Creating our connection, making sure we dispose it when we're done with it.
             return DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
             {
                 // Creating our SQL.
                 var sqlBuilder = new StringBuilder();
-                sqlBuilder.Append("select id, description, hyperlambda, created from tasks");
+                sqlBuilder
+                    .Append("select id, description, hyperlambda, created from tasks")
+                    .Append(string.IsNullOrEmpty(filter) ? "" : " where id like @filter or description like @filter")
+                    .Append(DatabaseHelper.GetPagingSql(_configuration, offset, limit));
 
                 // Creating our SQL command, making sure we dispose it when we're done with it.
-                using (var cmd = connection.CreateCommand())
+                return DatabaseHelper.CreateCommand(connection, sqlBuilder.ToString(), (cmd) =>
                 {
                     // Checking if we've got a filter condition.
                     if (!string.IsNullOrEmpty(filter))
                     {
-                        sqlBuilder.Append(" where id like @filter or description like @filter");
-
                         // Creating our filter argument.
                         var parFilter = cmd.CreateParameter();
                         parFilter.ParameterName = "@filter";
                         parFilter.Value = filter;
                         cmd.Parameters.Add(parFilter);
                     }
-
-                    sqlBuilder.Append(DatabaseHelper.GetPagingSql(_configuration, offset, limit));
-
-                    // Assigning SQL to command text.
-                    cmd.CommandText = sqlBuilder.ToString();
 
                     // Creating our offset argument.
                     if (offset > 0)
@@ -210,28 +191,27 @@ namespace magic.lambda.scheduler.services
                         }
                         return result;
                     }
-                }
+                });
             });
         }
 
         /// <inheritdoc />
         public long Count(string filter)
         {
-            // Creating our connection, making sure we dispose it when we're done with it.
             return DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
             {
                 // Creating our SQL.
                 var sqlBuilder = new StringBuilder();
-                sqlBuilder.Append("select count(*) from tasks");
+                sqlBuilder
+                    .Append("select count(*) from tasks")
+                    .Append(string.IsNullOrEmpty(filter) ? "" : " where id like @filter or description like @filter");
 
                 // Creating our SQL command, making sure we dispose it when we're done with it.
-                using (var cmd = connection.CreateCommand())
+                return DatabaseHelper.CreateCommand(connection, sqlBuilder.ToString(), (cmd) =>
                 {
                     // Checking if we've got a filter condition.
                     if (!string.IsNullOrEmpty(filter))
                     {
-                        sqlBuilder.Append(" where id like @filter or description like @filter");
-
                         // Creating our filter argument.
                         var parFilter = cmd.CreateParameter();
                         parFilter.ParameterName = "@filter";
@@ -239,38 +219,31 @@ namespace magic.lambda.scheduler.services
                         cmd.Parameters.Add(parFilter);
                     }
 
-                    // Assigning SQL to command text.
-                    cmd.CommandText = sqlBuilder.ToString();
-
                     // Executing command.
                     return (long)cmd.ExecuteScalar();
-                }
+                });
             });
         }
 
         /// <inheritdoc />
         public MagicTask Get(string id, bool schedules = false)
         {
-            // Creating our connection, making sure we dispose it when we're done with it.
             return DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
             {
                 // Creating our SQL.
                 var sqlBuilder = new StringBuilder();
-                sqlBuilder.Append("select id, description, hyperlambda, created from tasks where id = @id");
+                sqlBuilder
+                    .Append("select id, description, hyperlambda, created from tasks where id = @id")
+                    .Append(DatabaseHelper.GetPagingSql(_configuration, 0L, 1L));
 
                 // Creating our SQL command, making sure we dispose it when we're done with it.
-                using (var cmd = connection.CreateCommand())
+                return DatabaseHelper.CreateCommand(connection, sqlBuilder.ToString(), (cmd) =>
                 {
                     // Creating our filter argument.
                     var parFilter = cmd.CreateParameter();
                     parFilter.ParameterName = "@id";
                     parFilter.Value = id;
                     cmd.Parameters.Add(parFilter);
-
-                    sqlBuilder.Append(DatabaseHelper.GetPagingSql(_configuration, 0L, 1L));
-
-                    // Assigning SQL to command text.
-                    cmd.CommandText = sqlBuilder.ToString();
 
                     // Creating our offset argument.
                     var parLimit = cmd.CreateParameter();
@@ -307,7 +280,7 @@ namespace magic.lambda.scheduler.services
                         }
                     }
                     return result;
-                }
+                });
             });
         }
 
@@ -334,18 +307,14 @@ namespace magic.lambda.scheduler.services
         /// <inheritdoc />
         public void Schedule(string taskId, IRepetitionPattern repetition)
         {
-            // Creating our connection, making sure we dispose it when we're done with it.
             DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
             {
                 // Creating our SQL.
                 var sql = "insert into task_due (task, due, repeats) values (@task, @due, @repeats)";
 
                 // Creating our SQL command, making sure we dispose it when we're done with it.
-                using (var cmd = connection.CreateCommand())
+                DatabaseHelper.CreateCommand(connection, sql, (cmd) =>
                 {
-                    // Assigning SQL to command text.
-                    cmd.CommandText = sql;
-
                     // Creating our task ID argument.
                     var parTask = cmd.CreateParameter();
                     parTask.ParameterName = "@task";
@@ -366,25 +335,21 @@ namespace magic.lambda.scheduler.services
 
                     // Executing command.
                     cmd.ExecuteNonQuery();
-                }
+                });
             });
         }
 
         /// <inheritdoc />
         public void Schedule(string taskId, DateTime due)
         {
-            // Creating our connection, making sure we dispose it when we're done with it.
             DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
             {
                 // Creating our SQL.
                 var sql = "insert into task_due (task, due) values (@task, @due)";
 
                 // Creating our SQL command, making sure we dispose it when we're done with it.
-                using (var cmd = connection.CreateCommand())
+                DatabaseHelper.CreateCommand(connection, sql, (cmd) =>
                 {
-                    // Assigning SQL to command text.
-                    cmd.CommandText = sql;
-
                     // Creating our task ID argument.
                     var parTask = cmd.CreateParameter();
                     parTask.ParameterName = "@task";
@@ -399,14 +364,13 @@ namespace magic.lambda.scheduler.services
 
                     // Executing command.
                     cmd.ExecuteNonQuery();
-                }
+                });
             });
         }
 
         /// <inheritdoc />
         public void Delete(int id)
         {
-            // Creating our connection, making sure we dispose it when we're done with it.
             DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
             {
                 // Creating our SQL.
@@ -444,11 +408,8 @@ namespace magic.lambda.scheduler.services
             var sql = "select id, due, repeats from task_due where task = @task";
 
             // Creating our SQL command, making sure we dispose it when we're done with it.
-            using (var cmd = connection.CreateCommand())
+            return DatabaseHelper.CreateCommand(connection, sql, (cmd) =>
             {
-                // Assigning SQL to command text.
-                cmd.CommandText = sql;
-
                 // Creating our limit argument.
                 var parLimit = cmd.CreateParameter();
                 parLimit.ParameterName = "@task";
@@ -458,15 +419,17 @@ namespace magic.lambda.scheduler.services
                 // Executing command.
                 using (var reader = cmd.ExecuteReader())
                 {
+                    var result = new List<contracts.Schedule>();
                     while (reader.Read())
                     {
-                        yield return new contracts.Schedule((DateTime)reader[1], reader[2] as string)
+                        result.Add(new contracts.Schedule((DateTime)reader[1], reader[2] as string)
                         {
                             Id = (int)reader[0],
-                        };
+                        });
                     }
+                    return result;
                 }
-            }
+            });
         }
 
         #endregion
