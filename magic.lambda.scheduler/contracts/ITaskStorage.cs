@@ -39,7 +39,7 @@ namespace magic.lambda.scheduler.contracts
         /// </summary>
         /// <param name="filter">String tasks needs to start with in their ID to be considered a match.</param>
         /// <returns>Number of tasks in system matching optional query.</returns>
-        long CountTasks(string filter);
+        int CountTasks(string filter);
 
         /// <summary>
         /// Updates an existing task.

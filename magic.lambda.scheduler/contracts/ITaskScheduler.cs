@@ -29,6 +29,11 @@ namespace magic.lambda.scheduler.contracts
         /// Deletes an existing schedule for a task.
         /// </summary>
         /// <param name="id">Unique ID of schedule.</param>
-        void DeleteSchedule(ulong id);
+        void DeleteSchedule(int id);
+
+        /// <summary>
+        /// Starts scheduler.
+        /// </summary>
+        void Start();
     }
 }

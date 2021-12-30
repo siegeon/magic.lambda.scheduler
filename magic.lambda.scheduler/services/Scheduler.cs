@@ -29,7 +29,7 @@ namespace magic.lambda.scheduler.services
             public TaskSchedule(
                 Timer timer,
                 string taskId,
-                ulong scheduleId, 
+                int scheduleId, 
                 IRepetitionPattern repetition)
             {
                 Timer = timer;
@@ -40,7 +40,7 @@ namespace magic.lambda.scheduler.services
 
             public Timer Timer { get; private set; }
             public string TaskId { get; private set; }
-            public ulong ScheduleId { get; private set; }
+            public int ScheduleId { get; private set; }
             public IRepetitionPattern Repetition { get; set; }
 
             public void Dispose()
@@ -53,7 +53,7 @@ namespace magic.lambda.scheduler.services
         readonly IMagicConfiguration _configuration;
         readonly IServiceCreator<ISignaler> _signalCreator;
         readonly IServiceCreator<IMagicConfiguration> _configCreator;
-        static readonly Dictionary<ulong, TaskSchedule> _schedules = new Dictionary<ulong, TaskSchedule>();
+        static readonly Dictionary<int, TaskSchedule> _schedules = new Dictionary<int, TaskSchedule>();
         static readonly object _locker = new object();
 
         /// <summary>
@@ -182,7 +182,7 @@ namespace magic.lambda.scheduler.services
         }
 
         /// <inheritdoc />
-        public long CountTasks(string filter)
+        public int CountTasks(string filter)
         {
             return DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
             {
@@ -196,7 +196,7 @@ namespace magic.lambda.scheduler.services
                     if (!string.IsNullOrEmpty(filter))
                         DatabaseHelper.AddParameter(cmd, "@filter", filter);
 
-                    return (long)cmd.ExecuteScalar();
+                    return Convert.ToInt32(cmd.ExecuteScalar());
                 });
             });
         }
@@ -233,7 +233,7 @@ namespace magic.lambda.scheduler.services
                     DatabaseHelper.AddParameter(cmd, "@due", due);
                     DatabaseHelper.AddParameter(cmd, "@repeats", repetition.Value);
 
-                    var scheduledId = (ulong)cmd.ExecuteScalar();
+                    var scheduledId = Convert.ToInt32(cmd.ExecuteScalar());
                     CreateTimer(_signalCreator, _configCreator, scheduledId, taskId, due, repetition);
                 });
             });
@@ -253,14 +253,14 @@ namespace magic.lambda.scheduler.services
                     DatabaseHelper.AddParameter(cmd, "@task", taskId);
                     DatabaseHelper.AddParameter(cmd, "@due", due);
 
-                    var scheduleId = (ulong)cmd.ExecuteScalar();
+                    var scheduleId = Convert.ToInt32(cmd.ExecuteScalar());
                     CreateTimer(_signalCreator, _configCreator, scheduleId, taskId, due, null);
                 });
             });
         }
 
         /// <inheritdoc />
-        public void DeleteSchedule(ulong id)
+        public void DeleteSchedule(int id)
         {
             DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
             {
@@ -274,12 +274,45 @@ namespace magic.lambda.scheduler.services
                         throw new HyperlambdaException($"Task with ID of '{id}' was not found.");
                     lock (_locker)
                     {
-                        var schedule = _schedules[id];
-                        _schedules.Remove(id);
-                        schedule.Dispose();
+                        if (_schedules.ContainsKey(id))
+                        {
+                            var schedule = _schedules[id];
+                            _schedules.Remove(id);
+                            schedule.Dispose();
+                        }
                     }
                 });
             });
+        }
+
+        /// <inheritdoc />
+        public void Start()
+        {
+            // Retrieving all schedules.
+            var schedules = DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
+            {
+                var sql = "select id, task, due, repeats from task_due";
+
+                return DatabaseHelper.CreateCommand(connection, sql, (cmd) =>
+                {
+                    return DatabaseHelper.Iterate<(int Id, string Task, DateTime Due, string Pattern)>(cmd, (reader) =>
+                    {
+                        return ((int)reader[0], reader[1] as string, (DateTime)reader[2], reader[3] as string);
+                    });
+                });
+            });
+
+            // Creating timers for all schedules.
+            foreach (var idx in schedules)
+            {
+                CreateTimer(
+                    _signalCreator,
+                    _configCreator,
+                    idx.Id,
+                    idx.Task,
+                    idx.Due,
+                    PatternFactory.Create(idx.Pattern));
+            }
         }
 
         #endregion
@@ -375,7 +408,7 @@ namespace magic.lambda.scheduler.services
         static void CreateTimer(
             IServiceCreator<ISignaler> signalFactory,
             IServiceCreator<IMagicConfiguration> configFactory,
-            ulong scheduleId,
+            int scheduleId,
             string taskId,
             DateTime due,
             IRepetitionPattern repetition)
@@ -431,7 +464,7 @@ namespace magic.lambda.scheduler.services
         static void ExecuteSchedule(
             IServiceCreator<ISignaler> signalFactory,
             IServiceCreator<IMagicConfiguration> configFactory,
-            ulong scheduleId,
+            int scheduleId,
             string taskId,
             IRepetitionPattern repetition)
         {
