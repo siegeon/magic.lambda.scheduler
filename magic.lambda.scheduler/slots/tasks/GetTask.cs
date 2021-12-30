@@ -37,9 +37,9 @@ namespace magic.lambda.scheduler.slots.tasks
         public void Signal(ISignaler signaler, Node input)
         {
             // Retrieving task from storage and returning results to caller.
-            var id = input.GetEx<string>();
-            var schedules = input.Children.FirstOrDefault(x => x.Name == "schedules")?.GetEx<bool>() ?? false;
-            var task = _storage.Get(id, schedules);
+            var task = _storage.Get(
+                input.GetEx<string>(),
+                input.Children.FirstOrDefault(x => x.Name == "schedules")?.GetEx<bool>() ?? false);
             CreateResult(signaler, task, input);
         }
 
