@@ -4,26 +4,25 @@
 
 using magic.node;
 using magic.signals.contracts;
-using magic.lambda.scheduler.utilities;
+using magic.lambda.scheduler.contracts;
 
-namespace magic.lambda.scheduler
+namespace magic.lambda.scheduler.slots.tasks
 {
     /// <summary>
-    /// [scheduler.running] slot that will return boolean true if scheduler
-    /// is running.
+    /// [tasks.execute] slot that will execute the task with the specified ID.
     /// </summary>
-    [Slot(Name = "scheduler.running")]
-    public class SchedulerRunning : ISlot
+    [Slot(Name = "tasks.execute")]
+    public class ExecuteTask : ISlot
     {
-        readonly IScheduler _scheduler;
+        readonly ITaskStorage _storage;
 
         /// <summary>
         /// Creates a new instance of your slot.
         /// </summary>
-        /// <param name="scheduler">Which background service to use.</param>
-        public SchedulerRunning(IScheduler scheduler)
+        /// <param name="storage">Storage to use for tasks.</param>
+        public ExecuteTask(ITaskStorage storage)
         {
-            _scheduler = scheduler;
+            _storage = storage;
         }
 
         /// <summary>
@@ -33,7 +32,7 @@ namespace magic.lambda.scheduler
         /// <param name="input">Arguments to slot.</param>
         public void Signal(ISignaler signaler, Node input)
         {
-            input.Value = _scheduler.Running;
+            _storage.ExecuteTask(CreateTask.GetID(input));
         }
     }
 }

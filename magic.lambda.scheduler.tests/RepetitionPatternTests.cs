@@ -1,4 +1,3 @@
-// #define DEEP_TESTING
 /*
  * Magic Cloud, copyright Aista, Ltd. See the attached LICENSE file for details.
  */
@@ -7,6 +6,7 @@ using System;
 using Xunit;
 using magic.node.extensions;
 using magic.lambda.scheduler.utilities;
+using magic.lambda.scheduler.contracts;
 
 namespace magic.lambda.scheduler.tests
 {
@@ -235,7 +235,7 @@ namespace magic.lambda.scheduler.tests
             Assert.True((next - DateTime.UtcNow).TotalDays / 30 >= 4 && (next - DateTime.UtcNow).TotalDays / 30 < 6);
         }
 
-        private class ExtPattern : IPattern
+        private class ExtPattern : IRepetitionPattern
         {
             readonly string _args;
             public string Value => "ext:foo:" + _args;

@@ -2,28 +2,27 @@
  * Magic Cloud, copyright Aista, Ltd. See the attached LICENSE file for details.
  */
 
-using System.Threading.Tasks;
 using magic.node;
 using magic.signals.contracts;
-using magic.lambda.scheduler.utilities;
+using magic.lambda.scheduler.contracts;
 
-namespace magic.lambda.scheduler
+namespace magic.lambda.scheduler.slots.tasks
 {
     /// <summary>
-    /// [tasks.delete] slot that will delete a named task.
+    /// [tasks.delete] slot that will delete the task withthe specified ID.
     /// </summary>
     [Slot(Name = "tasks.delete")]
-    public class DeleteTask : ISlotAsync
+    public class DeleteTask : ISlot
     {
-        readonly IScheduler _scheduler;
+        readonly ITaskStorage _storage;
 
         /// <summary>
         /// Creates a new instance of your slot.
         /// </summary>
-        /// <param name="scheduler">Which background service to use.</param>
-        public DeleteTask(IScheduler scheduler)
+        /// <param name="storage">Storage to use for tasks.</param>
+        public DeleteTask(ITaskStorage storage)
         {
-            _scheduler = scheduler;
+            _storage = storage;
         }
 
         /// <summary>
@@ -31,9 +30,9 @@ namespace magic.lambda.scheduler
         /// </summary>
         /// <param name="signaler">Signaler that raised signal.</param>
         /// <param name="input">Arguments to slot.</param>
-        public async Task SignalAsync(ISignaler signaler, Node input)
+        public void Signal(ISignaler signaler, Node input)
         {
-            await _scheduler.DeleteTask(input);
+            _storage.DeleteTask(CreateTask.GetID(input));
         }
     }
 }

@@ -5,8 +5,9 @@
 using System;
 using System.Linq;
 using System.Collections.Generic;
-using magic.lambda.scheduler.utilities.patterns;
 using magic.node.extensions;
+using magic.lambda.scheduler.contracts;
+using magic.lambda.scheduler.utilities.patterns;
 
 namespace magic.lambda.scheduler.utilities
 {
@@ -16,15 +17,15 @@ namespace magic.lambda.scheduler.utilities
     /// </summary>
     public static class PatternFactory
     {
-        readonly static Dictionary<string, Func<string, IPattern>> _createExtensions =
-            new Dictionary<string, Func<string, IPattern>>();
+        readonly static Dictionary<string, Func<string, IRepetitionPattern>> _createExtensions =
+            new Dictionary<string, Func<string, IRepetitionPattern>>();
 
         /// <summary>
         /// Creates a new instance of the class.
         /// </summary>
         /// <param name="pattern">Repetition pattern to use.</param>
-        /// <returns>An instance of an IPattern.</returns>
-        public static IPattern Create(string pattern)
+        /// <returns>An instance of an IRepetitionPattern.</returns>
+        public static IRepetitionPattern Create(string pattern)
         {
             // Checking if this is an extension pattern.
             if (pattern.StartsWith("ext:"))
@@ -39,6 +40,7 @@ namespace magic.lambda.scheduler.utilities
             {
                 case 2:
                     return new IntervalPattern(int.Parse(entities[0]), entities[1]);
+
                 case 4:
                     var weekdays = entities[0] == "**" ?
                         null :
@@ -49,6 +51,7 @@ namespace magic.lambda.scheduler.utilities
                         int.Parse(entities[1]),
                         int.Parse(entities[2]),
                         int.Parse(entities[3]));
+
                 case 5:
                     var months = entities[0] == "**" ? null : entities[0].Split('|').Select(x => int.Parse(x));
                     var days = entities[1] == "**" ? null : entities[1].Split('|').Select(x => int.Parse(x));
@@ -58,6 +61,7 @@ namespace magic.lambda.scheduler.utilities
                         int.Parse(entities[2]),
                         int.Parse(entities[3]),
                         int.Parse(entities[4]));
+
                 default:
                     throw new HyperlambdaException($"'{pattern}' is not a recognized repetition pattern.");
             }
@@ -71,7 +75,7 @@ namespace magic.lambda.scheduler.utilities
         /// </summary>
         /// <param name="key">Lookup key to resolve your extension pattern.</param>
         /// <param name="functor">Function responsible for creating your IPattern instance.</param>
-        public static void AddExtensionPattern(string key, Func<string, IPattern> functor)
+        public static void AddExtensionPattern(string key, Func<string, IRepetitionPattern> functor)
         {
             _createExtensions[key] = functor;
         }
