@@ -12,6 +12,7 @@ using magic.node;
 using magic.node.contracts;
 using magic.node.extensions;
 using magic.signals.contracts;
+using magic.lambda.logging.helpers;
 using magic.lambda.scheduler.contracts;
 using magic.lambda.scheduler.utilities;
 
@@ -52,6 +53,7 @@ namespace magic.lambda.scheduler.services
         readonly ISignaler _signaler;
         readonly IMagicConfiguration _configuration;
         readonly IServiceCreator<ISignaler> _signalCreator;
+        readonly IServiceCreator<ILogger> _loggingCreator;
         readonly IServiceCreator<IMagicConfiguration> _configCreator;
         static readonly Dictionary<int, TaskSchedule> _schedules = new Dictionary<int, TaskSchedule>();
         static readonly object _locker = new object();
@@ -62,18 +64,21 @@ namespace magic.lambda.scheduler.services
         /// </summary>
         /// <param name="signaler">Needed to signal slots.</param>
         /// <param name="configuration">Needed to retrieve default database type.</param>
-        /// <param name="signalCreator">Needed to able to create an ISignaler instance during execution of scheduled tasks.</param>
-        /// <param name="configCreator">Needed to able to create an IMagicConfiguration instance during execution of scheduled tasks.</param>
+        /// <param name="signalCreator">Needed to be able to create an ISignaler instance during execution of scheduled tasks.</param>
+        /// <param name="loggingCreator">Needed to be able to log errors occurring as tasks are executed.</param>
+        /// <param name="configCreator">Needed to be able to create an IMagicConfiguration instance during execution of scheduled tasks.</param>
         public Scheduler(
             ISignaler signaler,
             IMagicConfiguration configuration,
             IServiceCreator<ISignaler> signalCreator,
+            IServiceCreator<ILogger> loggingCreator,
             IServiceCreator<IMagicConfiguration> configCreator)
         {
             _signaler = signaler;
             _configuration = configuration;
             _signalCreator = signalCreator;
             _configCreator = configCreator;
+            _loggingCreator = loggingCreator;
         }
 
         #region [ -- Interface implementation for ITaskStorage -- ]
@@ -233,7 +238,7 @@ namespace magic.lambda.scheduler.services
                     DatabaseHelper.AddParameter(cmd, "@repeats", repetition.Value);
 
                     var scheduledId = Convert.ToInt32(cmd.ExecuteScalar());
-                    CreateTimer(_signalCreator, _configCreator, scheduledId, taskId, due, repetition);
+                    CreateTimer(_signalCreator, _configCreator, _loggingCreator, scheduledId, taskId, due, repetition);
                 });
             });
         }
@@ -253,7 +258,7 @@ namespace magic.lambda.scheduler.services
                     DatabaseHelper.AddParameter(cmd, "@due", due);
 
                     var scheduleId = Convert.ToInt32(cmd.ExecuteScalar());
-                    CreateTimer(_signalCreator, _configCreator, scheduleId, taskId, due, null);
+                    CreateTimer(_signalCreator, _configCreator, _loggingCreator, scheduleId, taskId, due, null);
                 });
             });
         }
@@ -294,6 +299,7 @@ namespace magic.lambda.scheduler.services
                 CreateTimer(
                     _signalCreator,
                     _configCreator,
+                    _loggingCreator,
                     idx.Id,
                     idx.Task,
                     idx.Due,
@@ -425,6 +431,7 @@ namespace magic.lambda.scheduler.services
         static void CreateTimer(
             IServiceCreator<ISignaler> signalFactory,
             IServiceCreator<IMagicConfiguration> configFactory,
+            IServiceCreator<ILogger> logFactory,
             int scheduleId,
             string taskId,
             DateTime due,
@@ -452,6 +459,7 @@ namespace magic.lambda.scheduler.services
                     CreateTimer(
                         signalFactory,
                         configFactory,
+                        logFactory,
                         scheduleId,
                         taskId,
                         due,
@@ -462,6 +470,7 @@ namespace magic.lambda.scheduler.services
                 // Executing task.
                 ExecuteSchedule(
                     signalFactory,
+                    logFactory,
                     configFactory,
                     scheduleId,
                     taskId,
@@ -482,6 +491,7 @@ namespace magic.lambda.scheduler.services
          */
         static void ExecuteSchedule(
             IServiceCreator<ISignaler> signalFactory,
+            IServiceCreator<ILogger> logCreator,
             IServiceCreator<IMagicConfiguration> configFactory,
             int scheduleId,
             string taskId,
@@ -496,9 +506,10 @@ namespace magic.lambda.scheduler.services
             {
                 ExecuteTask(signaler, config, taskId);
             }
-            catch
+            catch (Exception error)
             {
-                // Not really sure what to do here ...?
+                var logger = logCreator.Create();
+                logger.Error($"Unhandled exception while executing scheduled task with id of '{taskId}'", error);
             }
             finally
             {
@@ -507,10 +518,9 @@ namespace magic.lambda.scheduler.services
                 {
                     DatabaseHelper.Connect(signaler, config, (connection) =>
                     {
-                        var sqlBuilder = new StringBuilder();
-                        sqlBuilder.Append("update task_due set due = @due where id = @id");
+                        var sql = "update task_due set due = @due where id = @id";
 
-                        DatabaseHelper.CreateCommand(connection, sqlBuilder.ToString(), (cmd) =>
+                        DatabaseHelper.CreateCommand(connection, sql, (cmd) =>
                         {
                             var nextDue = repetition.Next();
                             DatabaseHelper.AddParameter(cmd, "@due", nextDue);
@@ -522,6 +532,7 @@ namespace magic.lambda.scheduler.services
                             CreateTimer(
                                 signalFactory,
                                 configFactory,
+                                logCreator,
                                 scheduleId,
                                 taskId,
                                 nextDue,
