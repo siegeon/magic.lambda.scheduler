@@ -163,6 +163,16 @@ namespace magic.lambda.scheduler.utilities
             connection.ConnectionString = configuration[$"magic:databases:{dbType}:generic"].Replace("{database}", "magic");
             connection.Open();
 
+            // Making sure we set correct timezone for database if necessary.
+            if (dbType == "mysql")
+            {
+                using (var cmd = connection.CreateCommand())
+                {
+                    cmd.CommandText = "set time_zone = '+00:00'";
+                    cmd.ExecuteNonQuery();
+                }
+            }
+
             // Returning open connection to caller.
             return connection;
         }
