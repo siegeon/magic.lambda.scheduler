@@ -442,7 +442,7 @@ namespace magic.lambda.scheduler.services
             }
             catch
             {
-                ; // Not really sure what to do here ...?
+                // Not really sure what to do here ...?
             }
             finally
             {

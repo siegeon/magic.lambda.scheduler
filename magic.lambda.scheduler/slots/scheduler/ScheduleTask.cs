@@ -19,18 +19,15 @@ namespace magic.lambda.scheduler.slots.scheduler
     [Slot(Name = "tasks.schedule")]
     public class ScheduleTask : ISlot
     {
-        readonly ITaskStorage _storage;
         readonly ITaskScheduler _scheduler;
 
         /// <summary>
         /// Creates a new instance of your slot.
         /// </summary>
         /// <param name="scheduler">Which background service to use.</param>
-        /// <param name="storage">Needed to fetch tasks.</param>
-        public ScheduleTask(ITaskScheduler scheduler, ITaskStorage storage)
+        public ScheduleTask(ITaskScheduler scheduler)
         {
             _scheduler = scheduler;
-            _storage = storage;
         }
 
         /// <summary>

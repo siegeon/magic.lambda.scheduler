@@ -40,7 +40,7 @@ namespace magic.lambda.scheduler.slots.tasks
             var task = _storage.GetTask(
                 input.GetEx<string>(),
                 input.Children.FirstOrDefault(x => x.Name == "schedules")?.GetEx<bool>() ?? false);
-            CreateResult(signaler, task, input);
+            CreateResult(task, input);
         }
 
         #region [ -- Private helper methods -- ]
@@ -48,7 +48,7 @@ namespace magic.lambda.scheduler.slots.tasks
         /*
          * Adds the properties for the task into the specified node.
          */
-        static void CreateResult(ISignaler signaler, MagicTask task, Node input)
+        static void CreateResult(MagicTask task, Node input)
         {
             // House cleaning.
             input.Value = null;
