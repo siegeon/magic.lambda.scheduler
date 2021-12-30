@@ -181,6 +181,20 @@ tasks.list:foo
         }
 
         [Fact]
+        public void GetTaskAndSchedules()
+        {
+            ConnectionFactory.Arguments.Clear();
+            Common.Evaluate(@"
+tasks.get:foo
+   schedules:true");
+            Assert.Equal("CONNECTION-STRING-magic", ConnectionFactory.ConnectionString);
+            Assert.Equal("select id, description, hyperlambda, created from tasks where id = @id limit @limit", ConnectionFactory.CommandText);
+            Assert.Equal(2, ConnectionFactory.Arguments.Count);
+            Assert.Single(ConnectionFactory.Arguments.Where(x => x.Item1 == "@id" && x.Item2 == "foo"));
+            Assert.Single(ConnectionFactory.Arguments.Where(x => x.Item1 == "@limit" && x.Item2 == "1"));
+        }
+
+        [Fact]
         public void Schedule_Due()
         {
             ConnectionFactory.Arguments.Clear();

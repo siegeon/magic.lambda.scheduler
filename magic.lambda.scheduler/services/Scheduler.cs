@@ -290,7 +290,7 @@ namespace magic.lambda.scheduler.services
                     }
 
                     // Checking if caller wants to return schedules too.
-                    if (schedules)
+                    if (result != null && schedules)
                     {
                         foreach (var idx in GetSchedules(connection, result.ID))
                         {
