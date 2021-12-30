@@ -14,9 +14,10 @@ using magic.node;
 using magic.node.contracts;
 using magic.signals.services;
 using magic.signals.contracts;
-using magic.node.extensions.hyperlambda;
+using magic.lambda.scheduler.services;
 using magic.lambda.scheduler.contracts;
 using magic.lambda.scheduler.utilities;
+using magic.node.extensions.hyperlambda;
 
 namespace magic.lambda.scheduler.tests
 {

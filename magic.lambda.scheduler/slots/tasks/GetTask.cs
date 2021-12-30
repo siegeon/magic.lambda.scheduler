@@ -37,7 +37,9 @@ namespace magic.lambda.scheduler.slots.tasks
         public void Signal(ISignaler signaler, Node input)
         {
             // Retrieving task from storage and returning results to caller.
-            var task = _storage.Get(input.GetEx<string>());
+            var id = input.GetEx<string>();
+            var schedules = input.Children.FirstOrDefault(x => x.Name == "schedules")?.GetEx<bool>() ?? false;
+            var task = _storage.Get(id, schedules);
             CreateResult(signaler, task, input);
         }
 
@@ -57,11 +59,26 @@ namespace magic.lambda.scheduler.slots.tasks
                 return;
 
             // Returning task properties to caller.
-            input.Add(new Node("hyperlambda", task.Hyperlambda));
+            input.Add(new Node("hyperlambda", task.Hyperlambda.Trim()));
             input.Add(new Node("created", task.Created));
-            input.Add(new Node("id", task.ID));
             if (!string.IsNullOrEmpty(task.Description))
                 input.Add(new Node("description", task.Description));
+
+            // Returning schedules for task.
+            if (task.Schedules.Any())
+            {
+                var scheduleNode = new Node("schedule");
+                foreach (var idx in task.Schedules)
+                {
+                    var idxNode = new Node(".");
+                    idxNode.Add(new Node("id", idx.Id));
+                    idxNode.Add(new Node("due", idx.Due));
+                    if (!string.IsNullOrEmpty(idx.Repeats))
+                        idxNode.Add(new Node("repeats", idx.Repeats));
+                    scheduleNode.Add(idxNode);
+                }
+                input.Add(scheduleNode);
+            }
         }
 
         #endregion

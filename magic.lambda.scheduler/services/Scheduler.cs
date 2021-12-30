@@ -244,7 +244,7 @@ namespace magic.lambda.scheduler.services
         }
 
         /// <inheritdoc />
-        public MagicTask Get(string id)
+        public MagicTask Get(string id, bool schedules = false)
         {
             // Creating our connection, making sure we dispose it when we're done with it.
             using (var connection = CreateConnection())
@@ -273,18 +273,31 @@ namespace magic.lambda.scheduler.services
                     parLimit.Value = 1L;
                     cmd.Parameters.Add(parLimit);
 
-                    // Executing command.
+                    // Executing command and putting results into temporary variable.
+                    MagicTask result = null;
                     using (var reader = cmd.ExecuteReader())
                     {
                         if (reader.Read())
                         {
-                            return new MagicTask(reader[0] as string, reader[1] as string, reader[2] as string)
+                            result = new MagicTask(
+                                reader[0] as string,
+                                reader[1] as string,
+                                reader[2] as string)
                             {
-                                Created = (DateTime)reader[3]
+                                Created = (DateTime)reader[3],
                             };
                         }
                     }
-                    return null;
+
+                    // Checking if caller wants to return schedules too.
+                    if (schedules)
+                    {
+                        foreach (var idx in GetSchedules(connection, result.ID))
+                        {
+                            result.Schedules.Add(idx);
+                        }
+                    }
+                    return result;
                 }
             }
         }
@@ -390,6 +403,40 @@ namespace magic.lambda.scheduler.services
         #endregion
 
         #region [ -- Private helper methods -- ]
+
+        /*
+         * Returns schedules for task.
+         */
+        IEnumerable<Schedule> GetSchedules(IDbConnection connection, string id)
+        {
+            // Creating our SQL.
+            var sql = "select id, due, repeats from task_due where task = @task";
+
+            // Creating our SQL command, making sure we dispose it when we're done with it.
+            using (var cmd = connection.CreateCommand())
+            {
+                // Assigning SQL to command text.
+                cmd.CommandText = sql;
+
+                // Creating our limit argument.
+                var parLimit = cmd.CreateParameter();
+                parLimit.ParameterName = "@task";
+                parLimit.Value = id;
+                cmd.Parameters.Add(parLimit);
+
+                // Executing command.
+                using (var reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        yield return new contracts.Schedule((DateTime)reader[1], reader[2] as string)
+                        {
+                            Id = (int)reader[0],
+                        };
+                    }
+                }
+            }
+        }
 
         /*
          * Creates and returns an IDbConnection using factory slot, and returns the result to caller.

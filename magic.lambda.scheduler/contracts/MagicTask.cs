@@ -3,6 +3,8 @@
  */
 
 using System;
+using System.Linq;
+using System.Collections.Generic;
 
 namespace magic.lambda.scheduler.contracts
 {
@@ -17,11 +19,25 @@ namespace magic.lambda.scheduler.contracts
         /// <param name="id">Unique ID of your task.</param>
         /// <param name="description">Humanly readable description of task.</param>
         /// <param name="hyperlambda">Hyperlambda to associate with task.</param>
-        public MagicTask(string id, string description, string hyperlambda)
+        /// <param name="schedules">Schedules associated with task.</param>
+        public MagicTask(
+            string id,
+            string description,
+            string hyperlambda,
+            IEnumerable<Schedule> schedules = null)
         {
             ID = id;
             Description = description;
             Hyperlambda = hyperlambda;
+
+            // Checking if caller provided schedules for task.
+            if (schedules != null && schedules.Any())
+            {
+                foreach (var idx in schedules)
+                {
+                    Schedules.Add(idx);
+                }
+            }
         }
 
         /// <summary>
@@ -47,5 +63,11 @@ namespace magic.lambda.scheduler.contracts
         /// </summary>
         /// <value>Date and time when task was created.</value>
         public DateTime? Created { get; internal set; }
+
+        /// <summary>
+        /// Schedules for task, if task is scheduled.
+        /// </summary>
+        /// <value>Schedules for task.</value>
+        public IList<Schedule> Schedules { get; private set; } = new List<Schedule>();
     }
 }

@@ -126,9 +126,8 @@ tasks.delete:foo-bar2");
             ConnectionFactory.Arguments.Clear();
             Common.Evaluate(@"tasks.list");
             Assert.Equal("CONNECTION-STRING-magic", ConnectionFactory.ConnectionString);
-            Assert.Equal("select id, description, hyperlambda, created from tasks offset @offset limit @limit", ConnectionFactory.CommandText);
-            Assert.Equal(2, ConnectionFactory.Arguments.Count);
-            Assert.Single(ConnectionFactory.Arguments.Where(x => x.Item1 == "@offset" && x.Item2 == "0"));
+            Assert.Equal("select id, description, hyperlambda, created from tasks limit @limit", ConnectionFactory.CommandText);
+            Assert.Single(ConnectionFactory.Arguments);
             Assert.Single(ConnectionFactory.Arguments.Where(x => x.Item1 == "@limit" && x.Item2 == "10"));
         }
 
@@ -175,10 +174,9 @@ tasks.list:foo
             ConnectionFactory.Arguments.Clear();
             Common.Evaluate(@"tasks.get:foo");
             Assert.Equal("CONNECTION-STRING-magic", ConnectionFactory.ConnectionString);
-            Assert.Equal("select id, description, hyperlambda, created from tasks where id = @id offset @offset limit @limit", ConnectionFactory.CommandText);
-            Assert.Equal(3, ConnectionFactory.Arguments.Count);
+            Assert.Equal("select id, description, hyperlambda, created from tasks where id = @id limit @limit", ConnectionFactory.CommandText);
+            Assert.Equal(2, ConnectionFactory.Arguments.Count);
             Assert.Single(ConnectionFactory.Arguments.Where(x => x.Item1 == "@id" && x.Item2 == "foo"));
-            Assert.Single(ConnectionFactory.Arguments.Where(x => x.Item1 == "@offset" && x.Item2 == "0"));
             Assert.Single(ConnectionFactory.Arguments.Where(x => x.Item1 == "@limit" && x.Item2 == "1"));
         }
 

@@ -31,8 +31,9 @@ namespace magic.lambda.scheduler.contracts
         /// Returns the specified task, and its associated due date(s).
         /// </summary>
         /// <param name="id">ID of task to retrieve.</param>
+        /// <param name="schedules">If true will also retrieve schedules for task.</param>
         /// <returns>Node declaration of task.</returns>
-        MagicTask Get(string id);
+        MagicTask Get(string id, bool schedules = false);
 
         /// <summary>
         /// Counts tasks in system matching the optional query.
