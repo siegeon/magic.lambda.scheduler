@@ -23,6 +23,12 @@ namespace magic.lambda.scheduler.contracts
         }
 
         /// <summary>
+        /// Unique ID of schedule.
+        /// </summary>
+        /// <value>Unique ID.</value>
+        public int Id { get; internal set; }
+
+        /// <summary>
         /// Next upcoming due date and time for schedule.
         /// </summary>
         /// <value>Next due date and time.</value>
@@ -33,11 +39,5 @@ namespace magic.lambda.scheduler.contracts
         /// </summary>
         /// <value>Repetition pattern.</value>
         public string Repeats { get; private set; }
-
-        /// <summary>
-        /// Unique ID of schedule.
-        /// </summary>
-        /// <value>Unique ID.</value>
-        public int Id { get; set; }
     }
 }
