@@ -121,7 +121,7 @@ tasks.delete:foo-bar2");
         }
 
         [Fact]
-        public void ListTasks()
+        public void ListAllTasks()
         {
             ConnectionFactory.Arguments.Clear();
             Common.Evaluate(@"tasks.list");
@@ -144,7 +144,7 @@ tasks.list:foo
             Assert.Equal(3, ConnectionFactory.Arguments.Count);
             Assert.Single(ConnectionFactory.Arguments.Where(x => x.Item1 == "@offset" && x.Item2 == "25"));
             Assert.Single(ConnectionFactory.Arguments.Where(x => x.Item1 == "@limit" && x.Item2 == "11"));
-            Assert.Single(ConnectionFactory.Arguments.Where(x => x.Item1 == "@filter" && x.Item2 == "foo"));
+            Assert.Single(ConnectionFactory.Arguments.Where(x => x.Item1 == "@filter" && x.Item2 == "foo%"));
         }
 
         [Fact]
@@ -169,29 +169,11 @@ tasks.list:foo
         }
 
         [Fact]
-        public void GetTask()
+        public void GetTaskAndSchedules_Throws()
         {
-            ConnectionFactory.Arguments.Clear();
-            Common.Evaluate(@"tasks.get:foo");
-            Assert.Equal("CONNECTION-STRING-magic", ConnectionFactory.ConnectionString);
-            Assert.Equal("select id, description, hyperlambda, created from tasks where id = @id limit @limit", ConnectionFactory.CommandText);
-            Assert.Equal(2, ConnectionFactory.Arguments.Count);
-            Assert.Single(ConnectionFactory.Arguments.Where(x => x.Item1 == "@id" && x.Item2 == "foo"));
-            Assert.Single(ConnectionFactory.Arguments.Where(x => x.Item1 == "@limit" && x.Item2 == "1"));
-        }
-
-        [Fact]
-        public void GetTaskAndSchedules()
-        {
-            ConnectionFactory.Arguments.Clear();
-            Common.Evaluate(@"
+            Assert.Throws<HyperlambdaException>(() => Common.Evaluate(@"
 tasks.get:foo
-   schedules:true");
-            Assert.Equal("CONNECTION-STRING-magic", ConnectionFactory.ConnectionString);
-            Assert.Equal("select id, description, hyperlambda, created from tasks where id = @id limit @limit", ConnectionFactory.CommandText);
-            Assert.Equal(2, ConnectionFactory.Arguments.Count);
-            Assert.Single(ConnectionFactory.Arguments.Where(x => x.Item1 == "@id" && x.Item2 == "foo"));
-            Assert.Single(ConnectionFactory.Arguments.Where(x => x.Item1 == "@limit" && x.Item2 == "1"));
+   schedules:true"));
         }
 
         [Fact]

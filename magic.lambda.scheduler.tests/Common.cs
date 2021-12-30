@@ -16,7 +16,6 @@ using magic.signals.services;
 using magic.signals.contracts;
 using magic.lambda.scheduler.services;
 using magic.lambda.scheduler.contracts;
-using magic.lambda.scheduler.utilities;
 using magic.node.extensions.hyperlambda;
 
 namespace magic.lambda.scheduler.tests
@@ -61,7 +60,9 @@ namespace magic.lambda.scheduler.tests
                         .Callback<string>(value => CommandText = value);
 
                     // Execute non query method.
-                    comMoq.Setup(x => x.ExecuteNonQuery());
+                    comMoq
+                        .Setup(x => x.ExecuteNonQuery())
+                        .Returns(1);
 
                     // Parameters getter.
                     comMoq

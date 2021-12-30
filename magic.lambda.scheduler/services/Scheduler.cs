@@ -11,6 +11,7 @@ using magic.node.contracts;
 using magic.node.extensions;
 using magic.signals.contracts;
 using magic.lambda.scheduler.contracts;
+using magic.lambda.scheduler.utilities;
 
 namespace magic.lambda.scheduler.services
 {
@@ -38,7 +39,7 @@ namespace magic.lambda.scheduler.services
         public void CreateAsync(MagicTask task)
         {
             // Creating our connection, making sure we dispose it when we're done with it.
-            using (var connection = CreateConnection())
+            DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
             {
                 // Creating our SQL.
                 var sqlBuilder = new StringBuilder();
@@ -80,14 +81,14 @@ namespace magic.lambda.scheduler.services
                     // Executing command.
                     cmd.ExecuteNonQuery();
                 }
-            }
+            });
         }
 
         /// <inheritdoc />
         public void Update(MagicTask task)
         {
             // Creating our connection, making sure we dispose it when we're done with it.
-            using (var connection = CreateConnection())
+            DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
             {
                 // Creating our SQL.
                 var sql = "update tasks set description = @description, hyperlambda = @hyperlambda where id = @id";
@@ -117,16 +118,17 @@ namespace magic.lambda.scheduler.services
                     cmd.Parameters.Add(parDesc);
 
                     // Executing command.
-                    cmd.ExecuteNonQuery();
+                    if (cmd.ExecuteNonQuery() != 1)
+                        throw new HyperlambdaException($"Task with ID of '{task.ID}' was not found");
                 }
-            }
+            });
         }
 
         /// <inheritdoc />
         public void Delete(string id)
         {
             // Creating our connection, making sure we dispose it when we're done with it.
-            using (var connection = CreateConnection())
+            DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
             {
                 // Creating our SQL.
                 var sql = "delete from tasks where id = @id";
@@ -144,16 +146,17 @@ namespace magic.lambda.scheduler.services
                     cmd.Parameters.Add(parId);
 
                     // Executing command.
-                    cmd.ExecuteNonQuery();
+                    if (cmd.ExecuteNonQuery() != 1)
+                        throw new HyperlambdaException($"Task with ID of '{id}' was not found");
                 }
-            }
+            });
         }
 
         /// <inheritdoc />
         public IEnumerable<MagicTask> List(string filter, long offset, long limit)
         {
             // Creating our connection, making sure we dispose it when we're done with it.
-            using (var connection = CreateConnection())
+            return DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
             {
                 // Creating our SQL.
                 var sqlBuilder = new StringBuilder();
@@ -174,7 +177,7 @@ namespace magic.lambda.scheduler.services
                         cmd.Parameters.Add(parFilter);
                     }
 
-                    sqlBuilder.Append(GetTail(offset, limit));
+                    sqlBuilder.Append(DatabaseHelper.GetPagingSql(_configuration, offset, limit));
 
                     // Assigning SQL to command text.
                     cmd.CommandText = sqlBuilder.ToString();
@@ -197,23 +200,25 @@ namespace magic.lambda.scheduler.services
                     // Executing command.
                     using (var reader = cmd.ExecuteReader())
                     {
+                        var result = new List<MagicTask>();
                         while (reader.Read())
                         {
-                            yield return new MagicTask(reader[0] as string, reader[1] as string, reader[2] as string)
+                            result.Add(new MagicTask(reader[0] as string, reader[1] as string, reader[2] as string)
                             {
                                 Created = (DateTime)reader[3]
-                            };
+                            });
                         }
+                        return result;
                     }
                 }
-            }
+            });
         }
 
         /// <inheritdoc />
         public long Count(string filter)
         {
             // Creating our connection, making sure we dispose it when we're done with it.
-            using (var connection = CreateConnection())
+            return DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
             {
                 // Creating our SQL.
                 var sqlBuilder = new StringBuilder();
@@ -240,14 +245,14 @@ namespace magic.lambda.scheduler.services
                     // Executing command.
                     return (long)cmd.ExecuteScalar();
                 }
-            }
+            });
         }
 
         /// <inheritdoc />
         public MagicTask Get(string id, bool schedules = false)
         {
             // Creating our connection, making sure we dispose it when we're done with it.
-            using (var connection = CreateConnection())
+            return DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
             {
                 // Creating our SQL.
                 var sqlBuilder = new StringBuilder();
@@ -262,7 +267,7 @@ namespace magic.lambda.scheduler.services
                     parFilter.Value = id;
                     cmd.Parameters.Add(parFilter);
 
-                    sqlBuilder.Append(GetTail(0L, 1L));
+                    sqlBuilder.Append(DatabaseHelper.GetPagingSql(_configuration, 0L, 1L));
 
                     // Assigning SQL to command text.
                     cmd.CommandText = sqlBuilder.ToString();
@@ -287,6 +292,10 @@ namespace magic.lambda.scheduler.services
                                 Created = (DateTime)reader[3],
                             };
                         }
+                        else
+                        {
+                            throw new HyperlambdaException($"Task with ID of '{id}' was not found.");
+                        }
                     }
 
                     // Checking if caller wants to return schedules too.
@@ -299,7 +308,7 @@ namespace magic.lambda.scheduler.services
                     }
                     return result;
                 }
-            }
+            });
         }
 
         /// <inheritdoc />
@@ -308,7 +317,7 @@ namespace magic.lambda.scheduler.services
             // Retrieving task.
             var task = Get(id);
             if (task == null)
-                throw new HyperlambdaException($"Task with id of '{id}' was not found");
+                throw new HyperlambdaException($"Task with ID of '{id}' was not found");
 
             // Transforming task's Hyperlambda to a lambda object.
             var hlNode = new Node("", task.Hyperlambda);
@@ -326,7 +335,7 @@ namespace magic.lambda.scheduler.services
         public void Schedule(string taskId, IRepetitionPattern repetition)
         {
             // Creating our connection, making sure we dispose it when we're done with it.
-            using (var connection = CreateConnection())
+            DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
             {
                 // Creating our SQL.
                 var sql = "insert into task_due (task, due, repeats) values (@task, @due, @repeats)";
@@ -358,14 +367,14 @@ namespace magic.lambda.scheduler.services
                     // Executing command.
                     cmd.ExecuteNonQuery();
                 }
-            }
+            });
         }
 
         /// <inheritdoc />
         public void Schedule(string taskId, DateTime due)
         {
             // Creating our connection, making sure we dispose it when we're done with it.
-            using (var connection = CreateConnection())
+            DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
             {
                 // Creating our SQL.
                 var sql = "insert into task_due (task, due) values (@task, @due)";
@@ -391,14 +400,14 @@ namespace magic.lambda.scheduler.services
                     // Executing command.
                     cmd.ExecuteNonQuery();
                 }
-            }
+            });
         }
 
         /// <inheritdoc />
         public void Delete(int id)
         {
             // Creating our connection, making sure we dispose it when we're done with it.
-            using (var connection = CreateConnection())
+            DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
             {
                 // Creating our SQL.
                 var sql = "delete from task_due where id = @id";
@@ -416,9 +425,10 @@ namespace magic.lambda.scheduler.services
                     cmd.Parameters.Add(parId);
 
                     // Executing command.
-                    cmd.ExecuteNonQuery();
+                    if (cmd.ExecuteNonQuery() != 1)
+                        throw new HyperlambdaException($"Task with ID of '{id}' was not found.");
                 }
-            }
+            });
         }
 
         #endregion
@@ -456,44 +466,6 @@ namespace magic.lambda.scheduler.services
                         };
                     }
                 }
-            }
-        }
-
-        /*
-         * Creates and returns an IDbConnection using factory slot, and returns the result to caller.
-         */
-        IDbConnection CreateConnection()
-        {
-            // Creating our database connection.
-            var dbType = _configuration["magic:databases:default"];
-            var dbNode = new Node();
-            _signaler.Signal($".db-factory.connection.{dbType}", dbNode);
-            var connection = dbNode.Get<IDbConnection>();
-
-            // Opening up database connection.
-            connection.ConnectionString = _configuration[$"magic:databases:{dbType}:generic"].Replace("{database}", "magic");
-            connection.Open();
-
-            // Returning open connection to caller.
-            return connection;
-        }
-
-        /*
-         * Returns paging SQL parts to caller according to database type.
-         */
-        string GetTail(long offset, long limit)
-        {
-            var dbType = _configuration["magic:databases:default"];
-            switch (dbType)
-            {
-                case "mssql":
-                    if (offset > 0)
-                        return " fetch next @limit rows only";
-                    return " offset @offset rows fetch next @limit rows only";
-                default:
-                    if (offset > 0)
-                        return " offset @offset limit @limit";
-                    return " limit @limit";
             }
         }
 
