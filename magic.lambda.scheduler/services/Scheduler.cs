@@ -29,7 +29,7 @@ namespace magic.lambda.scheduler.services
             public TaskSchedule(
                 Timer timer,
                 string taskId,
-                long scheduleId, 
+                ulong scheduleId, 
                 IRepetitionPattern repetition)
             {
                 Timer = timer;
@@ -40,7 +40,7 @@ namespace magic.lambda.scheduler.services
 
             public Timer Timer { get; private set; }
             public string TaskId { get; private set; }
-            public long ScheduleId { get; private set; }
+            public ulong ScheduleId { get; private set; }
             public IRepetitionPattern Repetition { get; set; }
 
             public void Dispose()
@@ -53,7 +53,7 @@ namespace magic.lambda.scheduler.services
         readonly IMagicConfiguration _configuration;
         readonly IServiceCreator<ISignaler> _signalCreator;
         readonly IServiceCreator<IMagicConfiguration> _configCreator;
-        static readonly Dictionary<long, TaskSchedule> _schedules = new Dictionary<long, TaskSchedule>();
+        static readonly Dictionary<ulong, TaskSchedule> _schedules = new Dictionary<ulong, TaskSchedule>();
         static readonly object _locker = new object();
 
         /// <summary>
@@ -221,7 +221,7 @@ namespace magic.lambda.scheduler.services
                     DatabaseHelper.AddParameter(cmd, "@due", due);
                     DatabaseHelper.AddParameter(cmd, "@repeats", repetition.Value);
 
-                    var scheduledId = (long)cmd.ExecuteScalar();
+                    var scheduledId = (ulong)cmd.ExecuteScalar();
                     CreateTimer(_signaler, _configuration, scheduledId, taskId, due, repetition);
                 });
             });
@@ -241,14 +241,14 @@ namespace magic.lambda.scheduler.services
                     DatabaseHelper.AddParameter(cmd, "@task", taskId);
                     DatabaseHelper.AddParameter(cmd, "@due", due);
 
-                    var scheduleId = (long)cmd.ExecuteScalar();
+                    var scheduleId = (ulong)cmd.ExecuteScalar();
                     CreateTimer(_signaler, _configuration, scheduleId, taskId, due, null);
                 });
             });
         }
 
         /// <inheritdoc />
-        public void DeleteSchedule(int id)
+        public void DeleteSchedule(ulong id)
         {
             DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
             {
@@ -260,6 +260,12 @@ namespace magic.lambda.scheduler.services
 
                     if (cmd.ExecuteNonQuery() != 1)
                         throw new HyperlambdaException($"Task with ID of '{id}' was not found.");
+                    lock (_locker)
+                    {
+                        var schedule = _schedules[id];
+                        _schedules.Remove(id);
+                        schedule.Dispose();
+                    }
                 });
             });
         }
@@ -357,7 +363,7 @@ namespace magic.lambda.scheduler.services
         static void CreateTimer(
             ISignaler signaler,
             IMagicConfiguration configuration,
-            long scheduleId,
+            ulong scheduleId,
             string taskId,
             DateTime due,
             IRepetitionPattern repetition)
@@ -413,7 +419,7 @@ namespace magic.lambda.scheduler.services
         static void ExecuteSchedule(
             ISignaler signaler,
             IMagicConfiguration configuration,
-            long scheduleId,
+            ulong scheduleId,
             string taskId,
             IRepetitionPattern repetition)
         {
@@ -459,7 +465,9 @@ namespace magic.lambda.scheduler.services
                 {
                     lock (_locker)
                     {
+                        var schedule = _schedules[scheduleId];
                         _schedules.Remove(scheduleId);
+                        schedule.Dispose();
                     }
                 }
             }
