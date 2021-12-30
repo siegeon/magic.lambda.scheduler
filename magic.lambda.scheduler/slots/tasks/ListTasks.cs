@@ -34,9 +34,14 @@ namespace magic.lambda.scheduler.slots.tasks
         /// <param name="input">Arguments to slot.</param>
         public void Signal(ISignaler signaler, Node input)
         {
+            // Creating our filter.
+            var filter = input.GetEx<string>();
+            if (!filter?.Contains('%') ?? false)
+                filter += "%";
+
             // Retrieving tasks
             var tasks = _storage.List(
-                input.GetEx<string>(),
+                filter,
                 input.Children.FirstOrDefault(x => x.Name == "offset")?.GetEx<long>() ?? 0,
                 input.Children.FirstOrDefault(x => x.Name == "limit")?.GetEx<long>() ?? 10);
 
