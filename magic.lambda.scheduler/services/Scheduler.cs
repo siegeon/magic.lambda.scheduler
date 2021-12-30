@@ -137,8 +137,7 @@ namespace magic.lambda.scheduler.services
                     // Making sure we delete all related timers.
                     lock (_locker)
                     {
-                        var items = _schedules.Where(x => x.Value.TaskId == id).ToList();
-                        foreach (var idx in items)
+                        foreach (var idx in _schedules.Where(x => x.Value.TaskId == id).ToList())
                         {
                             _schedules.Remove(idx.Key);
                             idx.Value.Timer.Dispose();
@@ -174,7 +173,7 @@ namespace magic.lambda.scheduler.services
                             reader[1] as string,
                             reader[2] as string)
                         {
-                            Created = (DateTime)reader[3]
+                            Created = (DateTime)reader[3],
                         };
                     });
                 });
@@ -262,32 +261,19 @@ namespace magic.lambda.scheduler.services
         /// <inheritdoc />
         public void DeleteSchedule(int id)
         {
-            DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
-            {
-                var sql = "delete from task_due where id = @id";
-
-                DatabaseHelper.CreateCommand(connection, sql, (cmd) =>
-                {
-                    DatabaseHelper.AddParameter(cmd, "@id", id);
-
-                    if (cmd.ExecuteNonQuery() != 1)
-                        throw new HyperlambdaException($"Task with ID of '{id}' was not found.");
-                    lock (_locker)
-                    {
-                        if (_schedules.ContainsKey(id))
-                        {
-                            var schedule = _schedules[id];
-                            _schedules.Remove(id);
-                            schedule.Dispose();
-                        }
-                    }
-                });
-            });
+            DeleteSchedule(_signaler, _configuration, id);
         }
 
         /// <inheritdoc />
         public void Start()
         {
+            // Verifying cheduler haven't already been started.
+            lock (_locker)
+            {
+                if (_schedules.Any())
+                    throw new HyperlambdaException("Scheduler has already been started.");
+            }
+
             // Retrieving all schedules.
             var schedules = DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
             {
@@ -311,7 +297,7 @@ namespace magic.lambda.scheduler.services
                     idx.Id,
                     idx.Task,
                     idx.Due,
-                    PatternFactory.Create(idx.Pattern));
+                    idx.Pattern == null ? null : PatternFactory.Create(idx.Pattern));
             }
         }
 
@@ -403,6 +389,37 @@ namespace magic.lambda.scheduler.services
         }
 
         /*
+         * Static helper method to delete a schedule.
+         */
+        static void DeleteSchedule(
+            ISignaler signaler,
+            IMagicConfiguration configuration,
+            int id)
+        {
+            DatabaseHelper.Connect(signaler, configuration, (connection) =>
+            {
+                var sql = "delete from task_due where id = @id";
+
+                DatabaseHelper.CreateCommand(connection, sql, (cmd) =>
+                {
+                    DatabaseHelper.AddParameter(cmd, "@id", id);
+
+                    if (cmd.ExecuteNonQuery() != 1)
+                        throw new HyperlambdaException($"Task with ID of '{id}' was not found.");
+                    lock (_locker)
+                    {
+                        if (_schedules.ContainsKey(id))
+                        {
+                            var schedule = _schedules[id];
+                            _schedules.Remove(id);
+                            schedule.Dispose();
+                        }
+                    }
+                });
+            });
+        }
+
+        /*
          * Creates a timer that ensures task is executed at its next due date.
          */
         static void CreateTimer(
@@ -424,6 +441,8 @@ namespace magic.lambda.scheduler.services
             var maxMs = new TimeSpan(45, 0, 0, 0).TotalMilliseconds;
             var nextDue = (long)Math.Max(250L, Math.Min(whenMs, maxMs));
             var postpone = whenMs > maxMs;
+
+            // Creating our Timer instance.
             var timer = new Timer((state) =>
             {
                 // Checking if we have to postpone execution of task further into the future.
@@ -468,10 +487,14 @@ namespace magic.lambda.scheduler.services
             string taskId,
             IRepetitionPattern repetition)
         {
+            // Creating our services.
+            var signaler = signalFactory.Create();
+            var config = configFactory.Create();
+
             // Making sure we never allow for exception to propagate out of method.
             try
             {
-                ExecuteTask(signalFactory.Create(), configFactory.Create(), taskId);
+                ExecuteTask(signaler, config, taskId);
             }
             catch
             {
@@ -482,7 +505,7 @@ namespace magic.lambda.scheduler.services
                 // Making sure we update task_due value if task is repeating.
                 if (repetition != null)
                 {
-                    DatabaseHelper.Connect(signalFactory.Create(), configFactory.Create(), (connection) =>
+                    DatabaseHelper.Connect(signaler, config, (connection) =>
                     {
                         var sqlBuilder = new StringBuilder();
                         sqlBuilder.Append("update task_due set due = @due where id = @id");
@@ -510,9 +533,16 @@ namespace magic.lambda.scheduler.services
                 {
                     lock (_locker)
                     {
+                        // Removing and disposing timer for schedule.
                         var schedule = _schedules[scheduleId];
                         _schedules.Remove(scheduleId);
                         schedule.Dispose();
+
+                        // Making sure we delete schedule from database.
+                        DeleteSchedule(
+                            signaler,
+                            config,
+                            scheduleId);
                     }
                 }
             }
