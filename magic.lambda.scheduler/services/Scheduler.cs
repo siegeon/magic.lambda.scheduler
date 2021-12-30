@@ -397,7 +397,28 @@ namespace magic.lambda.scheduler.services
         /// <inheritdoc />
         public void Delete(int id)
         {
-            throw new NotImplementedException();
+            // Creating our connection, making sure we dispose it when we're done with it.
+            using (var connection = CreateConnection())
+            {
+                // Creating our SQL.
+                var sql = "delete from task_due where id = @id";
+
+                // Creating our SQL command, making sure we dispose it when we're done with it.
+                using (var cmd = connection.CreateCommand())
+                {
+                    // Assigning SQL to command text.
+                    cmd.CommandText = sql;
+
+                    // Creating our ID argument.
+                    var parId = cmd.CreateParameter();
+                    parId.ParameterName = "@id";
+                    parId.Value = id;
+                    cmd.Parameters.Add(parId);
+
+                    // Executing command.
+                    cmd.ExecuteNonQuery();
+                }
+            }
         }
 
         #endregion
