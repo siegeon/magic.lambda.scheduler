@@ -2,6 +2,7 @@
  * Magic Cloud, copyright Aista, Ltd. See the attached LICENSE file for details.
  */
 
+using System.Threading.Tasks;
 using System.Collections.Generic;
 
 namespace magic.lambda.scheduler.contracts
@@ -15,7 +16,7 @@ namespace magic.lambda.scheduler.contracts
         /// Creates a new task, either a simple persisted non-due task, or a repeating or due task.
         /// </summary>
         /// <param name="node">Node declaration of task.</param>
-        void CreateTask(MagicTask task);
+        Task CreateTaskAsync(MagicTask task);
 
         /// <summary>
         /// Lists all tasks in system paged.
@@ -24,7 +25,7 @@ namespace magic.lambda.scheduler.contracts
         /// <param name="offset">Offset of where to return tasks from.</param>
         /// <param name="limit">Maximum number of tasks to return.</param>
         /// <returns>List of tasks.</returns>
-        IEnumerable<MagicTask> ListTasks(string filter, long offset, long limit);
+        Task<IList<MagicTask>> ListTasksAsync(string filter, long offset, long limit);
 
         /// <summary>
         /// Returns the specified task, and its associated due date(s).
@@ -32,31 +33,31 @@ namespace magic.lambda.scheduler.contracts
         /// <param name="id">ID of task to retrieve.</param>
         /// <param name="schedules">If true will also retrieve schedules for task.</param>
         /// <returns>Returns task if found, otherwise throws exception.</returns>
-        MagicTask GetTask(string id, bool schedules = false);
+        Task<MagicTask> GetTaskAsync(string id, bool schedules = false);
 
         /// <summary>
         /// Counts tasks in system matching the optional query.
         /// </summary>
         /// <param name="filter">String tasks needs to start with in their ID to be considered a match.</param>
         /// <returns>Number of tasks in system matching optional query.</returns>
-        int CountTasks(string filter);
+        Task<int> CountTasksAsync(string filter);
 
         /// <summary>
         /// Updates an existing task.
         /// </summary>
         /// <param name="task">Node declaration of task.</param>
-        void UpdateTask(MagicTask task);
+        Task UpdateTaskAsync(MagicTask task);
 
         /// <summary>
         /// Deletes the task with the specified ID.
         /// </summary>
         /// <param name="id">Unique ID of task to delete.</param>
-        void DeleteTask(string id);
+        Task DeleteTaskAsync(string id);
 
         /// <summary>
         /// Executes the task with the specified ID.
         /// </summary>
         /// <param name="id">ID of task to execute.</param>
-        void ExecuteTask(string id);
+        Task ExecuteTaskAsync(string id);
     }
 }

@@ -23,6 +23,15 @@ namespace magic.lambda.scheduler.contracts
         }
 
         /// <summary>
+        /// Creates an instance of your type.
+        /// </summary>
+        /// <param name="due">Next upcoming due date for schedule.</param>
+        public Schedule(DateTime due)
+        {
+            Due = due;
+        }
+
+        /// <summary>
         /// Unique ID of schedule.
         /// </summary>
         /// <value>Unique ID.</value>

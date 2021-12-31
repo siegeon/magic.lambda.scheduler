@@ -3,6 +3,7 @@
  */
 
 using System.Linq;
+using System.Threading.Tasks;
 using magic.node;
 using magic.node.extensions;
 using magic.signals.contracts;
@@ -15,7 +16,7 @@ namespace magic.lambda.scheduler.slots.tasks
     /// including its next due date.
     /// </summary>
     [Slot(Name = "tasks.get")]
-    public class GetTask : ISlot
+    public class GetTask : ISlot, ISlotAsync
     {
         readonly ITaskStorage _storage;
 
@@ -37,7 +38,24 @@ namespace magic.lambda.scheduler.slots.tasks
         public void Signal(ISignaler signaler, Node input)
         {
             // Retrieving task from storage and returning results to caller.
-            var task = _storage.GetTask(
+            var task = _storage.GetTaskAsync(
+                input.GetEx<string>(),
+                input.Children.FirstOrDefault(x => x.Name == "schedules")?.GetEx<bool>() ?? false)
+                .GetAwaiter()
+                .GetResult();
+            CreateResult(task, input);
+        }
+
+        /// <summary>
+        /// Slot implementation.
+        /// </summary>
+        /// <param name="signaler">Signaler that raised signal.</param>
+        /// <param name="input">Arguments to slot.</param>
+        /// <returns>Awaitable task.</returns>
+        public async Task SignalAsync(ISignaler signaler, Node input)
+        {
+            // Retrieving task from storage and returning results to caller.
+            var task = await _storage.GetTaskAsync(
                 input.GetEx<string>(),
                 input.Children.FirstOrDefault(x => x.Name == "schedules")?.GetEx<bool>() ?? false);
             CreateResult(task, input);

@@ -4,6 +4,7 @@
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using magic.node;
 using magic.node.extensions;
 using magic.signals.contracts;
@@ -17,7 +18,7 @@ namespace magic.lambda.scheduler.slots.scheduler
     /// according to some [repeats], or at a specific [due] date in the future.
     /// </summary>
     [Slot(Name = "tasks.schedule")]
-    public class ScheduleTask : ISlot
+    public class ScheduleTask : ISlot, ISlotAsync
     {
         readonly ITaskScheduler _scheduler;
 
@@ -37,11 +38,24 @@ namespace magic.lambda.scheduler.slots.scheduler
         /// <param name="input">Arguments to slot.</param>
         public void Signal(ISignaler signaler, Node input)
         {
+            SignalAsync(signaler, input)
+                .GetAwaiter()
+                .GetResult();
+        }
+
+        /// <summary>
+        /// Slot implementation.
+        /// </summary>
+        /// <param name="signaler">Signaler that raised signal.</param>
+        /// <param name="input">Arguments to slot.</param>
+        /// <returns>Awaitable task.</returns>
+        public async Task SignalAsync(ISignaler signaler, Node input)
+        {
             var taskId = input.GetEx<string>();
             var pattern = input.Children.FirstOrDefault(x => x.Name == "repeats")?.GetEx<string>();
             if (pattern != null)
             {
-                _scheduler.ScheduleTask(taskId, PatternFactory.Create(pattern));
+                await _scheduler.ScheduleTaskAsync(taskId, PatternFactory.Create(pattern));
             }
             else
             {
@@ -54,7 +68,7 @@ namespace magic.lambda.scheduler.slots.scheduler
                 // Sanity checking invocation.
                 if (due < DateTime.UtcNow)
                     throw new HyperlambdaException($"[tasks.schedule] cannot be invoked with a date and time being in the past.");
-                _scheduler.ScheduleTask(taskId, due);
+                await _scheduler.ScheduleTaskAsync(taskId, due);
             }
         }
     }

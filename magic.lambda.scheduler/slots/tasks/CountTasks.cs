@@ -2,6 +2,7 @@
  * Magic Cloud, copyright Aista, Ltd. See the attached LICENSE file for details.
  */
 
+using System.Threading.Tasks;
 using magic.node;
 using magic.node.extensions;
 using magic.signals.contracts;
@@ -14,7 +15,7 @@ namespace magic.lambda.scheduler.slots.tasks
     /// system matching the optional filter condition.
     /// </summary>
     [Slot(Name = "tasks.count")]
-    public class CountTasks : ISlot
+    public class CountTasks : ISlot, ISlotAsync
     {
         readonly ITaskStorage _storage;
 
@@ -34,7 +35,20 @@ namespace magic.lambda.scheduler.slots.tasks
         /// <param name="input">Arguments to slot.</param>
         public void Signal(ISignaler signaler, Node input)
         {
-            input.Value = _storage.CountTasks(input.GetEx<string>());
+            input.Value = _storage.CountTasksAsync(input.GetEx<string>())
+                .GetAwaiter()
+                .GetResult();
+        }
+
+        /// <summary>
+        /// Slot implementation.
+        /// </summary>
+        /// <param name="signaler">Signaler that raised signal.</param>
+        /// <param name="input">Arguments to slot.</param>
+        /// <returns>Awaitable task.</returns>
+        public async Task SignalAsync(ISignaler signaler, Node input)
+        {
+            input.Value = await _storage.CountTasksAsync(input.GetEx<string>());
         }
     }
 }

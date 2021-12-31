@@ -3,6 +3,7 @@
  */
 
 using System;
+using System.Threading.Tasks;
 
 namespace magic.lambda.scheduler.contracts
 {
@@ -16,24 +17,24 @@ namespace magic.lambda.scheduler.contracts
         /// </summary>
         /// <param name="task">Actual task you want to schedule.</param>
         /// <param name="repetition">Repetition pattern for schedule.</param>
-        void ScheduleTask(string taskId, IRepetitionPattern repetition);
+        Task ScheduleTaskAsync(string taskId, IRepetitionPattern repetition);
 
         /// <summary>
         /// Schedules an existing task.
         /// </summary>
         /// <param name="task">Actual task you want to schedule.</param>
         /// <param name="due">Date and time for when task should be scheduled for execution.</param>
-        void ScheduleTask(string taskId, DateTime due);
+        Task ScheduleTaskAsync(string taskId, DateTime due);
 
         /// <summary>
         /// Deletes an existing schedule for a task.
         /// </summary>
         /// <param name="id">Unique ID of schedule.</param>
-        void DeleteSchedule(int id);
+        Task DeleteScheduleAsync(int id);
 
         /// <summary>
         /// Starts scheduler.
         /// </summary>
-        void Start();
+        Task StartAsync();
     }
 }

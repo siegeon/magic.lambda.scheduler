@@ -3,6 +3,7 @@
  */
 
 using System.Linq;
+using System.Threading.Tasks;
 using magic.node;
 using magic.node.extensions;
 using magic.signals.contracts;
@@ -14,7 +15,7 @@ namespace magic.lambda.scheduler.slots.tasks
     /// [tasks.list] slot that will return the names of all tasks in the system.
     /// </summary>
     [Slot(Name = "tasks.list")]
-    public class ListTasks : ISlot
+    public class ListTasks : ISlot, ISlotAsync
     {
         readonly ITaskStorage _storage;
 
@@ -34,13 +35,26 @@ namespace magic.lambda.scheduler.slots.tasks
         /// <param name="input">Arguments to slot.</param>
         public void Signal(ISignaler signaler, Node input)
         {
+            SignalAsync(signaler, input)
+                .GetAwaiter()
+                .GetResult();
+        }
+
+        /// <summary>
+        /// Slot implementation.
+        /// </summary>
+        /// <param name="signaler">Signaler that raised signal.</param>
+        /// <param name="input">Arguments to slot.</param>
+        /// <returns>Awaitable task.</returns>
+        public async Task SignalAsync(ISignaler signaler, Node input)
+        {
             // Creating our filter.
             var filter = input.GetEx<string>();
             if (!filter?.Contains('%') ?? false)
                 filter += "%";
 
             // Retrieving tasks
-            var tasks = _storage.ListTasks(
+            var tasks = await _storage.ListTasksAsync(
                 filter,
                 input.Children.FirstOrDefault(x => x.Name == "offset")?.GetEx<long>() ?? 0,
                 input.Children.FirstOrDefault(x => x.Name == "limit")?.GetEx<long>() ?? 10);

@@ -4,6 +4,7 @@
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using magic.node;
 using magic.node.extensions;
 using magic.signals.contracts;
@@ -16,7 +17,7 @@ namespace magic.lambda.scheduler.slots.tasks
     /// [tasks.create] slot that will create a new task.
     /// </summary>
     [Slot(Name = "tasks.create")]
-    public class CreateTask : ISlot
+    public class CreateTask : ISlot, ISlotAsync
     {
         readonly ITaskStorage _storage;
 
@@ -36,7 +37,20 @@ namespace magic.lambda.scheduler.slots.tasks
         /// <param name="input">Arguments to slot.</param>
         public void Signal(ISignaler signaler, Node input)
         {
-            _storage.CreateTask(Create(signaler, input));
+            _storage.CreateTaskAsync(Create(signaler, input))
+                .GetAwaiter()
+                .GetResult();
+        }
+
+        /// <summary>
+        /// Slot implementation.
+        /// </summary>
+        /// <param name="signaler">Signaler that raised signal.</param>
+        /// <param name="input">Arguments to slot.</param>
+        /// <returns>Awaitable task.</returns>
+        public async Task SignalAsync(ISignaler signaler, Node input)
+        {
+            await _storage.CreateTaskAsync(Create(signaler, input));
         }
 
         #region [ -- Internal helper methods -- ]
@@ -72,7 +86,7 @@ namespace magic.lambda.scheduler.slots.tasks
                     switch (x.Name)
                     {
                         case "due":
-                            return new Schedule(x.GetEx<DateTime>(), null);
+                            return new Schedule(x.GetEx<DateTime>());
 
                         case "repeats":
                             var pattern = PatternFactory.Create(x.GetEx<string>());

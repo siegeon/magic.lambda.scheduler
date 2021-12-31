@@ -3,10 +3,11 @@
  */
 
 using System;
-using System.Data;
 using System.Text;
 using System.Linq;
 using System.Threading;
+using System.Data.Common;
+using System.Threading.Tasks;
 using System.Collections.Generic;
 using magic.node;
 using magic.node.contracts;
@@ -56,7 +57,7 @@ namespace magic.lambda.scheduler.services
         readonly IServiceCreator<ILogger> _loggingCreator;
         readonly IServiceCreator<IMagicConfiguration> _configCreator;
         static readonly Dictionary<int, TaskSchedule> _schedules = new Dictionary<int, TaskSchedule>();
-        static readonly object _locker = new object();
+        static readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
 
         /// <summary>
         /// Creates a new instance of the task scheduler, allowing you to create, edit, delete, and
@@ -84,9 +85,9 @@ namespace magic.lambda.scheduler.services
         #region [ -- Interface implementation for ITaskStorage -- ]
 
         /// <inheritdoc />
-        public void CreateTask(MagicTask task)
+        public async Task CreateTaskAsync(MagicTask task)
         {
-            DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
+            await DatabaseHelper.ConnectAsync(_signaler, _configuration, async (connection) =>
             {
                 var sqlBuilder = new StringBuilder();
                 sqlBuilder
@@ -95,30 +96,39 @@ namespace magic.lambda.scheduler.services
                     .Append(" values (@id, @hyperlambda")
                     .Append(task.Description == null ? ")" : ", @description)");
 
-                DatabaseHelper.CreateCommand(connection, sqlBuilder.ToString(), (cmd) =>
+                await DatabaseHelper.CreateCommandAsync(connection, sqlBuilder.ToString(), async (cmd) =>
                 {
                     DatabaseHelper.AddParameter(cmd, "@id", task.ID);
                     DatabaseHelper.AddParameter(cmd, "@hyperlambda", task.Hyperlambda);
                     if (task.Description != null)
                         DatabaseHelper.AddParameter(cmd, "@description", task.Description);
-                    cmd.ExecuteNonQuery();
+                    await cmd.ExecuteNonQueryAsync();
                 });
 
                 foreach (var idx in task.Schedules.Where(x => x.Repeats != null))
                 {
-                    ScheduleTask(connection, task.ID, PatternFactory.Create(idx.Repeats));
+                    await ScheduleTaskAsync(
+                        connection,
+                        task.ID,
+                        PatternFactory.Create(idx.Repeats));
                 }
                 foreach (var idx in task.Schedules.Where(x => x.Repeats == null))
                 {
-                    ScheduleTask(connection, task.ID, idx.Due);
+                    await ScheduleTaskAsync(
+                        connection,
+                        task.ID,
+                        idx.Due);
                 }
             });
         }
 
         /// <inheritdoc />
-        public IEnumerable<MagicTask> ListTasks(string filter, long offset, long limit)
+        public async Task<IList<MagicTask>> ListTasksAsync(string filter, long offset, long limit)
         {
-            return DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
+            return await DatabaseHelper.ConnectAsync(
+                _signaler,
+                _configuration,
+                async (connection) =>
             {
                 var sqlBuilder = new StringBuilder();
                 sqlBuilder
@@ -126,7 +136,10 @@ namespace magic.lambda.scheduler.services
                     .Append(string.IsNullOrEmpty(filter) ? "" : " where id like @filter or description like @filter")
                     .Append(DatabaseHelper.GetPagingSql(_configuration, offset, limit));
 
-                return DatabaseHelper.CreateCommand(connection, sqlBuilder.ToString(), (cmd) =>
+                return await DatabaseHelper.CreateCommandAsync(
+                    connection,
+                    sqlBuilder.ToString(),
+                    async (cmd) =>
                 {
                     if (!string.IsNullOrEmpty(filter))
                         DatabaseHelper.AddParameter(cmd, "@filter", filter);
@@ -134,7 +147,7 @@ namespace magic.lambda.scheduler.services
                         DatabaseHelper.AddParameter(cmd, "@offset", offset);
                     DatabaseHelper.AddParameter(cmd, "@limit", limit);
 
-                    return DatabaseHelper.Iterate(cmd, (reader) =>
+                    return await DatabaseHelper.IterateAsync(cmd, (reader) =>
                     {
                         return new MagicTask(
                             reader[0] as string,
@@ -149,70 +162,89 @@ namespace magic.lambda.scheduler.services
         }
 
         /// <inheritdoc />
-        public MagicTask GetTask(string id, bool schedules = false)
+        public Task<MagicTask> GetTaskAsync(string id, bool schedules = false)
         {
-            return GetTask(_signaler, _configuration, id, schedules);
+            return GetTaskAsync(_signaler, _configuration, id, schedules);
         }
 
         /// <inheritdoc />
-        public int CountTasks(string filter)
+        public async Task<int> CountTasksAsync(string filter)
         {
-            return DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
+            return await DatabaseHelper.ConnectAsync(
+                _signaler,
+                _configuration,
+                async (connection) =>
             {
                 var sqlBuilder = new StringBuilder();
                 sqlBuilder
                     .Append("select count(*) from tasks")
                     .Append(string.IsNullOrEmpty(filter) ? "" : " where id like @filter or description like @filter");
 
-                return DatabaseHelper.CreateCommand(connection, sqlBuilder.ToString(), (cmd) =>
+                return await DatabaseHelper.CreateCommandAsync(
+                    connection,
+                    sqlBuilder.ToString(),
+                    async (cmd) =>
                 {
                     if (!string.IsNullOrEmpty(filter))
                         DatabaseHelper.AddParameter(cmd, "@filter", filter);
 
-                    return Convert.ToInt32(cmd.ExecuteScalar());
+                    return Convert.ToInt32(await cmd.ExecuteScalarAsync());
                 });
             });
         }
 
         /// <inheritdoc />
-        public void UpdateTask(MagicTask task)
+        public async Task UpdateTaskAsync(MagicTask task)
         {
             // Sanity checking invocation.
             if (task.Schedules.Any())
                 throw new HyperlambdaException("You cannot update schedules for tasks when updating your task");
 
-            DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
+            await DatabaseHelper.ConnectAsync(
+                _signaler,
+                _configuration,
+                async (connection) =>
             {
                 var sql = "update tasks set description = @description, hyperlambda = @hyperlambda where id = @id";
 
-                DatabaseHelper.CreateCommand(connection, sql, (cmd) =>
+                await DatabaseHelper.CreateCommandAsync(
+                    connection,
+                    sql,
+                    async (cmd) =>
                 {
                     DatabaseHelper.AddParameter(cmd, "@id", task.ID);
                     DatabaseHelper.AddParameter(cmd, "@hyperlambda", task.Hyperlambda);
                     DatabaseHelper.AddParameter(cmd, "@description", task.Description);
 
-                    if (cmd.ExecuteNonQuery() != 1)
+                    if (await cmd.ExecuteNonQueryAsync() != 1)
                         throw new HyperlambdaException($"Task with ID of '{task.ID}' was not found");
                 });
             });
         }
 
         /// <inheritdoc />
-        public void DeleteTask(string id)
+        public async Task DeleteTaskAsync(string id)
         {
-            DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
+            await DatabaseHelper.ConnectAsync(
+                _signaler,
+                _configuration,
+                async (connection) =>
             {
                 var sql = "delete from tasks where id = @id";
 
-                DatabaseHelper.CreateCommand(connection, sql, (cmd) =>
+                await DatabaseHelper.CreateCommandAsync(
+                    connection,
+                    sql,
+                    async (cmd) =>
                 {
                     DatabaseHelper.AddParameter(cmd, "@id", id);
 
-                    if (cmd.ExecuteNonQuery() != 1)
+                    if (await cmd.ExecuteNonQueryAsync() != 1)
                         throw new HyperlambdaException($"Task with ID of '{id}' was not found");
 
                     // Making sure we delete all related timers.
-                    lock (_locker)
+                    await _semaphore.WaitAsync();
+                    try
                     {
                         foreach (var idx in _schedules.Where(x => x.Value.TaskId == id).ToList())
                         {
@@ -220,14 +252,18 @@ namespace magic.lambda.scheduler.services
                             idx.Value.Timer.Dispose();
                         }
                     }
+                    finally
+                    {
+                        _semaphore.Release();
+                    }
                 });
             });
         }
 
         /// <inheritdoc />
-        public void ExecuteTask(string id)
+        public Task ExecuteTaskAsync(string id)
         {
-            ExecuteTask(_signaler, _configuration, id);
+            return ExecuteTaskAsync(_signaler, _configuration, id);
         }
 
         #endregion
@@ -235,47 +271,66 @@ namespace magic.lambda.scheduler.services
         #region [ -- Interface implementation for ITaskScheduler -- ]
 
         /// <inheritdoc />
-        public void ScheduleTask(string taskId, IRepetitionPattern repetition)
+        public async Task ScheduleTaskAsync(string taskId, IRepetitionPattern repetition)
         {
-            DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
+            await DatabaseHelper.ConnectAsync(
+                _signaler,
+                _configuration,
+                async (connection) =>
             {
-                ScheduleTask(connection, taskId, repetition);
+                await ScheduleTaskAsync(connection, taskId, repetition);
             });
         }
 
         /// <inheritdoc />
-        public void ScheduleTask(string taskId, DateTime due)
+        public async Task ScheduleTaskAsync(string taskId, DateTime due)
         {
-            DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
+            await DatabaseHelper.ConnectAsync(
+                _signaler,
+                _configuration,
+                async (connection) =>
             {
-                ScheduleTask(connection, taskId, due);
+                await ScheduleTaskAsync(connection, taskId, due);
             });
         }
 
         /// <inheritdoc />
-        public void DeleteSchedule(int id)
+        public Task DeleteScheduleAsync(int id)
         {
-            DeleteSchedule(_signaler, _configuration, id);
+            return DeleteScheduleAsync(_signaler, _configuration, id);
         }
 
         /// <inheritdoc />
-        public void Start()
+        public async Task StartAsync()
         {
             // Verifying cheduler haven't already been started.
-            lock (_locker)
+            await _semaphore.WaitAsync();
+            try
             {
                 if (_schedules.Any())
                     throw new HyperlambdaException("Scheduler has already been started.");
             }
+            finally
+            {
+                _semaphore.Release();
+            }
 
             // Retrieving all schedules.
-            var schedules = DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
+            var schedules = await DatabaseHelper.ConnectAsync(
+                _signaler,
+                _configuration,
+                async (connection) =>
             {
                 var sql = "select id, task, due, repeats from task_due";
 
-                return DatabaseHelper.CreateCommand(connection, sql, (cmd) =>
+                return await DatabaseHelper.CreateCommandAsync(
+                    connection,
+                    sql,
+                    async (cmd) =>
                 {
-                    return DatabaseHelper.Iterate<(int Id, string Task, DateTime Due, string Pattern)>(cmd, (reader) =>
+                    return await DatabaseHelper.IterateAsync<(int Id, string Task, DateTime Due, string Pattern)>(
+                        cmd,
+                        (reader) =>
                     {
                         return ((int)reader[0], reader[1] as string, (DateTime)reader[2], reader[3] as string);
                     });
@@ -303,25 +358,31 @@ namespace magic.lambda.scheduler.services
         /*
          * Static helper method to retrieve task from database.
          */
-        static MagicTask GetTask(
+        static async Task<MagicTask> GetTaskAsync(
             ISignaler signaler,
             IMagicConfiguration configuration,
             string id,
             bool schedules = false)
         {
-            return DatabaseHelper.Connect(signaler, configuration, (connection) =>
+            return await DatabaseHelper.ConnectAsync(
+                signaler,
+                configuration,
+                async (connection) =>
             {
                 var sqlBuilder = new StringBuilder();
                 sqlBuilder
                     .Append("select id, description, hyperlambda, created from tasks where id = @id")
                     .Append(DatabaseHelper.GetPagingSql(configuration, 0L, 1L));
 
-                return DatabaseHelper.CreateCommand(connection, sqlBuilder.ToString(), (cmd) =>
+                return await DatabaseHelper.CreateCommandAsync(
+                    connection,
+                    sqlBuilder.ToString(),
+                    async (cmd) =>
                 {
                     DatabaseHelper.AddParameter(cmd, "@id", id);
                     DatabaseHelper.AddParameter(cmd, "@limit", 1L);
 
-                    var result = DatabaseHelper.Iterate(cmd, (reader) =>
+                    var result = (await DatabaseHelper.IterateAsync(cmd, (reader) =>
                     {
                         return new MagicTask(
                             reader[0] as string,
@@ -330,11 +391,11 @@ namespace magic.lambda.scheduler.services
                         {
                             Created = (DateTime)reader[3],
                         };
-                    }).FirstOrDefault() ?? throw new HyperlambdaException($"Task with ID of '{id}' was not found.");
+                    })).FirstOrDefault() ?? throw new HyperlambdaException($"Task with ID of '{id}' was not found.");
 
                     if (schedules)
                     {
-                        foreach (var idx in GetSchedules(connection, result.ID))
+                        foreach (var idx in await GetSchedulesAsync(connection, result.ID))
                         {
                             result.Schedules.Add(idx);
                         }
@@ -347,33 +408,39 @@ namespace magic.lambda.scheduler.services
         /*
          * Static helper method to execute task.
          */
-        static void ExecuteTask(ISignaler signaler, IMagicConfiguration configuration, string id)
+        static async Task ExecuteTaskAsync(
+            ISignaler signaler,
+             IMagicConfiguration configuration,
+             string id)
         {
             // Retrieving task.
-            var task = GetTask(signaler, configuration, id);
+            var task = await GetTaskAsync(signaler, configuration, id);
             if (task == null)
                 throw new HyperlambdaException($"Task with ID of '{id}' was not found");
 
             // Transforming task's Hyperlambda to a lambda object.
             var hlNode = new Node("", task.Hyperlambda);
-            signaler.Signal("hyper2lambda", hlNode);
+            await signaler.SignalAsync("hyper2lambda", hlNode);
 
             // Executing task.
-            signaler.Signal("eval", hlNode);
+            await signaler.SignalAsync("eval", hlNode);
         }
 
         /*
          * Returns schedules for task.
          */
-        static IEnumerable<Schedule> GetSchedules(IDbConnection connection, string id)
+        static async Task<IList<Schedule>> GetSchedulesAsync(DbConnection connection, string id)
         {
             var sql = "select id, due, repeats from task_due where task = @task";
 
-            return DatabaseHelper.CreateCommand(connection, sql, (cmd) =>
+            return await DatabaseHelper.CreateCommandAsync(
+                connection,
+                sql,
+                async (cmd) =>
             {
                 DatabaseHelper.AddParameter(cmd, "@task", id);
 
-                return DatabaseHelper.Iterate(cmd, (reader) =>
+                return await DatabaseHelper.IterateAsync(cmd, (reader) =>
                 {
                     return new Schedule((DateTime)reader[1], reader[2] as string)
                     {
@@ -386,22 +453,29 @@ namespace magic.lambda.scheduler.services
         /*
          * Static helper method to delete a schedule.
          */
-        static void DeleteSchedule(
+        static async Task DeleteScheduleAsync(
             ISignaler signaler,
             IMagicConfiguration configuration,
             int id)
         {
-            DatabaseHelper.Connect(signaler, configuration, (connection) =>
+            await DatabaseHelper.ConnectAsync(
+                signaler,
+                configuration,
+                async (connection) =>
             {
                 var sql = "delete from task_due where id = @id";
 
-                DatabaseHelper.CreateCommand(connection, sql, (cmd) =>
+                await DatabaseHelper.CreateCommandAsync(
+                    connection,
+                    sql,
+                    async (cmd) =>
                 {
                     DatabaseHelper.AddParameter(cmd, "@id", id);
 
-                    if (cmd.ExecuteNonQuery() != 1)
+                    if (await cmd.ExecuteNonQueryAsync() != 1)
                         throw new HyperlambdaException($"Task with ID of '{id}' was not found.");
-                    lock (_locker)
+                    await _semaphore.WaitAsync();
+                    try
                     {
                         if (_schedules.ContainsKey(id))
                         {
@@ -410,6 +484,10 @@ namespace magic.lambda.scheduler.services
                             schedule.Dispose();
                         }
                     }
+                    finally
+                    {
+                        _semaphore.Release();
+                    }
                 });
             });
         }
@@ -417,8 +495,8 @@ namespace magic.lambda.scheduler.services
         /*
          * Helper method to schedule task with the specified connection.
          */
-        void ScheduleTask(
-            IDbConnection connection,
+        async Task ScheduleTaskAsync(
+            DbConnection connection,
             string taskId,
             IRepetitionPattern repetition)
         {
@@ -426,23 +504,33 @@ namespace magic.lambda.scheduler.services
             sqlBuilder.Append("insert into task_due (task, due, repeats) values (@task, @due, @repeats)");
             sqlBuilder.Append(DatabaseHelper.GetInsertTail(_configuration));
 
-            DatabaseHelper.CreateCommand(connection, sqlBuilder.ToString(), (cmd) =>
+            await DatabaseHelper.CreateCommandAsync(
+                connection,
+                sqlBuilder.ToString(),
+                async (cmd) =>
             {
                 var due = repetition.Next();
                 DatabaseHelper.AddParameter(cmd, "@task", taskId);
                 DatabaseHelper.AddParameter(cmd, "@due", due);
                 DatabaseHelper.AddParameter(cmd, "@repeats", repetition.Value);
 
-                var scheduledId = Convert.ToInt32(cmd.ExecuteScalar());
-                CreateTimer(_signalCreator, _configCreator, _loggingCreator, scheduledId, taskId, due, repetition);
+                var scheduledId = Convert.ToInt32(await cmd.ExecuteScalarAsync());
+                CreateTimer(
+                    _signalCreator,
+                    _configCreator,
+                    _loggingCreator,
+                    scheduledId,
+                    taskId,
+                    due,
+                    repetition);
             });
         }
 
         /*
          * Helper methods to schedule task on the specified connection.
          */
-        void ScheduleTask(
-            IDbConnection connection,
+        async Task ScheduleTaskAsync(
+            DbConnection connection,
             string taskId,
             DateTime due)
         {
@@ -450,13 +538,23 @@ namespace magic.lambda.scheduler.services
             sqlBuilder.Append("insert into task_due (task, due) values (@task, @due)");
             sqlBuilder.Append(DatabaseHelper.GetInsertTail(_configuration));
 
-            DatabaseHelper.CreateCommand(connection, sqlBuilder.ToString(), (cmd) =>
+            await DatabaseHelper.CreateCommandAsync(
+                connection,
+                sqlBuilder.ToString(),
+                async (cmd) =>
             {
                 DatabaseHelper.AddParameter(cmd, "@task", taskId);
                 DatabaseHelper.AddParameter(cmd, "@due", due);
 
-                var scheduleId = Convert.ToInt32(cmd.ExecuteScalar());
-                CreateTimer(_signalCreator, _configCreator, _loggingCreator, scheduleId, taskId, due, null);
+                var scheduleId = Convert.ToInt32(await cmd.ExecuteScalarAsync());
+                CreateTimer(
+                    _signalCreator,
+                    _configCreator,
+                    _loggingCreator,
+                    scheduleId,
+                    taskId,
+                    due,
+                    null);
             });
         }
 
@@ -485,7 +583,7 @@ namespace magic.lambda.scheduler.services
             var postpone = whenMs > maxMs;
 
             // Creating our Timer instance.
-            var timer = new Timer((state) =>
+            var timer = new Timer(async (state) =>
             {
                 // Checking if we have to postpone execution of task further into the future.
                 if (postpone)
@@ -503,7 +601,7 @@ namespace magic.lambda.scheduler.services
                 }
 
                 // Executing task.
-                ExecuteSchedule(
+                await ExecuteScheduleAsync(
                     signalFactory,
                     logFactory,
                     configFactory,
@@ -514,17 +612,26 @@ namespace magic.lambda.scheduler.services
             }, null, nextDue, Timeout.Infinite);
 
             // Creating our schedule and keeping a reference to it such that we can stop schedule if asked to do so.
-            var schedule = new TaskSchedule(timer, taskId, scheduleId, repetition);
-            lock (_locker)
+            var schedule = new TaskSchedule(
+                timer,
+                taskId,
+                scheduleId,
+                repetition);
+            _semaphore.WaitAsync();
+            try
             {
                 _schedules[scheduleId] = schedule;
+            }
+            finally
+            {
+                _semaphore.Release();
             }
         }
 
         /*
          * Helper method to execute task during scheduled time.
          */
-        static void ExecuteSchedule(
+        static async Task ExecuteScheduleAsync(
             IServiceCreator<ISignaler> signalFactory,
             IServiceCreator<ILogger> logCreator,
             IServiceCreator<IMagicConfiguration> configFactory,
@@ -539,29 +646,35 @@ namespace magic.lambda.scheduler.services
             // Making sure we never allow for exception to propagate out of method.
             try
             {
-                ExecuteTask(signaler, config, taskId);
+                await ExecuteTaskAsync(signaler, config, taskId);
             }
             catch (Exception error)
             {
                 var logger = logCreator.Create();
-                logger.Error($"Unhandled exception while executing scheduled task with id of '{taskId}'", error);
+                await logger.ErrorAsync($"Unhandled exception while executing scheduled task with id of '{taskId}'", error);
             }
             finally
             {
                 // Making sure we update task_due value if task is repeating.
                 if (repetition != null)
                 {
-                    DatabaseHelper.Connect(signaler, config, (connection) =>
+                    await DatabaseHelper.ConnectAsync(
+                        signaler,
+                        config,
+                        async (connection) =>
                     {
                         var sql = "update task_due set due = @due where id = @id";
 
-                        DatabaseHelper.CreateCommand(connection, sql, (cmd) =>
+                        await DatabaseHelper.CreateCommandAsync(
+                            connection,
+                            sql,
+                            async (cmd) =>
                         {
                             var nextDue = repetition.Next();
                             DatabaseHelper.AddParameter(cmd, "@due", nextDue);
                             DatabaseHelper.AddParameter(cmd, "@id", scheduleId);
 
-                            cmd.ExecuteNonQuery();
+                            await cmd.ExecuteNonQueryAsync();
 
                             // Creating a new timer for task
                             CreateTimer(
@@ -577,7 +690,8 @@ namespace magic.lambda.scheduler.services
                 }
                 else
                 {
-                    lock (_locker)
+                    await _semaphore.WaitAsync();
+                    try
                     {
                         // Removing and disposing timer for schedule.
                         var schedule = _schedules[scheduleId];
@@ -585,10 +699,14 @@ namespace magic.lambda.scheduler.services
                         schedule.Dispose();
 
                         // Making sure we delete schedule from database.
-                        DeleteSchedule(
+                        await DeleteScheduleAsync(
                             signaler,
                             config,
                             scheduleId);
+                    }
+                    finally
+                    {
+                        _semaphore.Release();
                     }
                 }
             }

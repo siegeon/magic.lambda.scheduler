@@ -4,6 +4,8 @@
 
 using System;
 using System.Data;
+using System.Data.Common;
+using System.Threading.Tasks;
 using System.Collections.Generic;
 using magic.node;
 using magic.node.contracts;
@@ -18,28 +20,28 @@ namespace magic.lambda.scheduler.utilities
          * Helper method to create a connection towards the default database, and execute
          * some arbitrary function from within your connection.
          */
-        public static void Connect(
+        public static async Task ConnectAsync(
             ISignaler signaler,
             IMagicConfiguration configuration,
-            Action<IDbConnection> functor)
+            Func<DbConnection, Task> functor)
         {
-            using (var connection = CreateConnection(signaler, configuration))
+            using (var connection = await CreateConnectionAsync(signaler, configuration))
             {
-                functor(connection);
+                await functor(connection);
             }
         }
         /*
          * Helper method to create a connection towards the default database, and execute
          * some arbitrary function from within your connection.
          */
-        public static T Connect<T>(
+        public static async Task<T> ConnectAsync<T>(
             ISignaler signaler,
             IMagicConfiguration configuration,
-            Func<IDbConnection, T> functor)
+            Func<DbConnection, Task<T>> functor)
         {
-            using (var connection = CreateConnection(signaler, configuration))
+            using (var connection = await CreateConnectionAsync(signaler, configuration))
             {
-                return functor(connection);
+                return await functor(connection);
             }
         }
 
@@ -47,15 +49,15 @@ namespace magic.lambda.scheduler.utilities
          * Helper method to create a command towards the specified database connection,
          * and execute some arbitrary function with your command.
          */
-        public static void CreateCommand(
-            IDbConnection connection,
+        public static async Task CreateCommandAsync(
+            DbConnection connection,
             string sql,
-            Action<IDbCommand> functor)
+            Func<DbCommand, Task> functor)
         {
             using (var command = connection.CreateCommand())
             {
                 command.CommandText = sql;
-                functor(command);
+                await functor(command);
             }
         }
 
@@ -63,22 +65,25 @@ namespace magic.lambda.scheduler.utilities
          * Helper method to create a command towards the specified database connection,
          * and execute some arbitrary function with your command.
          */
-        public static T CreateCommand<T>(
-            IDbConnection connection,
+        public static async Task<T> CreateCommandAsync<T>(
+            DbConnection connection,
             string sql,
-            Func<IDbCommand, T> functor)
+            Func<DbCommand, Task<T>> functor)
         {
             using (var command = connection.CreateCommand())
             {
                 command.CommandText = sql;
-                return functor(command);
+                return await functor(command);
             }
         }
 
         /*
          * Adds a parameter to the specified command.
          */
-        public static void AddParameter(IDbCommand command, string name, object value)
+        public static void AddParameter(
+            DbCommand command,
+            string name,
+            object value)
         {
             var par = command.CreateParameter();
             par.ParameterName = name;
@@ -89,12 +94,14 @@ namespace magic.lambda.scheduler.utilities
         /*
          * Reads all records returned from specified command and returns to caller.
          */
-        public static IList<T> Iterate<T>(IDbCommand command, Func<IDataReader, T> functor)
+        public static async Task<IList<T>> IterateAsync<T>(
+            DbCommand command,
+            Func<IDataReader, T> functor)
         {
-            using (var reader = command.ExecuteReader())
+            using (var reader = await command.ExecuteReaderAsync())
             {
                 var result = new List<T>();
-                while (reader.Read())
+                while (await reader.ReadAsync())
                 {
                     result.Add(functor(reader));
                 }
@@ -117,6 +124,7 @@ namespace magic.lambda.scheduler.utilities
                     if (offset > 0)
                         return " offset @offset rows fetch next @limit rows only";
                     return " fetch next @limit rows only";
+
                 default:
                     if (offset > 0)
                         return " offset @offset limit @limit";
@@ -151,17 +159,19 @@ namespace magic.lambda.scheduler.utilities
         /*
          * Creates and returns an IDbConnection using factory slot, and returns the result to caller.
          */
-        static IDbConnection CreateConnection(ISignaler signaler, IMagicConfiguration configuration)
+        static async Task<DbConnection> CreateConnectionAsync(
+            ISignaler signaler,
+            IMagicConfiguration configuration)
         {
             // Creating our database connection.
             var dbType = configuration["magic:databases:default"];
             var dbNode = new Node();
             signaler.Signal($".db-factory.connection.{dbType}", dbNode);
-            var connection = dbNode.Get<IDbConnection>();
+            var connection = dbNode.Get<DbConnection>();
 
             // Opening up database connection.
             connection.ConnectionString = configuration[$"magic:databases:{dbType}:generic"].Replace("{database}", "magic");
-            connection.Open();
+            await connection.OpenAsync();
 
             // Making sure we set correct timezone for database if necessary.
             if (dbType == "mysql")
@@ -169,7 +179,7 @@ namespace magic.lambda.scheduler.utilities
                 using (var cmd = connection.CreateCommand())
                 {
                     cmd.CommandText = "set time_zone = '+00:00'";
-                    cmd.ExecuteNonQuery();
+                    await cmd.ExecuteNonQueryAsync();
                 }
             }
 
