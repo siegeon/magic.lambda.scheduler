@@ -12,9 +12,10 @@ namespace magic.lambda.scheduler.contracts
     public interface IRepetitionPattern
     {
         /// <summary>
-        /// Calculates the next date and time for when the task is to be executed.
+        /// Calculates the next date and time for when the task is to be executed and returns
+        /// as a UTC date and time.
         /// </summary>
-        /// <returns>Date and time when task should be executed.</returns>
+        /// <returns>UTC date and time when task should be executed.</returns>
         DateTime Next();
 
         /// <summary>

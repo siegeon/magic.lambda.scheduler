@@ -14,12 +14,12 @@ namespace magic.lambda.scheduler.contracts
     public class MagicTask
     {
         /// <summary>
-        /// Creates an instance of your type.
+        /// Creates a new task according to the specified parameters.
         /// </summary>
         /// <param name="id">Unique ID of your task.</param>
         /// <param name="description">Humanly readable description of task.</param>
         /// <param name="hyperlambda">Hyperlambda to associate with task.</param>
-        /// <param name="schedules">Schedules associated with task.</param>
+        /// <param name="schedules">Optional schedules associated with task.</param>
         public MagicTask(
             string id,
             string description,
@@ -30,7 +30,7 @@ namespace magic.lambda.scheduler.contracts
             Description = description;
             Hyperlambda = hyperlambda;
 
-            // Checking if caller provided schedules for task.
+            // Checking if caller provided schedules for task, and if so associating these with the task.
             if (schedules != null && schedules.Any())
             {
                 foreach (var idx in schedules)
@@ -41,7 +41,7 @@ namespace magic.lambda.scheduler.contracts
         }
 
         /// <summary>
-        /// Unique identifier of task, used to reference the task.
+        /// Unique identifier of task, used to de-reference the task.
         /// </summary>
         /// <value>The unique identifier of the task.</value>
         public string ID { get; private set; }
@@ -53,7 +53,7 @@ namespace magic.lambda.scheduler.contracts
         public string Description { get; private set; }
 
         /// <summary>
-        /// Hyperlambda associated with the task, which is executed once the task is executed.
+        /// Hyperlambda associated with the task, which is executed as the task is executed.
         /// </summary>
         /// <value>Hyperlambda for task.</value>
         public string Hyperlambda { get; private set; }

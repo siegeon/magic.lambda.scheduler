@@ -96,7 +96,7 @@ namespace magic.lambda.scheduler.utilities
          */
         public static async Task<IList<T>> IterateAsync<T>(
             DbCommand command,
-            Func<IDataReader, T> functor)
+            Func<DbDataReader, T> functor)
         {
             using (var reader = await command.ExecuteReaderAsync())
             {

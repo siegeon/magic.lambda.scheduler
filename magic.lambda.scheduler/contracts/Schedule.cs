@@ -14,8 +14,8 @@ namespace magic.lambda.scheduler.contracts
         /// <summary>
         /// Creates an instance of your type.
         /// </summary>
-        /// <param name="due">Next upcoming due date for schedule.</param>
-        /// <param name="repeats">Repetition pattern for schedule.</param>
+        /// <param name="due">Next upcoming due date for task associated with schedule.</param>
+        /// <param name="repeats">Repetition pattern for task associated with schedule.</param>
         public Schedule(DateTime due, string repeats)
         {
             Due = due;
@@ -25,7 +25,7 @@ namespace magic.lambda.scheduler.contracts
         /// <summary>
         /// Creates an instance of your type.
         /// </summary>
-        /// <param name="due">Next upcoming due date for schedule.</param>
+        /// <param name="due">Next upcoming due date for task associated with schedule.</param>
         public Schedule(DateTime due)
         {
             Due = due;
@@ -38,9 +38,9 @@ namespace magic.lambda.scheduler.contracts
         public int Id { get; internal set; }
 
         /// <summary>
-        /// Next upcoming due date and time for schedule.
+        /// Next upcoming due date and time for task associated with schedule as UTC.
         /// </summary>
-        /// <value>Next due date and time.</value>
+        /// <value>Next due date and time as UTC.</value>
         public DateTime Due { get; private set; }
 
         /// <summary>

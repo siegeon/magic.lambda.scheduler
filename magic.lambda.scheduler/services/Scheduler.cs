@@ -16,47 +16,19 @@ using magic.signals.contracts;
 using magic.lambda.logging.helpers;
 using magic.lambda.scheduler.contracts;
 using magic.lambda.scheduler.utilities;
+using magic.lambda.scheduler.services.internals;
 
 namespace magic.lambda.scheduler.services
 {
     /// <inheritdoc />
     public sealed class Scheduler : ITaskScheduler, ITaskStorage
     {
-        /*
-         * Helper POCO class kind of to encapsulate a single schedule for
-         * a task in the future some time.
-         */
-        sealed private class TaskSchedule : IDisposable
-        {
-            public TaskSchedule(
-                Timer timer,
-                string taskId,
-                int scheduleId, 
-                IRepetitionPattern repetition)
-            {
-                Timer = timer;
-                TaskId = taskId;
-                ScheduleId = scheduleId;
-                Repetition = repetition;
-            }
-
-            public Timer Timer { get; private set; }
-            public string TaskId { get; private set; }
-            public int ScheduleId { get; private set; }
-            public IRepetitionPattern Repetition { get; set; }
-
-            public void Dispose()
-            {
-                Timer.Dispose();
-            }
-        }
-
         readonly ISignaler _signaler;
         readonly IMagicConfiguration _configuration;
         readonly IServiceCreator<ISignaler> _signalCreator;
-        readonly IServiceCreator<ILogger> _loggingCreator;
+        readonly IServiceCreator<ILogger> _loggerCreator;
         readonly IServiceCreator<IMagicConfiguration> _configCreator;
-        static readonly Dictionary<int, TaskSchedule> _schedules = new Dictionary<int, TaskSchedule>();
+        static readonly Dictionary<int, TaskScheduleWrapper> _schedules = new Dictionary<int, TaskScheduleWrapper>();
         static readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
 
         /// <summary>
@@ -66,20 +38,20 @@ namespace magic.lambda.scheduler.services
         /// <param name="signaler">Needed to signal slots.</param>
         /// <param name="configuration">Needed to retrieve default database type.</param>
         /// <param name="signalCreator">Needed to be able to create an ISignaler instance during execution of scheduled tasks.</param>
-        /// <param name="loggingCreator">Needed to be able to log errors occurring as tasks are executed.</param>
+        /// <param name="loggerCreator">Needed to be able to log errors occurring as tasks are executed.</param>
         /// <param name="configCreator">Needed to be able to create an IMagicConfiguration instance during execution of scheduled tasks.</param>
         public Scheduler(
             ISignaler signaler,
             IMagicConfiguration configuration,
             IServiceCreator<ISignaler> signalCreator,
-            IServiceCreator<ILogger> loggingCreator,
+            IServiceCreator<ILogger> loggerCreator,
             IServiceCreator<IMagicConfiguration> configCreator)
         {
             _signaler = signaler;
             _configuration = configuration;
             _signalCreator = signalCreator;
             _configCreator = configCreator;
-            _loggingCreator = loggingCreator;
+            _loggerCreator = loggerCreator;
         }
 
         #region [ -- Interface implementation for ITaskStorage -- ]
@@ -96,7 +68,10 @@ namespace magic.lambda.scheduler.services
                     .Append(" values (@id, @hyperlambda")
                     .Append(task.Description == null ? ")" : ", @description)");
 
-                await DatabaseHelper.CreateCommandAsync(connection, sqlBuilder.ToString(), async (cmd) =>
+                await DatabaseHelper.CreateCommandAsync(
+                    connection,
+                    sqlBuilder.ToString(),
+                    async (cmd) =>
                 {
                     DatabaseHelper.AddParameter(cmd, "@id", task.ID);
                     DatabaseHelper.AddParameter(cmd, "@hyperlambda", task.Hyperlambda);
@@ -123,7 +98,10 @@ namespace magic.lambda.scheduler.services
         }
 
         /// <inheritdoc />
-        public async Task<IList<MagicTask>> ListTasksAsync(string filter, long offset, long limit)
+        public async Task<IList<MagicTask>> ListTasksAsync(
+            string filter,
+            long offset,
+            long limit)
         {
             return await DatabaseHelper.ConnectAsync(
                 _signaler,
@@ -164,7 +142,11 @@ namespace magic.lambda.scheduler.services
         /// <inheritdoc />
         public Task<MagicTask> GetTaskAsync(string id, bool schedules = false)
         {
-            return GetTaskAsync(_signaler, _configuration, id, schedules);
+            return GetTaskAsync(
+                _signaler,
+                _configuration,
+                id,
+                schedules);
         }
 
         /// <inheritdoc />
@@ -212,9 +194,9 @@ namespace magic.lambda.scheduler.services
                     sql,
                     async (cmd) =>
                 {
-                    DatabaseHelper.AddParameter(cmd, "@id", task.ID);
                     DatabaseHelper.AddParameter(cmd, "@hyperlambda", task.Hyperlambda);
                     DatabaseHelper.AddParameter(cmd, "@description", task.Description);
+                    DatabaseHelper.AddParameter(cmd, "@id", task.ID);
 
                     if (await cmd.ExecuteNonQueryAsync() != 1)
                         throw new HyperlambdaException($"Task with ID of '{task.ID}' was not found");
@@ -239,9 +221,6 @@ namespace magic.lambda.scheduler.services
                 {
                     DatabaseHelper.AddParameter(cmd, "@id", id);
 
-                    if (await cmd.ExecuteNonQueryAsync() != 1)
-                        throw new HyperlambdaException($"Task with ID of '{id}' was not found");
-
                     // Making sure we delete all related timers.
                     await _semaphore.WaitAsync();
                     try
@@ -256,6 +235,13 @@ namespace magic.lambda.scheduler.services
                     {
                         _semaphore.Release();
                     }
+
+                    /*
+                     * To avoid funny race conditions we don't execute the delete SQL
+                     * before AFTER having destroyed the timers associated with the task.
+                     */
+                    if (await cmd.ExecuteNonQueryAsync() != 1)
+                        throw new HyperlambdaException($"Task with ID of '{id}' was not found");
                 });
             });
         }
@@ -263,7 +249,10 @@ namespace magic.lambda.scheduler.services
         /// <inheritdoc />
         public Task ExecuteTaskAsync(string id)
         {
-            return ExecuteTaskAsync(_signaler, _configuration, id);
+            return ExecuteTaskAsync(
+                _signaler,
+                _configuration,
+                id);
         }
 
         #endregion
@@ -278,7 +267,10 @@ namespace magic.lambda.scheduler.services
                 _configuration,
                 async (connection) =>
             {
-                return await ScheduleTaskAsync(connection, taskId, repetition);
+                return await ScheduleTaskAsync(
+                    connection,
+                    taskId,
+                    repetition);
             });
         }
 
@@ -290,20 +282,26 @@ namespace magic.lambda.scheduler.services
                 _configuration,
                 async (connection) =>
             {
-                return await ScheduleTaskAsync(connection, taskId, due);
+                return await ScheduleTaskAsync(
+                    connection,
+                    taskId,
+                    due);
             });
         }
 
         /// <inheritdoc />
         public Task DeleteScheduleAsync(int id)
         {
-            return DeleteScheduleAsync(_signaler, _configuration, id);
+            return DeleteScheduleAsync(
+                _signaler,
+                _configuration,
+                id);
         }
 
         /// <inheritdoc />
         public async Task StartAsync()
         {
-            // Verifying cheduler haven't already been started.
+            // Verifying scheduler haven't already been started.
             await _semaphore.WaitAsync();
             try
             {
@@ -332,7 +330,11 @@ namespace magic.lambda.scheduler.services
                         cmd,
                         (reader) =>
                     {
-                        return ((int)reader[0], reader[1] as string, (DateTime)reader[2], reader[3] as string);
+                        return (
+                            (int)reader[0],
+                            reader[1] as string,
+                            (DateTime)reader[2],
+                            reader[3] as string);
                     });
                 });
             });
@@ -340,10 +342,10 @@ namespace magic.lambda.scheduler.services
             // Creating timers for all schedules.
             foreach (var idx in schedules)
             {
-                CreateTimer(
+                await CreateTimerAsync(
                     _signalCreator,
                     _configCreator,
-                    _loggingCreator,
+                    _loggerCreator,
                     idx.Id,
                     idx.Task,
                     idx.Due,
@@ -410,8 +412,8 @@ namespace magic.lambda.scheduler.services
          */
         static async Task ExecuteTaskAsync(
             ISignaler signaler,
-             IMagicConfiguration configuration,
-             string id)
+            IMagicConfiguration configuration,
+            string id)
         {
             // Retrieving task.
             var task = await GetTaskAsync(signaler, configuration, id);
@@ -472,8 +474,6 @@ namespace magic.lambda.scheduler.services
                 {
                     DatabaseHelper.AddParameter(cmd, "@id", id);
 
-                    if (await cmd.ExecuteNonQueryAsync() != 1)
-                        throw new HyperlambdaException($"Schedule with ID of '{id}' was not found.");
                     await _semaphore.WaitAsync();
                     try
                     {
@@ -488,6 +488,13 @@ namespace magic.lambda.scheduler.services
                     {
                         _semaphore.Release();
                     }
+
+                    /*
+                     * To avoid funny race conditions we wait until we have deleted all timers before
+                     * we delete schedules from database.
+                     */
+                    if (await cmd.ExecuteNonQueryAsync() != 1)
+                        throw new HyperlambdaException($"Schedule with ID of '{id}' was not found.");
                 });
             });
         }
@@ -515,10 +522,10 @@ namespace magic.lambda.scheduler.services
                 DatabaseHelper.AddParameter(cmd, "@repeats", repetition.Value);
 
                 var scheduledId = Convert.ToInt32(await cmd.ExecuteScalarAsync());
-                CreateTimer(
+                await CreateTimerAsync(
                     _signalCreator,
                     _configCreator,
-                    _loggingCreator,
+                    _loggerCreator,
                     scheduledId,
                     taskId,
                     due,
@@ -548,14 +555,13 @@ namespace magic.lambda.scheduler.services
                 DatabaseHelper.AddParameter(cmd, "@due", due);
 
                 var scheduleId = Convert.ToInt32(await cmd.ExecuteScalarAsync());
-                CreateTimer(
+                await CreateTimerAsync(
                     _signalCreator,
                     _configCreator,
-                    _loggingCreator,
+                    _loggerCreator,
                     scheduleId,
                     taskId,
-                    due,
-                    null);
+                    due);
                 return scheduleId;
             });
         }
@@ -563,14 +569,14 @@ namespace magic.lambda.scheduler.services
         /*
          * Creates a timer that ensures task is executed at its next due date.
          */
-        static void CreateTimer(
+        static async Task CreateTimerAsync(
             IServiceCreator<ISignaler> signalFactory,
             IServiceCreator<IMagicConfiguration> configFactory,
             IServiceCreator<ILogger> logFactory,
             int scheduleId,
             string taskId,
             DateTime due,
-            IRepetitionPattern repetition)
+            IRepetitionPattern repetition = null)
         {
             /*
              * Notice, since the maximum future date for Timer is 45 days into the future, we
@@ -584,45 +590,70 @@ namespace magic.lambda.scheduler.services
             var nextDue = (long)Math.Max(250L, Math.Min(whenMs, maxMs));
             var postpone = whenMs > maxMs;
 
-            // Creating our Timer instance.
-            var timer = new Timer(async (state) =>
-            {
-                // Checking if we have to postpone execution of task further into the future.
-                if (postpone)
-                {
-                    // More than 45 days until schedule is due, hence just re-creating our timer.
-                    CreateTimer(
-                        signalFactory,
-                        configFactory,
-                        logFactory,
-                        scheduleId,
-                        taskId,
-                        due,
-                        repetition);
-                    return;
-                }
-
-                // Executing task.
-                await ExecuteScheduleAsync(
-                    signalFactory,
-                    logFactory,
-                    configFactory,
-                    scheduleId,
-                    taskId,
-                    repetition);
-
-            }, null, nextDue, Timeout.Infinite);
-
-            // Creating our schedule and keeping a reference to it such that we can stop schedule if asked to do so.
-            var schedule = new TaskSchedule(
-                timer,
-                taskId,
-                scheduleId,
-                repetition);
-            _semaphore.WaitAsync();
+            /*
+             * Creating our schedule and keeping a reference to it such that we can stop
+             * the schedule if asked to do so.
+             */
+            await _semaphore.WaitAsync();
             try
             {
-                _schedules[scheduleId] = schedule;
+                // Creating our Timer instance.
+                var timer = new Timer(async (state) =>
+                {
+                    /*
+                     * Making sure we dispose existing timer.
+                     *
+                     * Notice, this little trickery of awaiting our semaphore from inside another
+                     * wait on the same semaphore ensures that our timer always exists in our
+                     * dictionary as we try to dispose it on the timer's thread. And yes, it looks weird,
+                     * but remember that the timer's callback is executed on a different thread, so
+                     * there are no deadlocks here, even though it technically might look like a deadlock.
+                     */
+                    await _semaphore.WaitAsync();
+                    try
+                    {
+                        // Removing and disposing timer.
+                        var schedule = _schedules[scheduleId];
+                        _schedules.Remove(scheduleId);
+                        schedule.Dispose();
+                    }
+                    finally
+                    {
+                        _semaphore.Release();
+                    }
+
+                    // Checking if we have to postpone execution of task further into the future.
+                    if (postpone)
+                    {
+                        // More than 45 days until schedule is due, hence just re-creating our timer.
+                        await CreateTimerAsync(
+                            signalFactory,
+                            configFactory,
+                            logFactory,
+                            scheduleId,
+                            taskId,
+                            due,
+                            repetition);
+                    }
+                    else
+                    {
+                        // Executing task.
+                        await ExecuteScheduleAsync(
+                            signalFactory,
+                            logFactory,
+                            configFactory,
+                            scheduleId,
+                            taskId,
+                            repetition);
+                    }
+                }, null, nextDue, Timeout.Infinite);
+
+                // Stuffing wrapper into dictionary.
+                _schedules[scheduleId] = new TaskScheduleWrapper(
+                    timer,
+                    taskId,
+                    scheduleId,
+                    repetition);
             }
             finally
             {
@@ -652,6 +683,7 @@ namespace magic.lambda.scheduler.services
             }
             catch (Exception error)
             {
+                // Logging exception.
                 var logger = logCreator.Create();
                 await logger.ErrorAsync($"Unhandled exception while executing scheduled task with id of '{taskId}'", error);
             }
@@ -679,7 +711,7 @@ namespace magic.lambda.scheduler.services
                             await cmd.ExecuteNonQueryAsync();
 
                             // Creating a new timer for task
-                            CreateTimer(
+                            await CreateTimerAsync(
                                 signalFactory,
                                 configFactory,
                                 logCreator,
@@ -692,24 +724,11 @@ namespace magic.lambda.scheduler.services
                 }
                 else
                 {
-                    await _semaphore.WaitAsync();
-                    try
-                    {
-                        // Removing and disposing timer for schedule.
-                        var schedule = _schedules[scheduleId];
-                        _schedules.Remove(scheduleId);
-                        schedule.Dispose();
-
-                        // Making sure we delete schedule from database.
-                        await DeleteScheduleAsync(
-                            signaler,
-                            config,
-                            scheduleId);
-                    }
-                    finally
-                    {
-                        _semaphore.Release();
-                    }
+                    // Making sure we delete schedule from database.
+                    await DeleteScheduleAsync(
+                        signaler,
+                        config,
+                        scheduleId);
                 }
             }
         }
