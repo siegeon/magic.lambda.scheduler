@@ -2,11 +2,13 @@
  * Magic Cloud, copyright Aista, Ltd. See the attached LICENSE file for details.
  */
 
+using System;
 using System.Linq;
 using magic.node;
 using magic.node.extensions;
 using magic.signals.contracts;
 using magic.lambda.scheduler.contracts;
+using magic.lambda.scheduler.utilities;
 
 namespace magic.lambda.scheduler.slots.tasks
 {
@@ -40,6 +42,49 @@ namespace magic.lambda.scheduler.slots.tasks
         #region [ -- Internal helper methods -- ]
 
         /*
+         * Creates a task from the specified node structure and returns the created task to caller.
+         */
+        internal static MagicTask Create(ISignaler signaler, Node node)
+        {
+            // Retrieving and sanity checking ID of task.
+            var id = GetID(node);
+
+            // Sanity checking invocation.
+            if (!node.Children.Any(x => x.Name == ".lambda"))
+                throw new HyperlambdaException($"[{node.Name}] invoked without a [.lambda] object");
+
+            // Retrieving Hyperlambda for task.
+            var hlNode = new Node();
+            hlNode.AddRange(node.Children.FirstOrDefault(x => x.Name == ".lambda").Clone().Children);
+            signaler.Signal("lambda2hyper", hlNode);
+            var hyperlambda = hlNode.Get<string>();
+
+            // Retrieving description for task.
+            var description = node.Children.FirstOrDefault(x => x.Name == "description")?.GetEx<string>();
+
+            // Creating any optionally supplied schedules, and returning newly created task to caller.
+            return new MagicTask(
+                id,
+                description,
+                hyperlambda,
+                node.Children.Where(x => x.Name == "repeats" || x.Name == "due").Select(x =>
+                {
+                    switch (x.Name)
+                    {
+                        case "due":
+                            return new Schedule(x.GetEx<DateTime>(), null);
+
+                        case "repeats":
+                            var pattern = PatternFactory.Create(x.GetEx<string>());
+                            return new Schedule(pattern.Next(), pattern.Value);
+
+                        default:
+                            throw new HyperlambdaException("You're not supposed to be here!");
+                    }
+                }));
+        }
+
+        /*
          * Returns an ID for a task given the specified node.
          */
         internal static string GetID(Node node)
@@ -58,31 +103,6 @@ namespace magic.lambda.scheduler.slots.tasks
 
             // Returning ID to caller.
             return id;
-        }
-
-        /*
-         * Creates a task from the specified node structure and returns the created task to caller.
-         */
-        internal static MagicTask Create(ISignaler signaler, Node node)
-        {
-            // Sanity checking invocation.
-            if (!node.Children.Any(x => x.Name == ".lambda"))
-                throw new HyperlambdaException("[tasks.create] invoked without a [.lambda] object");
-
-            // Retrieving and sanity checking ID of task.
-            var id = GetID(node);
-
-            // Retrieving Hyperlambda for task.
-            var hlNode = new Node();
-            hlNode.AddRange(node.Children.FirstOrDefault(x => x.Name == ".lambda").Clone().Children);
-            signaler.Signal("lambda2hyper", hlNode);
-            var hyperlambda = hlNode.Get<string>();
-
-            // Retrieving description for task.
-            var description = node.Children.FirstOrDefault(x => x.Name == "description")?.GetEx<string>();
-
-            // Returning newly created task to caller.
-            return new MagicTask(id, description, hyperlambda);
         }
 
         #endregion

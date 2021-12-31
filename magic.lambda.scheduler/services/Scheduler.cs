@@ -103,12 +103,84 @@ namespace magic.lambda.scheduler.services
                         DatabaseHelper.AddParameter(cmd, "@description", task.Description);
                     cmd.ExecuteNonQuery();
                 });
+
+                foreach (var idx in task.Schedules.Where(x => x.Repeats != null))
+                {
+                    ScheduleTask(connection, task.ID, PatternFactory.Create(idx.Repeats));
+                }
+                foreach (var idx in task.Schedules.Where(x => x.Repeats == null))
+                {
+                    ScheduleTask(connection, task.ID, idx.Due);
+                }
+            });
+        }
+
+        /// <inheritdoc />
+        public IEnumerable<MagicTask> ListTasks(string filter, long offset, long limit)
+        {
+            return DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
+            {
+                var sqlBuilder = new StringBuilder();
+                sqlBuilder
+                    .Append("select id, description, hyperlambda, created from tasks")
+                    .Append(string.IsNullOrEmpty(filter) ? "" : " where id like @filter or description like @filter")
+                    .Append(DatabaseHelper.GetPagingSql(_configuration, offset, limit));
+
+                return DatabaseHelper.CreateCommand(connection, sqlBuilder.ToString(), (cmd) =>
+                {
+                    if (!string.IsNullOrEmpty(filter))
+                        DatabaseHelper.AddParameter(cmd, "@filter", filter);
+                    if (offset > 0)
+                        DatabaseHelper.AddParameter(cmd, "@offset", offset);
+                    DatabaseHelper.AddParameter(cmd, "@limit", limit);
+
+                    return DatabaseHelper.Iterate(cmd, (reader) =>
+                    {
+                        return new MagicTask(
+                            reader[0] as string,
+                            reader[1] as string,
+                            reader[2] as string)
+                        {
+                            Created = (DateTime)reader[3],
+                        };
+                    });
+                });
+            });
+        }
+
+        /// <inheritdoc />
+        public MagicTask GetTask(string id, bool schedules = false)
+        {
+            return GetTask(_signaler, _configuration, id, schedules);
+        }
+
+        /// <inheritdoc />
+        public int CountTasks(string filter)
+        {
+            return DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
+            {
+                var sqlBuilder = new StringBuilder();
+                sqlBuilder
+                    .Append("select count(*) from tasks")
+                    .Append(string.IsNullOrEmpty(filter) ? "" : " where id like @filter or description like @filter");
+
+                return DatabaseHelper.CreateCommand(connection, sqlBuilder.ToString(), (cmd) =>
+                {
+                    if (!string.IsNullOrEmpty(filter))
+                        DatabaseHelper.AddParameter(cmd, "@filter", filter);
+
+                    return Convert.ToInt32(cmd.ExecuteScalar());
+                });
             });
         }
 
         /// <inheritdoc />
         public void UpdateTask(MagicTask task)
         {
+            // Sanity checking invocation.
+            if (task.Schedules.Any())
+                throw new HyperlambdaException("You cannot update schedules for tasks when updating your task");
+
             DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
             {
                 var sql = "update tasks set description = @description, hyperlambda = @hyperlambda where id = @id";
@@ -153,65 +225,6 @@ namespace magic.lambda.scheduler.services
         }
 
         /// <inheritdoc />
-        public IEnumerable<MagicTask> ListTasks(string filter, long offset, long limit)
-        {
-            return DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
-            {
-                var sqlBuilder = new StringBuilder();
-                sqlBuilder
-                    .Append("select id, description, hyperlambda, created from tasks")
-                    .Append(string.IsNullOrEmpty(filter) ? "" : " where id like @filter or description like @filter")
-                    .Append(DatabaseHelper.GetPagingSql(_configuration, offset, limit));
-
-                return DatabaseHelper.CreateCommand(connection, sqlBuilder.ToString(), (cmd) =>
-                {
-                    if (!string.IsNullOrEmpty(filter))
-                        DatabaseHelper.AddParameter(cmd, "@filter", filter);
-                    if (offset > 0)
-                        DatabaseHelper.AddParameter(cmd, "@offset", offset);
-                    DatabaseHelper.AddParameter(cmd, "@limit", limit);
-
-                    return DatabaseHelper.Iterate(cmd, (reader) =>
-                    {
-                        return new MagicTask(
-                            reader[0] as string,
-                            reader[1] as string,
-                            reader[2] as string)
-                        {
-                            Created = (DateTime)reader[3],
-                        };
-                    });
-                });
-            });
-        }
-
-        /// <inheritdoc />
-        public int CountTasks(string filter)
-        {
-            return DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
-            {
-                var sqlBuilder = new StringBuilder();
-                sqlBuilder
-                    .Append("select count(*) from tasks")
-                    .Append(string.IsNullOrEmpty(filter) ? "" : " where id like @filter or description like @filter");
-
-                return DatabaseHelper.CreateCommand(connection, sqlBuilder.ToString(), (cmd) =>
-                {
-                    if (!string.IsNullOrEmpty(filter))
-                        DatabaseHelper.AddParameter(cmd, "@filter", filter);
-
-                    return Convert.ToInt32(cmd.ExecuteScalar());
-                });
-            });
-        }
-
-        /// <inheritdoc />
-        public MagicTask GetTask(string id, bool schedules = false)
-        {
-            return GetTask(_signaler, _configuration, id, schedules);
-        }
-
-        /// <inheritdoc />
         public void ExecuteTask(string id)
         {
             ExecuteTask(_signaler, _configuration, id);
@@ -226,20 +239,7 @@ namespace magic.lambda.scheduler.services
         {
             DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
             {
-                var sqlBuilder = new StringBuilder();
-                sqlBuilder.Append("insert into task_due (task, due, repeats) values (@task, @due, @repeats)");
-                sqlBuilder.Append(DatabaseHelper.GetInsertTail(_configuration));
-
-                DatabaseHelper.CreateCommand(connection, sqlBuilder.ToString(), (cmd) =>
-                {
-                    var due = repetition.Next();
-                    DatabaseHelper.AddParameter(cmd, "@task", taskId);
-                    DatabaseHelper.AddParameter(cmd, "@due", due);
-                    DatabaseHelper.AddParameter(cmd, "@repeats", repetition.Value);
-
-                    var scheduledId = Convert.ToInt32(cmd.ExecuteScalar());
-                    CreateTimer(_signalCreator, _configCreator, _loggingCreator, scheduledId, taskId, due, repetition);
-                });
+                ScheduleTask(connection, taskId, repetition);
             });
         }
 
@@ -248,18 +248,7 @@ namespace magic.lambda.scheduler.services
         {
             DatabaseHelper.Connect(_signaler, _configuration, (connection) =>
             {
-                var sqlBuilder = new StringBuilder();
-                sqlBuilder.Append("insert into task_due (task, due) values (@task, @due)");
-                sqlBuilder.Append(DatabaseHelper.GetInsertTail(_configuration));
-
-                DatabaseHelper.CreateCommand(connection, sqlBuilder.ToString(), (cmd) =>
-                {
-                    DatabaseHelper.AddParameter(cmd, "@task", taskId);
-                    DatabaseHelper.AddParameter(cmd, "@due", due);
-
-                    var scheduleId = Convert.ToInt32(cmd.ExecuteScalar());
-                    CreateTimer(_signalCreator, _configCreator, _loggingCreator, scheduleId, taskId, due, null);
-                });
+                ScheduleTask(connection, taskId, due);
             });
         }
 
@@ -422,6 +411,52 @@ namespace magic.lambda.scheduler.services
                         }
                     }
                 });
+            });
+        }
+
+        /*
+         * Helper method to schedule task with the specified connection.
+         */
+        void ScheduleTask(
+            IDbConnection connection,
+            string taskId,
+            IRepetitionPattern repetition)
+        {
+            var sqlBuilder = new StringBuilder();
+            sqlBuilder.Append("insert into task_due (task, due, repeats) values (@task, @due, @repeats)");
+            sqlBuilder.Append(DatabaseHelper.GetInsertTail(_configuration));
+
+            DatabaseHelper.CreateCommand(connection, sqlBuilder.ToString(), (cmd) =>
+            {
+                var due = repetition.Next();
+                DatabaseHelper.AddParameter(cmd, "@task", taskId);
+                DatabaseHelper.AddParameter(cmd, "@due", due);
+                DatabaseHelper.AddParameter(cmd, "@repeats", repetition.Value);
+
+                var scheduledId = Convert.ToInt32(cmd.ExecuteScalar());
+                CreateTimer(_signalCreator, _configCreator, _loggingCreator, scheduledId, taskId, due, repetition);
+            });
+        }
+
+        /*
+         * Helper methods to schedule task on the specified connection.
+         */
+        void ScheduleTask(
+            IDbConnection connection,
+            string taskId,
+            DateTime due)
+        {
+            var sqlBuilder = new StringBuilder();
+            sqlBuilder.Append("insert into task_due (task, due) values (@task, @due)");
+            sqlBuilder.Append(DatabaseHelper.GetInsertTail(_configuration));
+
+            DatabaseHelper.CreateCommand(connection, sqlBuilder.ToString(), (cmd) =>
+            {
+                DatabaseHelper.AddParameter(cmd, "@task", taskId);
+                DatabaseHelper.AddParameter(cmd, "@due", due);
+
+                var scheduleId = Convert.ToInt32(cmd.ExecuteScalar());
+                CreateTimer(_signalCreator, _configCreator, _loggingCreator, scheduleId, taskId, due, null);
             });
         }
 

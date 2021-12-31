@@ -29,9 +29,9 @@ tasks.create:foo-bar-task-1
 ```
 
 The name or ID of your task in the above example becomes _"foo-bar-task-1"_, and the task can be referenced later
-using this name. The name must be unique, otherwise any previously created tasks with the same name will be silently
-overwritten. A task can also optionally have a **[description]** argument, which is a humanly readable
-description, describing what your task does. Below is an example.
+using this name. The name must be unique, otherwise an exception will be thrown. A task can also optionally have
+a **[description]** argument, which is a humanly readable description, describing what your task does. Below is
+an example.
 
 ```
 tasks.create:foo-bar-task-2
@@ -42,6 +42,42 @@ tasks.create:foo-bar-task-2
 
 **Notice** - Your task's **[id]** argument, can only contain alpha numeric characters, 
 a-z, 0-9 - In addition to the following special characters; `.`, `-` and `_`.
+
+### Convenience methods
+
+When you create a task, you can also optionally schedule it simultaneously, by providing any amount of **[due]**
+dates, and/or **[repeats]** patterns, which will create and schedule the task at the same time. Below is an example.
+
+```
+tasks.create:foo-bar-task-2
+   due:date:"2025-01-01T23:59:27"
+   repeats:5.seconds
+   repeats:3.hours
+   due:date:"2030-01-01T23:59:27"
+   .lambda
+      log.info:Executing foo-bar-task-2
+```
+
+The above schedules your task for being executed once in the year of 2025, another time in the year of 2030,
+in addition to once every 3 hours and once every 5 seconds. This document will describe in details how schedules
+works further down.
+
+You can also _update_ an existing task by using the **[tasks.update]** slot. This slot allows you to update
+a task's description and its Hyperlambda, but you _cannot_ associate schedules with your task using this
+slot. If you've already created your task and you need to (re) schedule it, you'll need to combine the
+slots **[tasks.schedule]** and **[tasks.schedule.delete]** together. Below is an example of first creating
+a task for then to update its description.
+
+```
+tasks.create:foo-bar-task-1
+   .lambda
+      log.info:Executing foo-bar-task-1
+tasks.update:foo-bar-task-1
+   description:This is the foo bar task
+```
+
+In the above example the Hyperlambda already associated with your task will be unchanged, and only its
+description will be changed.
 
 ## Executing a task
 
@@ -60,13 +96,10 @@ occurs - Effectively giving you the most important features from Microsoft Workf
 ridiculous XML and WYSIWYG - In addition to that this also is a .Net Core library, contrary
 to MWF that only works for the full .Net Framework.
 
-This allows you to create and persist a function _invocation_, for then to later execute it, as some condition occurs,
-arguably giving you _"workflow capabilities"_ in your projects.
-
 ## Scheduled tasks
 
 If you want to create a _scheduled_ task, you can choose to have the task executed once in the future, at a specified
-date and time, by invoking **[tasks.schedule.create]** and reference your task after it's been created, and pass in
+date and time, by invoking **[tasks.schedule]**, and reference your task after it's been created, passing in
 a **[due]** argument being a date and time in the future for when you want to execute your task.
 
 ```
@@ -79,7 +112,7 @@ tasks.schedule:foo-bar-task-3
 
 The above **[due]** argument is a UTC date and time in the future for when you want your task to be scheduled
 for execution. After the task has been executed, it will never execute again, unless you manually execute it,
-or invoke **[tasks.schedule]** again, passing in a new **[due]** argument or a **[repeats]** pattern.
+or invoke **[tasks.schedule]** again.
 
 **Notice** - You _cannot_ create a task with a due date being in the past, and all dates are assumed to be in
 the UTC timezone.
@@ -195,7 +228,7 @@ tasks.schedule:task-id
 
 You can also provide a double asterix (\*\*) for the weekdays pattern, implying _"all days of the week"_.
 
-### Creating your own repetition patter
+### Creating your own repetition pattern
 
 In addition to the above 3 types of repetition patterns, you can also create your own repetition pattern type,
 by implementing the `IRepetitionPattern` interface on one of your own types, and registering your type create function
