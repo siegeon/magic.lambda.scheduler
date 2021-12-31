@@ -35,6 +35,7 @@ namespace magic.lambda.scheduler.contracts
         /// <summary>
         /// Starts scheduler.
         /// </summary>
-        Task StartAsync();
+        /// <param name="maxConcurrency">Maximum number of tasks simultaneously executed.</param>
+        Task StartAsync(int maxConcurrency);
     }
 }
