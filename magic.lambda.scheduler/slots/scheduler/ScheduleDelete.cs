@@ -34,7 +34,7 @@ namespace magic.lambda.scheduler.slots.scheduler
         /// <param name="input">Arguments to slot.</param>
         public void Signal(ISignaler signaler, Node input)
         {
-            _scheduler.DeleteScheduleAsync(input.GetEx<int>())
+            SignalAsync(signaler, input)
                 .GetAwaiter()
                 .GetResult();
         }
@@ -48,6 +48,8 @@ namespace magic.lambda.scheduler.slots.scheduler
         public async Task SignalAsync(ISignaler signaler, Node input)
         {
             await _scheduler.DeleteScheduleAsync(input.GetEx<int>());
+            input.Clear();
+            input.Value = null;
         }
     }
 }

@@ -10,6 +10,7 @@ using magic.node.extensions;
 using magic.signals.contracts;
 using magic.lambda.scheduler.contracts;
 using magic.lambda.scheduler.utilities;
+using magic.lambda.scheduler.slots.tasks;
 
 namespace magic.lambda.scheduler.slots.scheduler
 {
@@ -51,11 +52,11 @@ namespace magic.lambda.scheduler.slots.scheduler
         /// <returns>Awaitable task.</returns>
         public async Task SignalAsync(ISignaler signaler, Node input)
         {
-            var taskId = input.GetEx<string>();
+            var taskId = CreateTask.GetID(input);
             var pattern = input.Children.FirstOrDefault(x => x.Name == "repeats")?.GetEx<string>();
             if (pattern != null)
             {
-                await _scheduler.ScheduleTaskAsync(taskId, PatternFactory.Create(pattern));
+                input.Value = await _scheduler.ScheduleTaskAsync(taskId, PatternFactory.Create(pattern));
             }
             else
             {
@@ -68,8 +69,9 @@ namespace magic.lambda.scheduler.slots.scheduler
                 // Sanity checking invocation.
                 if (due < DateTime.UtcNow)
                     throw new HyperlambdaException($"[tasks.schedule] cannot be invoked with a date and time being in the past.");
-                await _scheduler.ScheduleTaskAsync(taskId, due);
+                input.Value = await _scheduler.ScheduleTaskAsync(taskId, due);
             }
+            input.Clear();
         }
     }
 }

@@ -22,9 +22,7 @@ To create and persist a task you can use something such as the following.
 tasks.create:foo-bar-task-1
    .lambda
 
-      /*
-       * Your task's lambda object goes here
-       */
+      // Your task's lambda object goes here
       log.info:Executing foo-bar-task-1
 ```
 
@@ -49,7 +47,7 @@ When you create a task, you can also optionally schedule it simultaneously, by p
 dates, and/or **[repeats]** patterns, which will create and schedule the task at the same time. Below is an example.
 
 ```
-tasks.create:foo-bar-task-2
+tasks.create:foo-bar-task-3
    due:date:"2025-01-01T23:59:27"
    repeats:5.seconds
    repeats:3.hours
@@ -66,32 +64,86 @@ You can also _update_ an existing task by using the **[tasks.update]** slot. Thi
 a task's description and its Hyperlambda, but you _cannot_ associate schedules with your task using this
 slot. If you've already created your task and you need to (re) schedule it, you'll need to combine the
 slots **[tasks.schedule]** and **[tasks.schedule.delete]** together. Below is an example of first creating
-a task for then to update its description.
+a task for then to update it.
 
 ```
-tasks.create:foo-bar-task-1
+tasks.create:foo-bar-task-4
    .lambda
       log.info:Executing foo-bar-task-1
-tasks.update:foo-bar-task-1
+tasks.update:foo-bar-task-4
    description:This is the foo bar task
+   .lambda
+      log.info:Another log entry now!
 ```
-
-In the above example the Hyperlambda already associated with your task will be unchanged, and only its
-description will be changed.
 
 ## Executing a task
 
 You can explicitly execute a persisted task by invoking **[tasks.execute]** and pass
-in the ID of your task. Below is an example, that assumes you have created the above _"foo-bar-task-1"_ task
+in the ID of your task. Below is an example, that assumes you have created the above _"foo-bar-task-4"_ task
 first.
 
 ```
-tasks.execute:foo-bar-task-1
+tasks.execute:foo-bar-task-4
 ```
+
+Notice, if you try to execute a non-existing task, an exception will be thrown.
+
+## Deleting a task
+
+Use the **[tasks.delete]** signal to delete a task. This will also delete all future schedules for your task and
+automatically dispose any timers associated with the task. An example can be found below.
+
+```
+tasks.delete:task-id
+```
+
+Besides from the task ID, the delete task signal doesn't take any arguments.
+
+## Inspecting a task
+
+To inspect a task you can use the following.
+
+```
+tasks.get:task-id
+```
+
+The above will return the Hyperlambda for your task, in addition to your task's description. If you add
+a **[schedules]** argument and set its value to boolean `true`, this slot will also return all schedules
+associated with the task.
+
+```
+tasks.get:task-id
+   schedules:true
+```
+
+## Listing tasks
+
+To list tasks, you can use the **[tasks.list]** signal. This slot optionally
+handles an **[offset]** and a **[limit]** argument, allowing you to page, which might be
+useful if you have a lot of tasks in your system. If no **[limit]** is specified, this signal
+will only return the first 10 tasks, including the task's Hyperlambda, but not its repetition
+pattern, or due date. Below is an example.
+
+```
+tasks.list
+   offset:20
+   limit:10
+```
+
+## Persisting tasks
+
+All tasks are persisted into your selected database type of choice, either MySQL, PostgreSQL, or Microsoft SQL Server.
+Which implies that even if the server is stopped, all scheduled tasks and persisted tasks will automatically
+load up again, and be available and re-scheduled as the server is restarted. This _might_ imply that
+all tasks in the past are immediately executed, which is important for you to understand, since any tasks
+with a due date in the past, are executed immediately as the server restarts again.
+
+Tasks are by default persisted into your `magic.tasks` table, and schedules are persisted into your
+`magic.task_due` table.
 
 ## Workflows and Magic Tasks
 
-The above allows you to persist a _"function invocation"_ for later to execute it, once some specified condition
+The above allows you to persist a _"function invocation"_ for later to execute it, once some specific condition
 occurs - Effectively giving you the most important features from Microsoft Workflow Foundation, without the
 ridiculous XML and WYSIWYG - In addition to that this also is a .Net Core library, contrary
 to MWF that only works for the full .Net Framework.
@@ -115,7 +167,10 @@ for execution. After the task has been executed, it will never execute again, un
 or invoke **[tasks.schedule]** again.
 
 **Notice** - You _cannot_ create a task with a due date being in the past, and all dates are assumed to be in
-the UTC timezone.
+the UTC timezone. The unique ID of the schedule created is returned when you explicitly schedule a task using
+the **[tasks.schedule]** slot. If you add schedules during invocations to **[tasks.create]** though, no schedule
+IDs are returned, but you can still retrieve all schedules by invoking **[tasks.get]** and passing in **[schedules]**
+to have the slot return all schedules for a specific task.
 
 ### Repeating tasks
 
@@ -306,59 +361,6 @@ its interval pattern - Implying that if you use a 5 second pattern, the schedule
 calculated 5 seconds from the time the task _finished_ executing, which might not necessarily imply that your tasks
 are executed exactly every 5 seconds, depending upon how much time your task requires to execute. The interval
 pattern declares how many units to count to before executing the task again, from when the task _finished_ executing.
-
-## Deleting a task
-
-Use the **[tasks.delete]** signal to delete a task. This will also delete all future schedules for your task and
-automatically dispose any timers associated with the task. An example can be found below.
-
-```
-tasks.delete:task-id
-```
-
-Besides from the task ID, the delete task signal doesn't take any arguments.
-
-## Inspecting a task
-
-To inspect a task you can use the following.
-
-```
-tasks.get:task-id
-```
-
-Besides from the task ID, the get task slot doesn't take any arguments. Invoking this slot will
-return the task's due date(s) in addition to the task itself, but only if you add a **[schedules]**
-argument to the invocation and set its value to boolean `true`. Below is an example.
-
-```
-tasks.get:task-id
-   schedules:true
-```
-
-## Listing tasks
-
-To list tasks, you can use the **[tasks.list]** signal. This slot optionally
-handles an **[offset]** and a **[limit]** argument, allowing you to page, which might be
-useful if you have a lot of tasks in your system. If no **[limit]** is specified, this signal
-will only return the first 10 tasks, including the task's Hyperlambda, but not its repetition
-pattern, or due date. Below is an example.
-
-```
-tasks.list
-   offset:20
-   limit:10
-```
-
-## Persisting tasks
-
-All tasks are persisted into your selected database type of choice, either MySQL, PostgreSQL, or Microsoft SQL Server.
-Which implies that even if the server is stopped, all scheduled tasks and persisted tasks will automatically
-load up again, and be available and re-scheduled as the server is restarted. This _might_ imply that
-all tasks in the past are immediately executed, which is important for you to understand, since any tasks
-with a due date in the past, are executed immediately as the server restarts again.
-
-Tasks are by default persisted into your `magic.tasks` table, and schedules are persisted into your
-`magic.task_due` table.
 
 ## Project website
 

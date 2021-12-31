@@ -271,26 +271,26 @@ namespace magic.lambda.scheduler.services
         #region [ -- Interface implementation for ITaskScheduler -- ]
 
         /// <inheritdoc />
-        public async Task ScheduleTaskAsync(string taskId, IRepetitionPattern repetition)
+        public async Task<int> ScheduleTaskAsync(string taskId, IRepetitionPattern repetition)
         {
-            await DatabaseHelper.ConnectAsync(
+            return await DatabaseHelper.ConnectAsync(
                 _signaler,
                 _configuration,
                 async (connection) =>
             {
-                await ScheduleTaskAsync(connection, taskId, repetition);
+                return await ScheduleTaskAsync(connection, taskId, repetition);
             });
         }
 
         /// <inheritdoc />
-        public async Task ScheduleTaskAsync(string taskId, DateTime due)
+        public async Task<int> ScheduleTaskAsync(string taskId, DateTime due)
         {
-            await DatabaseHelper.ConnectAsync(
+            return await DatabaseHelper.ConnectAsync(
                 _signaler,
                 _configuration,
                 async (connection) =>
             {
-                await ScheduleTaskAsync(connection, taskId, due);
+                return await ScheduleTaskAsync(connection, taskId, due);
             });
         }
 
@@ -473,7 +473,7 @@ namespace magic.lambda.scheduler.services
                     DatabaseHelper.AddParameter(cmd, "@id", id);
 
                     if (await cmd.ExecuteNonQueryAsync() != 1)
-                        throw new HyperlambdaException($"Task with ID of '{id}' was not found.");
+                        throw new HyperlambdaException($"Schedule with ID of '{id}' was not found.");
                     await _semaphore.WaitAsync();
                     try
                     {
@@ -495,7 +495,7 @@ namespace magic.lambda.scheduler.services
         /*
          * Helper method to schedule task with the specified connection.
          */
-        async Task ScheduleTaskAsync(
+        async Task<int> ScheduleTaskAsync(
             DbConnection connection,
             string taskId,
             IRepetitionPattern repetition)
@@ -504,7 +504,7 @@ namespace magic.lambda.scheduler.services
             sqlBuilder.Append("insert into task_due (task, due, repeats) values (@task, @due, @repeats)");
             sqlBuilder.Append(DatabaseHelper.GetInsertTail(_configuration));
 
-            await DatabaseHelper.CreateCommandAsync(
+            return await DatabaseHelper.CreateCommandAsync(
                 connection,
                 sqlBuilder.ToString(),
                 async (cmd) =>
@@ -523,13 +523,14 @@ namespace magic.lambda.scheduler.services
                     taskId,
                     due,
                     repetition);
+                return scheduledId;
             });
         }
 
         /*
          * Helper methods to schedule task on the specified connection.
          */
-        async Task ScheduleTaskAsync(
+        async Task<int> ScheduleTaskAsync(
             DbConnection connection,
             string taskId,
             DateTime due)
@@ -538,7 +539,7 @@ namespace magic.lambda.scheduler.services
             sqlBuilder.Append("insert into task_due (task, due) values (@task, @due)");
             sqlBuilder.Append(DatabaseHelper.GetInsertTail(_configuration));
 
-            await DatabaseHelper.CreateCommandAsync(
+            return await DatabaseHelper.CreateCommandAsync(
                 connection,
                 sqlBuilder.ToString(),
                 async (cmd) =>
@@ -555,6 +556,7 @@ namespace magic.lambda.scheduler.services
                     taskId,
                     due,
                     null);
+                return scheduleId;
             });
         }
 

@@ -37,13 +37,9 @@ namespace magic.lambda.scheduler.slots.tasks
         /// <returns>Awaitable task</returns>
         public void Signal(ISignaler signaler, Node input)
         {
-            // Retrieving task from storage and returning results to caller.
-            var task = _storage.GetTaskAsync(
-                input.GetEx<string>(),
-                input.Children.FirstOrDefault(x => x.Name == "schedules")?.GetEx<bool>() ?? false)
+            SignalAsync(signaler, input)
                 .GetAwaiter()
                 .GetResult();
-            CreateResult(task, input);
         }
 
         /// <summary>
@@ -54,9 +50,13 @@ namespace magic.lambda.scheduler.slots.tasks
         /// <returns>Awaitable task.</returns>
         public async Task SignalAsync(ISignaler signaler, Node input)
         {
+            // Retrieving ID and sanity checking invocation.
+            var id = input.GetEx<string>() ?? 
+                throw new HyperlambdaException("No ID provided to [tasks.get]");
+
             // Retrieving task from storage and returning results to caller.
             var task = await _storage.GetTaskAsync(
-                input.GetEx<string>(),
+                id,
                 input.Children.FirstOrDefault(x => x.Name == "schedules")?.GetEx<bool>() ?? false);
             CreateResult(task, input);
         }
@@ -85,7 +85,7 @@ namespace magic.lambda.scheduler.slots.tasks
             // Returning schedules for task.
             if (task.Schedules.Any())
             {
-                var scheduleNode = new Node("schedule");
+                var scheduleNode = new Node("schedules");
                 foreach (var idx in task.Schedules)
                 {
                     var idxNode = new Node(".");

@@ -17,14 +17,14 @@ namespace magic.lambda.scheduler.contracts
         /// </summary>
         /// <param name="task">Actual task you want to schedule.</param>
         /// <param name="repetition">Repetition pattern for schedule.</param>
-        Task ScheduleTaskAsync(string taskId, IRepetitionPattern repetition);
+        Task<int> ScheduleTaskAsync(string taskId, IRepetitionPattern repetition);
 
         /// <summary>
         /// Schedules an existing task.
         /// </summary>
         /// <param name="task">Actual task you want to schedule.</param>
         /// <param name="due">Date and time for when task should be scheduled for execution.</param>
-        Task ScheduleTaskAsync(string taskId, DateTime due);
+        Task<int> ScheduleTaskAsync(string taskId, DateTime due);
 
         /// <summary>
         /// Deletes an existing schedule for a task.
