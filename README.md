@@ -132,14 +132,14 @@ tasks.list
 
 ## Persisting tasks
 
-All tasks are persisted into your selected database type of choice, either MySQL, PostgreSQL, or Microsoft SQL Server.
+All tasks are persisted into your `magic` database, either in MySQL, PostgreSQL, or Microsoft SQL Server.
 Which implies that even if the server is stopped, all scheduled tasks and persisted tasks will automatically
 load up again, and be available and re-scheduled as the server is restarted. This _might_ imply that
 all tasks in the past are immediately executed, which is important for you to understand, since any tasks
 with a due date in the past, are executed immediately as the server restarts again.
 
-Tasks are by default persisted into your `magic.tasks` table, and schedules are persisted into your
-`magic.task_due` table.
+Tasks are by default persisted into your `tasks` table, and schedules are persisted into your
+`task_due` table.
 
 ## Workflows and Magic Tasks
 
@@ -148,7 +148,7 @@ occurs - Effectively giving you the most important features from Microsoft Workf
 ridiculous XML and WYSIWYG - In addition to that this also is a .Net Core library, contrary
 to MWF that only works for the full .Net Framework.
 
-## Scheduled tasks
+## Scheduling tasks
 
 If you want to create a _scheduled_ task, you can choose to have the task executed once in the future, at a specified
 date and time, by invoking **[tasks.schedule]**, and reference your task after it's been created, passing in
