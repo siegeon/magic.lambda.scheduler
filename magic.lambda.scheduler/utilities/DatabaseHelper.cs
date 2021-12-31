@@ -127,7 +127,7 @@ namespace magic.lambda.scheduler.utilities
 
                 default:
                     if (offset > 0)
-                        return " offset @offset limit @limit";
+                        return " limit @limit offset @offset";
                     return " limit @limit";
             }
         }
