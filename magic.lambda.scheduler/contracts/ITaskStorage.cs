@@ -15,7 +15,7 @@ namespace magic.lambda.scheduler.contracts
         /// <summary>
         /// Creates a new task, either a simple persisted non-due task, or a repeating or due task.
         /// </summary>
-        /// <param name="node">Node declaration of task.</param>
+        /// <param name="task">Task to create.</param>
         Task CreateTaskAsync(MagicTask task);
 
         /// <summary>
