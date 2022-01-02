@@ -122,8 +122,8 @@ namespace magic.lambda.scheduler.utilities
             {
                 case "mssql":
                     if (offset > 0)
-                        return " offset @offset rows fetch next @limit rows only";
-                    return " fetch next @limit rows only";
+                        return " order by id offset @offset rows fetch next @limit rows only";
+                    return " order by id offset 0 rows fetch next @limit rows only";
 
                 default:
                     if (offset > 0)
