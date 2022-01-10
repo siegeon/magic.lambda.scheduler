@@ -317,7 +317,7 @@ namespace magic.lambda.scheduler.services
                  * Making sure we initialize execute semaphore such that we can throttle number of
                  * maximum threads used for scheduled tasks.
                  */
-                _executeSemaphore = new SemaphoreSlim(maxConcurrency, maxConcurrency);
+                _executeSemaphore = new SemaphoreSlim(maxConcurrency, maxConcurrency); //NOSONAR
             }
             finally
             {
