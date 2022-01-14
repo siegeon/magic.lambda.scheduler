@@ -23,7 +23,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </PackageReference>
     <PackageReference Include="magic.signals.contracts" Version="10.0.15" />
-    <PackageReference Include="magic.lambda" Version="10.0.15" />
+    <PackageReference Include="magic.lambda" Version="10.0.16" />
     <PackageReference Include="magic.lambda.hyperlambda" Version="10.0.15" />
     <PackageReference Include="Moq" Version="4.13.1" />
   </ItemGroup>
