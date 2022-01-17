@@ -29,7 +29,7 @@ namespace magic.lambda.scheduler.services
         readonly IServiceCreator<ILogger> _loggerCreator;
         readonly IServiceCreator<IMagicConfiguration> _configCreator;
         static readonly Dictionary<int, TaskScheduleWrapper> _schedules = new Dictionary<int, TaskScheduleWrapper>();
-        static readonly SemaphoreSlim _dictionarySemaphore = new SemaphoreSlim(1, 1);
+        static readonly object _dictionarySemaphore = new object();
         static SemaphoreSlim _executeSemaphore = null;
 
         /// <summary>
@@ -223,18 +223,13 @@ namespace magic.lambda.scheduler.services
                     DatabaseHelper.AddParameter(cmd, "@id", id);
 
                     // Making sure we delete all related timers.
-                    await _dictionarySemaphore.WaitAsync();
-                    try
+                    lock (_dictionarySemaphore)
                     {
                         foreach (var idx in _schedules.Where(x => x.Value.TaskId == id).ToList())
                         {
                             _schedules.Remove(idx.Key);
-                            idx.Value.Timer.Dispose();
+                            idx.Value.Dispose();
                         }
-                    }
-                    finally
-                    {
-                        _dictionarySemaphore.Release();
                     }
 
                     /*
@@ -307,8 +302,7 @@ namespace magic.lambda.scheduler.services
                 throw new HyperlambdaException($"Maximum concurrently executed tasks for the task scheduler must fall between 1 and 100, you provided {maxConcurrency}");
 
             // Verifying scheduler haven't already been started.
-            await _dictionarySemaphore.WaitAsync();
-            try
+            lock (_dictionarySemaphore)
             {
                 if (_executeSemaphore != null)
                     throw new HyperlambdaException("Scheduler has already been started.");
@@ -318,10 +312,6 @@ namespace magic.lambda.scheduler.services
                  * maximum threads used for scheduled tasks.
                  */
                 _executeSemaphore = new SemaphoreSlim(maxConcurrency, maxConcurrency); //NOSONAR
-            }
-            finally
-            {
-                _dictionarySemaphore.Release();
             }
 
             // Retrieving all schedules.
@@ -353,7 +343,7 @@ namespace magic.lambda.scheduler.services
             // Creating timers for all schedules.
             foreach (var idx in schedules)
             {
-                await CreateTimerAsync(
+                CreateTimer(
                     _signalCreator,
                     _configCreator,
                     _loggerCreator,
@@ -485,8 +475,7 @@ namespace magic.lambda.scheduler.services
                 {
                     DatabaseHelper.AddParameter(cmd, "@id", id);
 
-                    await _dictionarySemaphore.WaitAsync();
-                    try
+                    lock (_dictionarySemaphore)
                     {
                         if (_schedules.ContainsKey(id))
                         {
@@ -494,10 +483,6 @@ namespace magic.lambda.scheduler.services
                             _schedules.Remove(id);
                             schedule.Dispose();
                         }
-                    }
-                    finally
-                    {
-                        _dictionarySemaphore.Release();
                     }
 
                     /*
@@ -533,7 +518,7 @@ namespace magic.lambda.scheduler.services
                 DatabaseHelper.AddParameter(cmd, "@repeats", repetition.Value);
 
                 var scheduledId = Convert.ToInt32(await cmd.ExecuteScalarAsync());
-                await CreateTimerAsync(
+                CreateTimer(
                     _signalCreator,
                     _configCreator,
                     _loggerCreator,
@@ -566,7 +551,7 @@ namespace magic.lambda.scheduler.services
                 DatabaseHelper.AddParameter(cmd, "@due", due);
 
                 var scheduleId = Convert.ToInt32(await cmd.ExecuteScalarAsync());
-                await CreateTimerAsync(
+                CreateTimer(
                     _signalCreator,
                     _configCreator,
                     _loggerCreator,
@@ -580,7 +565,7 @@ namespace magic.lambda.scheduler.services
         /*
          * Creates a timer that ensures task is executed at its next due date.
          */
-        static async Task CreateTimerAsync(
+        static void CreateTimer(
             IServiceCreator<ISignaler> signalFactory,
             IServiceCreator<IMagicConfiguration> configFactory,
             IServiceCreator<ILogger> logFactory,
@@ -605,8 +590,7 @@ namespace magic.lambda.scheduler.services
              * Creating our schedule and keeping a reference to it such that we can stop
              * the schedule if asked to do so.
              */
-            await _dictionarySemaphore.WaitAsync();
-            try
+            lock (_dictionarySemaphore)
             {
                 // Creating our Timer instance.
                 var timer = new Timer(async (state) =>
@@ -620,24 +604,19 @@ namespace magic.lambda.scheduler.services
                      * but remember that the timer's callback is executed on a different thread, so
                      * there are no deadlocks here, even though it technically might look like a deadlock.
                      */
-                    await _dictionarySemaphore.WaitAsync();
-                    try
+                    lock (_dictionarySemaphore)
                     {
                         // Removing and disposing timer.
                         var schedule = _schedules[scheduleId];
                         _schedules.Remove(scheduleId);
                         schedule.Dispose();
                     }
-                    finally
-                    {
-                        _dictionarySemaphore.Release();
-                    }
 
                     // Checking if we have to postpone execution of task further into the future.
                     if (postpone)
                     {
                         // More than 45 days until schedule is due, hence just re-creating our timer.
-                        await CreateTimerAsync(
+                        CreateTimer(
                             signalFactory,
                             configFactory,
                             logFactory,
@@ -665,10 +644,6 @@ namespace magic.lambda.scheduler.services
                     taskId,
                     scheduleId,
                     repetition);
-            }
-            finally
-            {
-                _dictionarySemaphore.Release();
             }
         }
 
@@ -729,7 +704,7 @@ namespace magic.lambda.scheduler.services
                             await cmd.ExecuteNonQueryAsync();
 
                             // Creating a new timer for task
-                            await CreateTimerAsync(
+                            CreateTimer(
                                 signalFactory,
                                 configFactory,
                                 logCreator,
