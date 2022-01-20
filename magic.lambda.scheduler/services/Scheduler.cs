@@ -13,7 +13,7 @@ using magic.node;
 using magic.node.contracts;
 using magic.node.extensions;
 using magic.signals.contracts;
-using magic.lambda.logging.helpers;
+using magic.lambda.logging.contracts;
 using magic.lambda.scheduler.contracts;
 using magic.lambda.scheduler.utilities;
 using magic.lambda.scheduler.services.internals;
