@@ -675,7 +675,7 @@ namespace magic.lambda.scheduler.services
             {
                 // Logging exception.
                 var logger = logCreator.Create();
-                await logger.ErrorAsync($"Unhandled exception while executing scheduled task with id of '{taskId}'", error);
+                await logger.ErrorAsync($"Unhandled exception while executing scheduled task with id of '{taskId}'", error.StackTrace);
             }
             finally
             {
